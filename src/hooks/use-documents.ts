@@ -59,7 +59,11 @@ export function useDocuments() {
     file: File,
     meta: { title: string; author: string; date: string; tags: string[] }
   ) => {
-    const storagePath = `${Date.now()}-${file.name}`;
+    const safeName = file.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `${Date.now()}-${safeName}`;
 
     const { error: storageError } = await supabase.storage
       .from('pdfs')
