@@ -51,13 +51,13 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
       setFiles(acceptedFiles.slice(0, 1));
       if (acceptedFiles.length > 0) {
         const { title, date } = parseFileName(acceptedFiles[0].name);
-        setSingleTitle(singleTitle || title);
-        setSingleDate(singleDate || date);
+        setSingleTitle(title);
+        setSingleDate(date);
       }
     } else {
       setFiles((prev) => [...prev, ...acceptedFiles]);
     }
-  }, [mode, singleTitle, singleDate]);
+  }, [mode]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
