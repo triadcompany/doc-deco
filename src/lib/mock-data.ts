@@ -77,12 +77,34 @@ export const mockDocuments: PDFDocument[] = [
 
 export function parseFileName(fileName: string): { title: string; date: string } {
   const nameWithoutExt = fileName.replace(/\.pdf$/i, '');
-  const dateMatch = nameWithoutExt.match(/(\d{4}-\d{2}-\d{2})/);
-  const date = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
+
+  // Try yyyy-MM-dd
+  let dateMatch = nameWithoutExt.match(/(\d{4})-(\d{2})-(\d{2})/);
+  let date = '';
+  let dateRaw = '';
+
+  if (dateMatch) {
+    date = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+    dateRaw = dateMatch[0];
+  } else {
+    // Try dd-MM-yyyy or dd.MM.yyyy or dd/MM/yyyy
+    dateMatch = nameWithoutExt.match(/(\d{2})[-./](\d{2})[-./](\d{4})/);
+    if (dateMatch) {
+      date = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+      dateRaw = dateMatch[0];
+    }
+  }
+
+  if (!date) {
+    date = new Date().toISOString().split('T')[0];
+  }
+
   const title = nameWithoutExt
-    .replace(/(\d{4}-\d{2}-\d{2})/, '')
+    .replace(dateRaw, '')
     .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
+
   return { title: title || nameWithoutExt, date };
 }
 
