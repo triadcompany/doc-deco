@@ -109,6 +109,29 @@ export function useDocuments() {
     );
   };
 
+  const updateDocument = async (
+    id: string,
+    data: { title: string; author: string; date: string; tags: string[] }
+  ) => {
+    const { error } = await supabase
+      .from('documents')
+      .update({
+        title: data.title,
+        author: data.author,
+        date: data.date,
+        tags: data.tags,
+      } as any)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    setDocuments((prev) =>
+      prev.map((d) =>
+        d.id === id ? { ...d, title: data.title, author: data.author, date: data.date, tags: data.tags } : d
+      )
+    );
+  };
+
   const deleteDocument = async (id: string) => {
     const { data } = await supabase
       .from('documents')
@@ -170,5 +193,5 @@ export function useDocuments() {
     return results;
   };
 
-  return { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, searchContent };
+  return { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent };
 }

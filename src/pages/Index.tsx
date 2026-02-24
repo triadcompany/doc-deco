@@ -4,6 +4,7 @@ import { useDocuments } from '@/hooks/use-documents';
 import { PDFCard } from '@/components/PDFCard';
 import { PDFViewer } from '@/components/PDFViewer';
 import { UploadDialog } from '@/components/UploadDialog';
+import { EditDocumentDialog } from '@/components/EditDocumentDialog';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { SearchTab } from '@/components/SearchTab';
 import { SettingsTab } from '@/components/SettingsTab';
@@ -34,7 +35,7 @@ import {
 } from 'lucide-react';
 
 const Index = () => {
-  const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument } = useDocuments();
+  const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument } = useDocuments();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +44,7 @@ const Index = () => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
+  const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -228,6 +230,7 @@ const Index = () => {
                       onView={setViewingDoc}
                       onToggleFavorite={toggleFavorite}
                       onDelete={deleteDocument}
+                      onEdit={setEditingDoc}
                     />
                   ))}
                 </div>
@@ -241,6 +244,7 @@ const Index = () => {
                       onView={setViewingDoc}
                       onToggleFavorite={toggleFavorite}
                       onDelete={deleteDocument}
+                      onEdit={setEditingDoc}
                     />
                   ))}
                 </div>
@@ -253,6 +257,7 @@ const Index = () => {
                 onView={setViewingDoc}
                 onToggleFavorite={toggleFavorite}
                 onDelete={deleteDocument}
+                onEdit={setEditingDoc}
               />
             </TabsContent>
 
@@ -288,6 +293,13 @@ const Index = () => {
         onComplete={fetchDocuments}
         authorsList={authors.map((a) => a.name)}
         translatorsList={translators.map((t) => t.name)}
+      />
+
+      <EditDocumentDialog
+        doc={editingDoc}
+        open={!!editingDoc}
+        onOpenChange={(open) => { if (!open) setEditingDoc(null); }}
+        onSave={updateDocument}
       />
     </div>
   );
