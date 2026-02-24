@@ -36,7 +36,7 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete }: 
 
   const authors = useMemo(() => {
     const set = new Set<string>();
-    documents.forEach((d) => set.add(d.author));
+    documents.forEach((d) => { if (d.author) set.add(d.author); });
     return Array.from(set).sort();
   }, [documents]);
 
