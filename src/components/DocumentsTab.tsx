@@ -17,9 +17,10 @@ interface DocumentsTabProps {
   onView: (doc: PDFDocument) => void;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit?: (doc: PDFDocument) => void;
 }
 
-export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete }: DocumentsTabProps) {
+export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, onEdit }: DocumentsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
@@ -139,6 +140,7 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete }: 
               onView={onView}
               onToggleFavorite={onToggleFavorite}
               onDelete={onDelete}
+              onEdit={onEdit}
             />
           ))}
         </div>
@@ -152,6 +154,7 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete }: 
               onView={onView}
               onToggleFavorite={onToggleFavorite}
               onDelete={onDelete}
+              onEdit={onEdit}
             />
           ))}
         </div>
