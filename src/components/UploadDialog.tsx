@@ -185,32 +185,21 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
             {/* Selected files list */}
             {files.length > 0 && (
               <div className="space-y-1.5">
-                {files.map((file, i) => {
-                  const parsed = parseFileName(file.name);
-                  return (
-                    <div key={i} className="rounded-md bg-secondary/50 px-3 py-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-primary shrink-0" />
-                        <span className="flex-1 truncate">{file.name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">{formatFileSize(file.size)}</span>
-                        <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-foreground">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      {mode === 'batch' && (
-                        <div className="mt-1 ml-6 flex gap-4 text-xs text-muted-foreground">
-                          <span>Título: <span className="text-foreground">{parsed.title}</span></span>
-                          <span>Data: <span className="text-foreground">{parsed.date}</span></span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {files.map((file, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-md bg-secondary/50 px-3 py-2 text-sm">
+                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                    <span className="flex-1 truncate min-w-0">{file.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{formatFileSize(file.size)}</span>
+                    <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
             {/* Auto-processing info (batch mode) */}
-            {mode === 'batch' && (
+            {mode === 'batch' && files.length > 0 && (
               <div className="rounded-lg bg-secondary/50 p-4 space-y-1">
                 <p className="text-sm font-medium">Processamento Automático:</p>
                 <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
@@ -220,7 +209,7 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
               </div>
             )}
 
-            {/* Single mode: Title field */}
+            {/* Title - shown for single mode OR batch with extracted preview */}
             {mode === 'single' && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">
@@ -231,6 +220,24 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
                   onChange={(e) => setSingleTitle(e.target.value)}
                   placeholder="Título do documento"
                 />
+              </div>
+            )}
+
+            {/* Batch mode: show extracted titles and dates as read-only preview */}
+            {mode === 'batch' && files.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Títulos e Datas Extraídos</Label>
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  {files.map((file, i) => {
+                    const parsed = parseFileName(file.name);
+                    return (
+                      <div key={i} className="px-3 py-2 text-sm flex items-center gap-4">
+                        <span className="flex-1 min-w-0 truncate">{parsed.title}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">{parsed.date}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
