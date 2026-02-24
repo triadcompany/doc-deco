@@ -59,11 +59,21 @@ export function useDocuments() {
     file: File,
     meta: { title: string; author: string; date: string; tags: string[] }
   ) => {
+    const { extractTextFromPDF } = await import('@/lib/pdf-text-extract');
+
     const safeName = file.name
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9._-]/g, '_');
     const storagePath = `${Date.now()}-${safeName}`;
+
+    // Extract text content from PDF
+    let content = '';
+    try {
+      content = await extractTextFromPDF(file);
+    } catch (e) {
+      console.warn('Could not extract text from PDF:', e);
+    }
 
     const { error: storageError } = await supabase.storage
       .from('pdfs')
@@ -79,6 +89,7 @@ export function useDocuments() {
       file_size: file.size,
       tags: meta.tags,
       storage_path: storagePath,
+      content,
     } as any);
 
     if (dbError) throw dbError;
@@ -113,5 +124,51 @@ export function useDocuments() {
     setDocuments((prev) => prev.filter((d) => d.id !== id));
   };
 
-  return { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument };
+  const searchContent = async (
+    term: string,
+    searchType: 'exact' | 'proximity',
+    filters?: { author?: string; tags?: string[]; startDate?: string; endDate?: string }
+  ): Promise<PDFDocument[]> => {
+    let query = supabase.from('documents').select('*');
+
+    if (term) {
+      if (searchType === 'exact') {
+        query = query.ilike('content', `%${term}%`);
+      } else {
+        // Proximity: all words must appear in content
+        const words = term.split(/\s+/).filter(Boolean);
+        for (const word of words) {
+          query = query.ilike('content', `%${word}%`);
+        }
+      }
+    }
+
+    if (filters?.author && filters.author !== 'all') {
+      query = query.eq('author', filters.author);
+    }
+
+    if (filters?.startDate) {
+      query = query.gte('date', filters.startDate);
+    }
+
+    if (filters?.endDate) {
+      query = query.lte('date', filters.endDate);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    let results = (data as DbDocument[]).map(toAppDoc);
+
+    if (filters?.tags && filters.tags.length > 0) {
+      results = results.filter((d) =>
+        filters.tags!.some((st) => d.tags.some((t) => t.toLowerCase().includes(st)))
+      );
+    }
+
+    return results;
+  };
+
+  return { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, searchContent };
 }

@@ -17,6 +17,7 @@ export type Database = {
       documents: {
         Row: {
           author: string
+          content: string | null
           created_at: string
           date: string
           favorite: boolean
@@ -31,6 +32,7 @@ export type Database = {
         }
         Insert: {
           author?: string
+          content?: string | null
           created_at?: string
           date?: string
           favorite?: boolean
@@ -45,6 +47,7 @@ export type Database = {
         }
         Update: {
           author?: string
+          content?: string | null
           created_at?: string
           date?: string
           favorite?: boolean

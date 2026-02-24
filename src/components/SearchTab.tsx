@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { PDFDocument } from '@/lib/types';
+import { useState } from 'react';
+import { useDocuments } from '@/hooks/use-documents';
 import { PDFCard } from '@/components/PDFCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, FileText } from 'lucide-react';
-
+import { Search, FileText, Loader2 } from 'lucide-react';
+import { PDFDocument } from '@/lib/types';
 interface SearchTabProps {
   documents: PDFDocument[];
   onView: (doc: PDFDocument) => void;
@@ -34,60 +34,32 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [results, setResults] = useState<PDFDocument[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const { searchContent } = useDocuments();
 
   const authors = authorsList.length > 0 ? authorsList : (() => {
     const set = new Set<string>();
-    documents.forEach((d) => set.add(d.author));
+    documents.forEach((d) => { if (d.author) set.add(d.author); });
     return Array.from(set).sort();
   })();
 
-  const results = useMemo(() => {
-    if (!hasSearched) return [];
-
-    let docs = [...documents];
-
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      if (searchType === 'exact') {
-        docs = docs.filter(
-          (d) =>
-            d.title.toLowerCase().includes(q) ||
-            d.author.toLowerCase().includes(q) ||
-            d.fileName.toLowerCase().includes(q)
-        );
-      } else {
-        const words = q.split(/\s+/).filter(Boolean);
-        docs = docs.filter((d) => {
-          const text = `${d.title} ${d.author} ${d.tags.join(' ')} ${d.fileName}`.toLowerCase();
-          return words.every((w) => text.includes(w));
-        });
-      }
-    }
-
-    if (selectedAuthor !== 'all') {
-      docs = docs.filter((d) => d.author === selectedAuthor);
-    }
-
-    if (tagsInput.trim()) {
-      const searchTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
-      docs = docs.filter((d) =>
-        searchTags.some((st) => d.tags.some((t) => t.toLowerCase().includes(st)))
-      );
-    }
-
-    if (startDate) {
-      docs = docs.filter((d) => d.date >= startDate);
-    }
-
-    if (endDate) {
-      docs = docs.filter((d) => d.date <= endDate);
-    }
-
-    return docs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [documents, searchTerm, searchType, selectedAuthor, tagsInput, startDate, endDate, hasSearched]);
-
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setHasSearched(true);
+    setSearching(true);
+    try {
+      const searchTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+      const res = await searchContent(searchTerm, searchType, {
+        author: selectedAuthor,
+        tags: searchTags.length > 0 ? searchTags : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
+      setResults(res);
+    } finally {
+      setSearching(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -117,8 +89,8 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
               placeholder="Digite o que deseja encontrar..."
               className="flex-1 h-10 bg-secondary/50"
             />
-            <Button onClick={handleSearch} size="icon" className="h-10 w-10 shrink-0">
-              <Search className="w-4 h-4" />
+            <Button onClick={handleSearch} size="icon" className="h-10 w-10 shrink-0" disabled={searching}>
+              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             </Button>
           </div>
         </div>
