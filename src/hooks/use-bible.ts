@@ -46,6 +46,25 @@ export interface BibleNote {
   updated_at: string;
 }
 
+export interface BibleHighlight {
+  id: string;
+  version: string;
+  book_abbrev: string;
+  chapter: number;
+  verse: number;
+  color: string;
+  created_at: string;
+}
+
+export const HIGHLIGHT_COLORS = [
+  { value: 'yellow', label: 'Amarelo', bg: 'bg-yellow-200/40', text: 'text-yellow-600', dot: 'bg-yellow-400' },
+  { value: 'green', label: 'Verde', bg: 'bg-green-200/40', text: 'text-green-600', dot: 'bg-green-400' },
+  { value: 'blue', label: 'Azul', bg: 'bg-blue-200/40', text: 'text-blue-600', dot: 'bg-blue-400' },
+  { value: 'pink', label: 'Rosa', bg: 'bg-pink-200/40', text: 'text-pink-600', dot: 'bg-pink-400' },
+  { value: 'orange', label: 'Laranja', bg: 'bg-orange-200/40', text: 'text-orange-600', dot: 'bg-orange-400' },
+  { value: 'purple', label: 'Roxo', bg: 'bg-purple-200/40', text: 'text-purple-600', dot: 'bg-purple-400' },
+];
+
 export const BIBLE_VERSIONS = [
   { value: 'arc', label: 'ARC - Almeida Revista e Corrigida' },
   { value: 'acf', label: 'ACF - Almeida Corrigida e Fiel' },
@@ -72,6 +91,7 @@ export function useBible() {
   const [searchResults, setSearchResults] = useState<BibleSearchResult[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [bookmarks, setBookmarks] = useState<BibleBookmark[]>([]);
+  const [highlights, setHighlights] = useState<BibleHighlight[]>([]);
   const [notes, setNotes] = useState<BibleNote[]>([]);
   const [currentBookInfo, setCurrentBookInfo] = useState<{ name: string } | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -210,13 +230,39 @@ export function useBible() {
     fetchNotes();
   }, [fetchNotes]);
 
+  // Highlights
+  const fetchHighlights = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('bible_highlights').select('*').order('created_at', { ascending: false });
+    if (data) setHighlights(data as BibleHighlight[]);
+  }, [user]);
+
+  const addHighlight = useCallback(async (h: { version: string; book_abbrev: string; chapter: number; verse: number; color: string }) => {
+    if (!user) return;
+    // Upsert: delete existing then insert
+    await supabase.from('bible_highlights').delete()
+      .eq('user_id', user.id).eq('version', h.version).eq('book_abbrev', h.book_abbrev)
+      .eq('chapter', h.chapter).eq('verse', h.verse);
+    await supabase.from('bible_highlights').insert({ ...h, user_id: user.id });
+    fetchHighlights();
+  }, [user, fetchHighlights]);
+
+  const removeHighlight = useCallback(async (id: string) => {
+    await supabase.from('bible_highlights').delete().eq('id', id);
+    fetchHighlights();
+  }, [fetchHighlights]);
+
+  const getHighlight = useCallback((version: string, abbrev: string, chapter: number, verse: number) => {
+    return highlights.find(h => h.version === version && h.book_abbrev === abbrev && h.chapter === chapter && h.verse === verse);
+  }, [highlights]);
+
   useEffect(() => {
     fetchBooks('arc');
   }, [fetchBooks]);
 
   useEffect(() => {
-    if (user) { fetchBookmarks(); fetchNotes(); }
-  }, [user, fetchBookmarks, fetchNotes]);
+    if (user) { fetchBookmarks(); fetchNotes(); fetchHighlights(); }
+  }, [user, fetchBookmarks, fetchNotes, fetchHighlights]);
 
   return {
     books, loadingBooks,
@@ -225,5 +271,6 @@ export function useBible() {
     searchResults, loadingSearch, searchVerses,
     bookmarks, addBookmark, removeBookmark, isBookmarked,
     notes, addNote, updateNote, deleteNote,
+    highlights, addHighlight, removeHighlight, getHighlight,
   };
 }
