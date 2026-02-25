@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { PDFDocument } from '@/lib/types';
+import { PDFDocument, SearchContext } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
 import { PDFViewer } from '@/components/PDFViewer';
@@ -40,7 +40,13 @@ const Index = () => {
   const { goal, currentReadings, completedThisMonth, upsertGoal, markCompleted, removeReading } = useReadingGoals();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
+  const [searchContext, setSearchContext] = useState<SearchContext | null>(null);
   const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
+
+  const handleViewDoc = (doc: PDFDocument, ctx?: SearchContext) => {
+    setSearchContext(ctx || null);
+    setViewingDoc(doc);
+  };
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -49,7 +55,7 @@ const Index = () => {
   }, [documents]);
 
   if (viewingDoc) {
-    return <PDFViewer doc={viewingDoc} onBack={() => setViewingDoc(null)} />;
+    return <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />;
   }
 
   return (
@@ -153,7 +159,7 @@ const Index = () => {
                 <CurrentReadings
                   documents={documents}
                   currentReadings={currentReadings}
-                  onView={setViewingDoc}
+                  onView={(doc) => handleViewDoc(doc)}
                   onMarkCompleted={markCompleted}
                   onRemove={removeReading}
                 />
@@ -169,7 +175,7 @@ const Index = () => {
             <TabsContent value="documentos">
               <DocumentsTab
                 documents={documents}
-                onView={setViewingDoc}
+                onView={(doc) => handleViewDoc(doc)}
                 onToggleFavorite={toggleFavorite}
                 onDelete={deleteDocument}
                 onEdit={setEditingDoc}
@@ -179,7 +185,7 @@ const Index = () => {
             <TabsContent value="pastas">
               <FoldersTab
                 documents={documents}
-                onView={setViewingDoc}
+                onView={(doc) => handleViewDoc(doc)}
                 onToggleFavorite={toggleFavorite}
                 onDelete={deleteDocument}
                 onEdit={setEditingDoc}
@@ -189,7 +195,7 @@ const Index = () => {
             <TabsContent value="favoritos">
               <FavoritesTab
                 documents={documents}
-                onView={setViewingDoc}
+                onView={(doc) => handleViewDoc(doc)}
                 onToggleFavorite={toggleFavorite}
                 onDelete={deleteDocument}
                 onEdit={setEditingDoc}
@@ -199,7 +205,7 @@ const Index = () => {
             <TabsContent value="pesquisa">
               <SearchTab
                 documents={documents}
-                onView={setViewingDoc}
+                onView={(doc, ctx) => handleViewDoc(doc, ctx)}
                 onToggleFavorite={toggleFavorite}
                 onDelete={deleteDocument}
                 authorsList={authors.map((a) => a.name)}
