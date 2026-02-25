@@ -257,6 +257,61 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     };
   }, [highlightMode, handleSelectionEnd]);
 
+  const isPercentRect = (r: { top: number; left: number; width: number; height: number }) =>
+    r.top <= 100 && r.left <= 100 && r.width <= 100 && r.height <= 100;
+
+  const mergeHighlightRects = (rects: { top: number; left: number; width: number; height: number }[]) => {
+    if (rects.length <= 1) return rects.map((r) => ({ ...r, isPercent: isPercentRect(r) }));
+
+    const allPercent = rects.every(isPercentRect);
+    const allPx = rects.every((r) => !isPercentRect(r));
+    if (!allPercent && !allPx) return rects.map((r) => ({ ...r, isPercent: isPercentRect(r) }));
+
+    const yTolerance = allPercent ? 0.7 : 2;
+    const hTolerance = allPercent ? 0.7 : 2;
+    const xGapTolerance = allPercent ? 0.5 : 2;
+
+    const sorted = [...rects].sort((a, b) => (a.top === b.top ? a.left - b.left : a.top - b.top));
+    const lines: Array<{ top: number; bottom: number; height: number; segments: Array<[number, number]> }> = [];
+
+    for (const r of sorted) {
+      const bottom = r.top + r.height;
+      let line = lines.find(
+        (l) => Math.abs(l.top - r.top) <= yTolerance && Math.abs(l.height - r.height) <= hTolerance,
+      );
+
+      if (!line) {
+        line = { top: r.top, bottom, height: r.height, segments: [] };
+        lines.push(line);
+      } else {
+        line.top = Math.min(line.top, r.top);
+        line.bottom = Math.max(line.bottom, bottom);
+        line.height = line.bottom - line.top;
+      }
+
+      line.segments.push([r.left, r.left + r.width]);
+    }
+
+    return lines.flatMap((line) => {
+      const segments = [...line.segments].sort((a, b) => a[0] - b[0]);
+      const merged: Array<[number, number]> = [];
+
+      for (const [start, end] of segments) {
+        const last = merged[merged.length - 1];
+        if (!last || start > last[1] + xGapTolerance) merged.push([start, end]);
+        else last[1] = Math.max(last[1], end);
+      }
+
+      return merged.map(([start, end]) => ({
+        top: line.top,
+        left: start,
+        width: Math.max(0, end - start),
+        height: line.height,
+        isPercent: allPercent,
+      }));
+    });
+  };
+
   const pageAnnotations = annotations.filter((a) => a.page === currentPage);
 
   return (
@@ -374,43 +429,35 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
                 />
               </Document>
 
-              {/* Render persisted highlights overlay — SVG so overlapping rects don't double-up */}
+              {/* Render persisted highlights overlay */}
               {pageAnnotations.map((h) => {
                 const rects = h.position?.rects || [];
                 if (rects.length === 0) return null;
                 const bgColor = h.color.replace('hsl(', 'hsla(').replace(')', ', 0.4)');
-                // Build a single SVG path from all rects so fill is uniform
-                const pathD = rects.map((r) => {
-                  const isPercent = r.top <= 100 && r.left <= 100 && r.width <= 100 && r.height <= 100;
-                  const x = isPercent ? `${r.left}%` : `${r.left}px`;
-                  const y = isPercent ? `${r.top}%` : `${r.top}px`;
-                  const w = isPercent ? `${r.width}%` : `${r.width}px`;
-                  const ht = isPercent ? `${r.height}%` : `${r.height}px`;
-                  return { x, y, w, ht, isPercent, raw: r };
-                });
+                const mergedRects = mergeHighlightRects(rects);
+
                 return (
                   <svg
                     key={h.id}
                     className="pointer-events-none"
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
-                    onClick={() => { if (highlightMode) removeAnnotation(h.id); }}
                   >
                     <title>{highlightMode ? 'Clique para remover grifo' : h.text}</title>
-                    {rects.map((r, i) => {
-                      const isPercent = r.top <= 100 && r.left <= 100 && r.width <= 100 && r.height <= 100;
-                      return (
-                        <rect
-                          key={i}
-                          x={isPercent ? `${r.left}%` : r.left}
-                          y={isPercent ? `${r.top}%` : r.top}
-                          width={isPercent ? `${r.width}%` : r.width}
-                          height={isPercent ? `${r.height}%` : r.height}
-                          rx="2"
-                          fill={bgColor}
-                          className="pointer-events-auto cursor-pointer"
-                        />
-                      );
-                    })}
+                    {mergedRects.map((r, i) => (
+                      <rect
+                        key={i}
+                        x={r.isPercent ? `${r.left}%` : r.left}
+                        y={r.isPercent ? `${r.top}%` : r.top}
+                        width={r.isPercent ? `${r.width}%` : r.width}
+                        height={r.isPercent ? `${r.height}%` : r.height}
+                        rx="2"
+                        fill={bgColor}
+                        className="pointer-events-auto cursor-pointer"
+                        onClick={() => {
+                          if (highlightMode) removeAnnotation(h.id);
+                        }}
+                      />
+                    ))}
                   </svg>
                 );
               })}
