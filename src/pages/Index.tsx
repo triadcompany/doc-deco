@@ -53,7 +53,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background safe-top safe-bottom safe-x">
+    <div className="min-h-screen bg-background safe-top safe-x pb-20 sm:pb-0 sm:safe-bottom">
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
@@ -86,39 +86,40 @@ const Index = () => {
           </div>
         ) : (
           <Tabs defaultValue="inicio" className="space-y-4 sm:space-y-6">
-            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-              <TabsList className="bg-secondary/50 w-max sm:w-auto">
-                <TabsTrigger value="inicio" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+            {/* Desktop/Tablet tabs - hidden on mobile */}
+            <div className="hidden sm:block overflow-x-auto scrollbar-none">
+              <TabsList className="bg-secondary/50 w-auto">
+                <TabsTrigger value="inicio" className="gap-1.5 text-sm px-3">
                   <BookOpen className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Início</span>
+                  Início
                 </TabsTrigger>
-                <TabsTrigger value="documentos" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                <TabsTrigger value="documentos" className="gap-1.5 text-sm px-3">
                   <FolderSearch className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Documentos</span>
+                  Documentos
                 </TabsTrigger>
-                <TabsTrigger value="pastas" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                <TabsTrigger value="pastas" className="gap-1.5 text-sm px-3">
                   <FolderTree className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Pastas</span>
+                  Pastas
                 </TabsTrigger>
-                <TabsTrigger value="favoritos" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                <TabsTrigger value="favoritos" className="gap-1.5 text-sm px-3">
                   <Star className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Favoritos</span>
+                  Favoritos
                 </TabsTrigger>
-                <TabsTrigger value="pesquisa" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                <TabsTrigger value="pesquisa" className="gap-1.5 text-sm px-3">
                   <Search className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Pesquisa</span>
+                  Pesquisa
                 </TabsTrigger>
-                <TabsTrigger value="meta" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                <TabsTrigger value="meta" className="gap-1.5 text-sm px-3">
                   <Target className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Meta</span>
+                  Meta
                 </TabsTrigger>
-                <TabsTrigger value="biblia" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                <TabsTrigger value="biblia" className="gap-1.5 text-sm px-3">
                   <BookOpen className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Bíblia</span>
+                  Bíblia
                 </TabsTrigger>
-                <TabsTrigger value="configuracoes" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                <TabsTrigger value="configuracoes" className="gap-1.5 text-sm px-3">
                   <Settings className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Config</span>
+                  Config
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -229,6 +230,31 @@ const Index = () => {
                 removeTranslator={removeTranslator}
               />
             </TabsContent>
+
+            {/* Mobile bottom tab bar */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
+              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-8 gap-0 p-0">
+                {[
+                  { value: 'inicio', icon: BookOpen, label: 'Início' },
+                  { value: 'documentos', icon: FolderSearch, label: 'Docs' },
+                  { value: 'pastas', icon: FolderTree, label: 'Pastas' },
+                  { value: 'favoritos', icon: Star, label: 'Favoritos' },
+                  { value: 'pesquisa', icon: Search, label: 'Busca' },
+                  { value: 'meta', icon: Target, label: 'Meta' },
+                  { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
+                  { value: 'configuracoes', icon: Settings, label: 'Config' },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="flex flex-col items-center gap-0.5 py-2 px-0 rounded-none text-muted-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    <span className="text-[9px] leading-tight">{tab.label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
           </Tabs>
         )}
       </main>
