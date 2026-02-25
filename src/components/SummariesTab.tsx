@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { PDFDocument } from '@/lib/types';
 import { DocSummary } from '@/hooks/use-document-summaries';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import {
   Dialog,
   DialogContent,
@@ -12,12 +13,18 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   FileText,
   Plus,
@@ -25,9 +32,12 @@ import {
   Trash2,
   Loader2,
   BookOpen,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface SummariesTabProps {
   documents: PDFDocument[];
@@ -44,6 +54,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [selectedDocId, setSelectedDocId] = useState('');
   const [summaryText, setSummaryText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [comboOpen, setComboOpen] = useState(false);
 
   const openNew = () => {
     setEditingSummary(null);
@@ -73,6 +84,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   };
 
   const getDoc = (docId: string) => documents.find((d) => d.id === docId);
+
+  const selectedDocTitle = selectedDocId ? getDocTitle(selectedDocId) : '';
 
   if (loading) {
     return (
@@ -131,7 +144,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-6">{s.summary}</p>
+                  <div
+                    className="text-sm text-muted-foreground line-clamp-6 prose prose-sm max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: s.summary }}
+                  />
                 </CardContent>
               </Card>
             );
@@ -140,31 +156,60 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingSummary ? 'Editar Resumo' : 'Novo Resumo'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">Documento</label>
-              <Select value={selectedDocId} onValueChange={setSelectedDocId} disabled={!!editingSummary}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um documento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {documents.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={comboOpen}
+                    className="w-full justify-between font-normal"
+                    disabled={!!editingSummary}
+                  >
+                    <span className="truncate">
+                      {selectedDocTitle || 'Pesquisar documento...'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Pesquisar documento..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum documento encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {documents.map((d) => (
+                          <CommandItem
+                            key={d.id}
+                            value={d.title}
+                            onSelect={() => {
+                              setSelectedDocId(d.id);
+                              setComboOpen(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", selectedDocId === d.id ? "opacity-100" : "opacity-0")} />
+                            <span className="truncate">{d.title}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Resumo</label>
-              <Textarea
+              <RichTextEditor
+                key={editingSummary?.id || 'new'}
                 value={summaryText}
-                onChange={(e) => setSummaryText(e.target.value)}
+                onChange={setSummaryText}
                 placeholder="Escreva o resumo do documento..."
-                className="min-h-[200px]"
               />
             </div>
           </div>
