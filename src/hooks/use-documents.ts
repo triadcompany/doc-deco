@@ -18,7 +18,7 @@ interface DbDocument {
   updated_at: string;
 }
 
-function toAppDoc(d: DbDocument): PDFDocument {
+function toAppDoc(d: any): PDFDocument {
   const { data } = supabase.storage.from('pdfs').getPublicUrl(d.storage_path);
   return {
     id: d.id,
@@ -32,6 +32,7 @@ function toAppDoc(d: DbDocument): PDFDocument {
     favorite: d.favorite,
     createdAt: d.created_at,
     url: data.publicUrl,
+    visibility: d.visibility || 'personal',
   };
 }
 
@@ -59,7 +60,7 @@ export function useDocuments() {
 
   const uploadDocument = async (
     file: File,
-    meta: { title: string; author: string; date: string; tags: string[] }
+    meta: { title: string; author: string; date: string; tags: string[]; visibility?: string }
   ) => {
     const { extractTextFromPDF } = await import('@/lib/pdf-text-extract');
 
@@ -93,6 +94,7 @@ export function useDocuments() {
       storage_path: storagePath,
       content,
       user_id: user?.id,
+      visibility: meta.visibility || 'personal',
     } as any);
 
     if (dbError) throw dbError;
@@ -114,7 +116,7 @@ export function useDocuments() {
 
   const updateDocument = async (
     id: string,
-    data: { title: string; author: string; date: string; tags: string[] }
+    data: { title: string; author: string; date: string; tags: string[]; visibility?: string }
   ) => {
     const { error } = await supabase
       .from('documents')
@@ -123,6 +125,7 @@ export function useDocuments() {
         author: data.author,
         date: data.date,
         tags: data.tags,
+        visibility: data.visibility || 'personal',
       } as any)
       .eq('id', id);
 
@@ -130,7 +133,7 @@ export function useDocuments() {
 
     setDocuments((prev) =>
       prev.map((d) =>
-        d.id === id ? { ...d, title: data.title, author: data.author, date: data.date, tags: data.tags } : d
+        d.id === id ? { ...d, title: data.title, author: data.author, date: data.date, tags: data.tags, visibility: (data.visibility as any) || 'personal' } : d
       )
     );
   };

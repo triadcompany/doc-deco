@@ -1,3 +1,5 @@
+export type DocVisibility = 'global' | 'personal';
+
 export interface PDFDocument {
   id: string;
   title: string;
@@ -10,6 +12,7 @@ export interface PDFDocument {
   favorite: boolean;
   createdAt: string;
   url?: string;
+  visibility: DocVisibility;
 }
 
 export interface Annotation {

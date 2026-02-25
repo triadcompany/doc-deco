@@ -24,7 +24,7 @@ type Visibility = 'global' | 'personal' | 'group';
 interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (file: File, meta: { title: string; author: string; date: string; tags: string[] }) => Promise<void>;
+  onUpload: (file: File, meta: { title: string; author: string; date: string; tags: string[]; visibility: string }) => Promise<void>;
   onComplete: () => void;
   authorsList?: string[];
   translatorsList?: string[];
@@ -98,6 +98,7 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
           author,
           date: mode === 'single' ? singleDate || date : date,
           tags,
+          visibility,
         });
       }
       toast.success(files.length > 1 ? 'Upload concluído!' : 'Documento salvo!');
