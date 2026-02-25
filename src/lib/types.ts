@@ -15,6 +15,11 @@ export interface PDFDocument {
   visibility: DocVisibility;
 }
 
+export interface SearchContext {
+  searchTerm: string;
+  snippet: string;
+}
+
 export interface Annotation {
   id: string;
   documentId: string;

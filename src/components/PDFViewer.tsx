@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
-import { PDFDocument } from '@/lib/types';
+import { PDFDocument, SearchContext } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
@@ -24,6 +24,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface PDFViewerProps {
   doc: PDFDocument;
   onBack: () => void;
+  searchContext?: SearchContext | null;
 }
 
 interface Highlight {
@@ -42,7 +43,7 @@ const highlightColors = [
   { name: 'Laranja', color: 'hsl(25, 95%, 53%)' },
 ];
 
-export function PDFViewer({ doc, onBack }: PDFViewerProps) {
+export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(doc.pages || 1);
   const [zoom, setZoom] = useState(100);
@@ -50,6 +51,7 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
   const [highlightMode, setHighlightMode] = useState(false);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchPageFound, setSearchPageFound] = useState(false);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
@@ -69,10 +71,68 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
     return () => observer.disconnect();
   }, []);
 
-  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+  const onDocumentLoadSuccess = useCallback(async ({ numPages }: { numPages: number }) => {
     setTotalPages(numPages);
     setLoading(false);
-  }, []);
+
+    // If we have a search context, find the page containing the snippet
+    if (searchContext?.snippet && !searchPageFound && doc.url) {
+      try {
+        const pdfjsLib = pdfjs;
+        const loadingTask = pdfjsLib.getDocument(doc.url);
+        const pdf = await loadingTask.promise;
+        
+        // Take a meaningful portion of the snippet (strip leading/trailing ellipsis)
+        const cleanSnippet = searchContext.snippet.replace(/^\.{3}/, '').replace(/\.{3}$/, '').trim();
+        // Use the first 80 chars as a search needle
+        const needle = cleanSnippet.slice(0, 80).replace(/\s+/g, ' ').trim().toLowerCase();
+        
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map((item: any) => item.str).join(' ').toLowerCase();
+          if (pageText.includes(needle.slice(0, 40))) {
+            setCurrentPage(i);
+            setSearchPageFound(true);
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not find search page:', e);
+      }
+    }
+  }, [searchContext, searchPageFound, doc.url]);
+
+  // Highlight search term in the text layer after page render
+  useEffect(() => {
+    if (!searchContext?.searchTerm) return;
+    const container = pageContainerRef.current;
+    if (!container) return;
+
+    // Small delay to wait for text layer render
+    const timeout = setTimeout(() => {
+      const textLayer = container.querySelector('.react-pdf__Page__textContent');
+      if (!textLayer) return;
+
+      const words = searchContext.searchTerm.split(/\s+/).filter(Boolean);
+      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
+      const regex = new RegExp(pattern, 'gi');
+
+      const spans = textLayer.querySelectorAll('span');
+      spans.forEach((span) => {
+        const text = span.textContent || '';
+        if (regex.test(text)) {
+          const html = text.replace(regex, (match) =>
+            `<mark style="background: hsl(48, 96%, 53%, 0.5); color: inherit; border-radius: 2px; padding: 0 1px;">${match}</mark>`
+          );
+          span.innerHTML = html;
+        }
+        regex.lastIndex = 0;
+      });
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [currentPage, searchContext, loading]);
 
   // Capture text selection and create highlight
   const handleSelectionEnd = useCallback(() => {

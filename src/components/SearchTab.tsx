@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SearchContext } from '@/lib/types';
 import { useDocuments } from '@/hooks/use-documents';
 import { PDFCard } from '@/components/PDFCard';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,7 @@ function highlightTerm(text: string, term: string): React.ReactNode {
 function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete }: {
   doc: PDFDocument & { snippet?: string };
   currentTerm: string;
-  onView: (doc: PDFDocument) => void;
+  onView: (doc: PDFDocument, searchContext?: SearchContext) => void;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -66,7 +67,7 @@ function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete
       <PDFCard
         doc={doc}
         viewMode="list"
-        onView={onView}
+        onView={() => onView(doc, doc.snippet && currentTerm ? { searchTerm: currentTerm, snippet: doc.snippet } : undefined)}
         onToggleFavorite={onToggleFavorite}
         onDelete={onDelete}
       />
@@ -83,7 +84,7 @@ function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete
 
 interface SearchTabProps {
   documents: PDFDocument[];
-  onView: (doc: PDFDocument) => void;
+  onView: (doc: PDFDocument, searchContext?: SearchContext) => void;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
   authorsList?: string[];
