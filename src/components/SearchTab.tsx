@@ -12,9 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, FileText, Loader2 } from 'lucide-react';
+import { Search, FileText, Loader2, Copy, Check } from 'lucide-react';
 import { PDFDocument } from '@/lib/types';
 import React from 'react';
+
+function formatCitationAPA(doc: PDFDocument): string {
+  const author = doc.author || 'Autor desconhecido';
+  let year = '';
+  if (doc.date) {
+    const match = doc.date.match(/(\d{4})/);
+    year = match ? match[1] : 's.d.';
+  } else {
+    year = 's.d.';
+  }
+  const title = doc.title || 'Sem título';
+  const pages = doc.pages ? ` (${doc.pages} p.)` : '';
+  return `${author}. (${year}). ${title}${pages}. [Documento digital].`;
+}
 
 function highlightTerm(text: string, term: string): React.ReactNode {
   if (!term) return text;
@@ -28,6 +42,57 @@ function highlightTerm(text: string, term: string): React.ReactNode {
     )
   );
 }
+function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete }: {
+  doc: PDFDocument & { snippet?: string };
+  currentTerm: string;
+  onView: (doc: PDFDocument) => void;
+  onToggleFavorite: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const citation = formatCitationAPA(doc);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(citation);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-0">
+      <PDFCard
+        doc={doc}
+        viewMode="list"
+        onView={onView}
+        onToggleFavorite={onToggleFavorite}
+        onDelete={onDelete}
+      />
+      <div className="ml-14 mr-4 -mt-1 mb-2 px-3 py-2 rounded-b-lg bg-secondary/30 border border-t-0 border-border/50 space-y-1.5">
+        {doc.snippet && (
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {highlightTerm(doc.snippet, currentTerm)}
+          </p>
+        )}
+        <div className="flex items-center gap-2">
+          <p className="text-xs italic text-muted-foreground/80 flex-1 select-all">
+            {citation}
+          </p>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={handleCopy}
+            title="Copiar citação"
+          >
+            {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface SearchTabProps {
   documents: PDFDocument[];
   onView: (doc: PDFDocument) => void;
@@ -238,22 +303,14 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
           ) : (
             <div className="space-y-3">
               {results.map((doc) => (
-                <div key={doc.id} className="space-y-0">
-                  <PDFCard
-                    doc={doc}
-                    viewMode="list"
-                    onView={onView}
-                    onToggleFavorite={onToggleFavorite}
-                    onDelete={onDelete}
-                  />
-                  {doc.snippet && (
-                    <div className="ml-14 mr-4 -mt-1 mb-2 px-3 py-2 rounded-b-lg bg-secondary/30 border border-t-0 border-border/50">
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {highlightTerm(doc.snippet, currentTerm)}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <SearchResultItem
+                  key={doc.id}
+                  doc={doc}
+                  currentTerm={currentTerm}
+                  onView={onView}
+                  onToggleFavorite={onToggleFavorite}
+                  onDelete={onDelete}
+                />
               ))}
             </div>
           )}
