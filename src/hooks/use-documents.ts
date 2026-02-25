@@ -175,7 +175,10 @@ export function useDocuments() {
 
     if (term) {
       if (searchType === 'exact') {
-        query = query.ilike('content', `%${term}%`);
+        // PDF content often has multiple spaces between words, so we replace
+        // spaces with % wildcards to match regardless of whitespace differences
+        const pattern = term.split(/\s+/).filter(Boolean).join('%');
+        query = query.ilike('content', `%${pattern}%`);
       } else {
         const words = term.split(/\s+/).filter(Boolean);
         for (const word of words) {
