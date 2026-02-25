@@ -27,7 +27,7 @@ export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEd
 
     for (const doc of documents) {
       const author = doc.author || 'Sem autor';
-      const dateKey = doc.date?.slice(0, 7) || 'sem-data'; // YYYY-MM
+      const dateKey = doc.date?.slice(0, 4) || 'sem-data'; // YYYY
       if (!byAuthor.has(author)) byAuthor.set(author, new Map());
       const dateMap = byAuthor.get(author)!;
       if (!dateMap.has(dateKey)) dateMap.set(dateKey, []);
@@ -38,9 +38,7 @@ export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEd
       .map(([author, dateMap]) => {
         const dateFolders = Array.from(dateMap.entries())
           .map(([dateKey, docs]) => {
-            const label = dateKey === 'sem-data'
-              ? 'Sem data'
-              : new Date(dateKey + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            const label = dateKey === 'sem-data' ? 'Sem data' : dateKey;
             return { date: dateKey, label, docs: docs.sort((a, b) => a.title.localeCompare(b.title)) };
           })
           .sort((a, b) => b.date.localeCompare(a.date));
