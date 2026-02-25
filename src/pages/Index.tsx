@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PDFDocument, ViewMode, SortBy } from '@/lib/types';
+import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
 import { PDFCard } from '@/components/PDFCard';
 import { PDFViewer } from '@/components/PDFViewer';
@@ -32,10 +33,12 @@ import {
   FolderSearch,
   Loader2,
   Settings,
+  LogOut,
 } from 'lucide-react';
 
 const Index = () => {
   const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument } = useDocuments();
+  const { signOut } = useAuth();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,6 +109,9 @@ const Index = () => {
             <Button onClick={() => setUploadOpen(true)} className="glow-amber">
               <Upload className="w-4 h-4" />
               Upload
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => signOut()} title="Sair">
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
