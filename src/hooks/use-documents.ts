@@ -165,7 +165,8 @@ export function useDocuments() {
     searchType: 'exact' | 'proximity',
     filters?: { author?: string; tags?: string[]; startDate?: string; endDate?: string }
   ): Promise<(PDFDocument & { snippet?: string })[]> => {
-    let query = supabase.from('documents').select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, content');
+    // Step 1: Query only IDs + metadata (no content) for speed
+    let query = supabase.from('documents').select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility');
 
     if (term) {
       if (searchType === 'exact') {
@@ -181,44 +182,51 @@ export function useDocuments() {
     if (filters?.author && filters.author !== 'all') {
       query = query.eq('author', filters.author);
     }
-
     if (filters?.startDate) {
       query = query.gte('date', filters.startDate);
     }
-
     if (filters?.endDate) {
       query = query.lte('date', filters.endDate);
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
-
     if (error || !data) return [];
 
-    let results = (data as any[]).map((d) => {
-      const doc = toAppDoc(d);
-      let snippet: string | undefined;
-
-      if (term && d.content) {
-        const content = d.content as string;
-        const lowerContent = content.toLowerCase();
-        const lowerTerm = term.toLowerCase();
-        const idx = lowerContent.indexOf(lowerTerm);
-        if (idx !== -1) {
-          const start = Math.max(0, idx - 150);
-          const end = Math.min(content.length, idx + lowerTerm.length + 150);
-          const before = start > 0 ? '...' : '';
-          const after = end < content.length ? '...' : '';
-          snippet = before + content.slice(start, end) + after;
-        }
-      }
-
-      return { ...doc, snippet };
-    });
+    let results = (data as any[]).map((d) => ({ ...toAppDoc(d), snippet: undefined as string | undefined }));
 
     if (filters?.tags && filters.tags.length > 0) {
       results = results.filter((d) =>
         filters.tags!.some((st) => d.tags.some((t: string) => t.toLowerCase().includes(st)))
       );
+    }
+
+    // Step 2: Fetch snippets only for the first 50 results (content field is heavy)
+    if (term && results.length > 0) {
+      const idsToSnippet = results.slice(0, 50).map((r) => r.id);
+      const { data: contentData } = await supabase
+        .from('documents')
+        .select('id, content')
+        .in('id', idsToSnippet);
+
+      if (contentData) {
+        const contentMap = new Map<string, string>();
+        for (const row of contentData as any[]) {
+          if (row.content) contentMap.set(row.id, row.content);
+        }
+
+        const lowerTerm = term.toLowerCase();
+        results = results.map((doc) => {
+          const content = contentMap.get(doc.id);
+          if (!content) return doc;
+          const idx = content.toLowerCase().indexOf(lowerTerm);
+          if (idx === -1) return doc;
+          const start = Math.max(0, idx - 150);
+          const end = Math.min(content.length, idx + lowerTerm.length + 150);
+          const before = start > 0 ? '...' : '';
+          const after = end < content.length ? '...' : '';
+          return { ...doc, snippet: before + content.slice(start, end) + after };
+        });
+      }
     }
 
     return results;
