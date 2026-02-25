@@ -18,6 +18,18 @@ interface AuthorFolder {
   totalDocs: number;
 }
 
+function buildSubfolderKey(doc: PDFDocument): string {
+  const year = doc.date?.slice(0, 4) || 'sem-data';
+  const translator = doc.translator?.trim();
+  if (translator) return `${translator} - ${year}`;
+  return year;
+}
+
+function buildSubfolderLabel(key: string): string {
+  if (key === 'sem-data') return 'Sem data';
+  return key;
+}
+
 export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEdit }: FoldersTabProps) {
   const [expandedAuthor, setExpandedAuthor] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -27,7 +39,7 @@ export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEd
 
     for (const doc of documents) {
       const author = doc.author || 'Sem autor';
-      const dateKey = doc.date?.slice(0, 4) || 'sem-data'; // YYYY
+      const dateKey = buildSubfolderKey(doc);
       if (!byAuthor.has(author)) byAuthor.set(author, new Map());
       const dateMap = byAuthor.get(author)!;
       if (!dateMap.has(dateKey)) dateMap.set(dateKey, []);
@@ -38,7 +50,7 @@ export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEd
       .map(([author, dateMap]) => {
         const dateFolders = Array.from(dateMap.entries())
           .map(([dateKey, docs]) => {
-            const label = dateKey === 'sem-data' ? 'Sem data' : dateKey;
+            const label = buildSubfolderLabel(dateKey);
             return { date: dateKey, label, docs: docs.sort((a, b) => a.title.localeCompare(b.title)) };
           })
           .sort((a, b) => b.date.localeCompare(a.date));

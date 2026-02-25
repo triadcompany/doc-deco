@@ -34,6 +34,7 @@ function toAppDoc(d: any): PDFDocument {
     createdAt: d.created_at,
     url: data.publicUrl,
     visibility: d.visibility || 'personal',
+    translator: d.translator || '',
   };
 }
 
@@ -48,7 +49,7 @@ export function useDocuments() {
 
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility')
+        .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -90,7 +91,7 @@ export function useDocuments() {
 
   const uploadDocument = async (
     file: File,
-    meta: { title: string; author: string; date: string; tags: string[]; visibility?: string }
+    meta: { title: string; author: string; date: string; tags: string[]; visibility?: string; translator?: string }
   ) => {
     const { extractTextFromPDF } = await import('@/lib/pdf-text-extract');
 
@@ -127,6 +128,7 @@ export function useDocuments() {
       content,
       user_id: user?.id,
       visibility: meta.visibility || 'personal',
+      translator: meta.translator || '',
     } as any);
 
     if (dbError) throw dbError;
@@ -193,7 +195,7 @@ export function useDocuments() {
     // Step 1: Query only IDs + metadata (no content) for speed
     let query = supabase
       .from('documents')
-      .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility');
+      .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator');
 
     if (filters?.author && filters.author !== 'all') {
       query = query.eq('author', filters.author);

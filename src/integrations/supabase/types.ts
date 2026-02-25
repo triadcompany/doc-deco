@@ -218,6 +218,7 @@ export type Database = {
           storage_path: string
           tags: string[]
           title: string
+          translator: string
           updated_at: string
           user_id: string | null
           visibility: string
@@ -235,6 +236,7 @@ export type Database = {
           storage_path: string
           tags?: string[]
           title: string
+          translator?: string
           updated_at?: string
           user_id?: string | null
           visibility?: string
@@ -252,6 +254,7 @@ export type Database = {
           storage_path?: string
           tags?: string[]
           title?: string
+          translator?: string
           updated_at?: string
           user_id?: string | null
           visibility?: string
