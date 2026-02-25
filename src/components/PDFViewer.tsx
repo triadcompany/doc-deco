@@ -165,46 +165,46 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top bar */}
-      <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0 glass mt-[20px]">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold truncate max-w-[300px]">{doc.title}</h1>
-            <p className="text-xs text-muted-foreground">{doc.author}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.max(50, z - 10))}>
-            <ZoomOut className="w-4 h-4" />
-          </Button>
-          <span className="text-xs text-muted-foreground w-12 text-center">{zoom}%</span>
-          <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.min(200, z + 10))}>
-            <ZoomIn className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            variant={highlightMode ? 'default' : 'ghost'}
-            size="icon"
-            onClick={() => setHighlightMode(!highlightMode)}
-            title="Modo grifo"
-          >
-            <Highlighter className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Bookmark className="w-4 h-4" />
-          </Button>
-          {pdfUrl && (
-            <Button variant="ghost" size="icon" asChild>
-              <a href={pdfUrl} download={doc.fileName} target="_blank" rel="noopener noreferrer">
-                <Download className="w-4 h-4" />
-              </a>
+      <header className="border-b border-border shrink-0 glass mt-[20px] sm:mt-0">
+        <div className="h-14 flex items-center justify-between px-2 sm:px-4">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
-          )}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xs sm:text-sm font-semibold truncate">{doc.title}</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{doc.author}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.max(50, z - 10))}>
+              <ZoomOut className="w-3.5 h-3.5" />
+            </Button>
+            <span className="text-[10px] sm:text-xs text-muted-foreground w-9 sm:w-12 text-center">{zoom}%</span>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.min(200, z + 10))}>
+              <ZoomIn className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant={highlightMode ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setHighlightMode(!highlightMode)}
+              title="Modo grifo"
+            >
+              <Highlighter className="w-3.5 h-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Bookmark className="w-3.5 h-3.5" />
+            </Button>
+            {pdfUrl && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                <a href={pdfUrl} download={doc.fileName} target="_blank" rel="noopener noreferrer">
+                  <Download className="w-3.5 h-3.5" />
+                </a>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
