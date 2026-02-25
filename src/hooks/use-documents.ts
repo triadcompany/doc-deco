@@ -222,14 +222,19 @@ export function useDocuments() {
           if (row.content) contentMap.set(row.id, row.content);
         }
 
-        const lowerTerm = term.toLowerCase();
+        const termWords = term.toLowerCase().split(/\s+/).filter(Boolean);
+        const regexPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+        const termRegex = new RegExp(regexPattern, 'i');
+
         results = results.map((doc) => {
           const content = contentMap.get(doc.id);
           if (!content) return doc;
-          const idx = content.toLowerCase().indexOf(lowerTerm);
-          if (idx === -1) return doc;
+          const match = termRegex.exec(content);
+          if (!match) return doc;
+          const idx = match.index;
+          const matchLen = match[0].length;
           const start = Math.max(0, idx - 300);
-          const end = Math.min(content.length, idx + lowerTerm.length + 300);
+          const end = Math.min(content.length, idx + matchLen + 300);
           const before = start > 0 ? '...' : '';
           const after = end < content.length ? '...' : '';
           return { ...doc, snippet: before + content.slice(start, end) + after };
