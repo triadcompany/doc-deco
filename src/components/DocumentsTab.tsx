@@ -9,8 +9,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, FileText, LayoutGrid, List } from 'lucide-react';
+import { Search, FileText, LayoutGrid, List, Trash2, X, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface DocumentsTabProps {
   documents: PDFDocument[];
@@ -25,6 +36,9 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -43,25 +57,76 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
 
   const filteredDocs = useMemo(() => {
     let docs = [...documents];
-
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       docs = docs.filter((d) => d.title.toLowerCase().includes(q));
     }
-
     if (selectedYear !== 'all') {
       docs = docs.filter((d) => d.date.startsWith(selectedYear));
     }
-
     if (selectedAuthor !== 'all') {
       docs = docs.filter((d) => d.author === selectedAuthor);
     }
-
     return docs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [documents, searchQuery, selectedYear, selectedAuthor]);
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredDocs.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredDocs.map((d) => d.id)));
+    }
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    for (const id of selectedIds) {
+      await onDelete(id);
+    }
+    setConfirmOpen(false);
+    exitSelectionMode();
+  };
+
   return (
     <div className="space-y-4">
+      {/* Selection bar */}
+      {selectionMode && (
+        <div className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg border border-border">
+          <Checkbox
+            checked={selectedIds.size === filteredDocs.length && filteredDocs.length > 0}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium flex-1">
+            {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={selectedIds.size === 0}
+            onClick={() => setConfirmOpen(true)}
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            Excluir ({selectedIds.size})
+          </Button>
+          <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
+            <X className="w-4 h-4 mr-1" />
+            Cancelar
+          </Button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="relative flex-1 w-full">
@@ -98,6 +163,13 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
           </SelectContent>
         </Select>
 
+        {!selectionMode && (
+          <Button variant="outline" size="sm" className="h-9" onClick={() => setSelectionMode(true)}>
+            <CheckSquare className="w-4 h-4 mr-1" />
+            Selecionar
+          </Button>
+        )}
+
         <div className="flex border border-border rounded-md">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -133,32 +205,69 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {filteredDocs.map((doc) => (
-            <PDFCard
-              key={doc.id}
-              doc={doc}
-              viewMode="grid"
-              onView={onView}
-              onToggleFavorite={onToggleFavorite}
-              onDelete={onDelete}
-              onEdit={onEdit}
-            />
+            <div key={doc.id} className="relative">
+              {selectionMode && (
+                <div
+                  className="absolute top-2 left-2 z-10"
+                  onClick={(e) => { e.stopPropagation(); toggleSelect(doc.id); }}
+                >
+                  <Checkbox checked={selectedIds.has(doc.id)} />
+                </div>
+              )}
+              <div className={selectionMode && selectedIds.has(doc.id) ? 'ring-2 ring-primary rounded-xl' : ''}>
+                <PDFCard
+                  doc={doc}
+                  viewMode="grid"
+                  onView={selectionMode ? () => toggleSelect(doc.id) : onView}
+                  onToggleFavorite={onToggleFavorite}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                />
+              </div>
+            </div>
           ))}
         </div>
       ) : (
         <div className="space-y-2">
           {filteredDocs.map((doc) => (
-            <PDFCard
-              key={doc.id}
-              doc={doc}
-              viewMode="list"
-              onView={onView}
-              onToggleFavorite={onToggleFavorite}
-              onDelete={onDelete}
-              onEdit={onEdit}
-            />
+            <div key={doc.id} className="flex items-center gap-2">
+              {selectionMode && (
+                <div onClick={(e) => { e.stopPropagation(); toggleSelect(doc.id); }}>
+                  <Checkbox checked={selectedIds.has(doc.id)} />
+                </div>
+              )}
+              <div className={`flex-1 ${selectionMode && selectedIds.has(doc.id) ? 'ring-2 ring-primary rounded-xl' : ''}`}>
+                <PDFCard
+                  doc={doc}
+                  viewMode="list"
+                  onView={selectionMode ? () => toggleSelect(doc.id) : onView}
+                  onToggleFavorite={onToggleFavorite}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                />
+              </div>
+            </div>
           ))}
         </div>
       )}
+
+      {/* Confirm bulk delete */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir documentos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedIds.size} documento{selectedIds.size !== 1 ? 's' : ''}? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
