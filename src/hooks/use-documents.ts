@@ -224,25 +224,28 @@ export function useDocuments() {
 
         const termWords = term.toLowerCase().split(/\s+/).filter(Boolean);
         const regexPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
-        const termRegex = new RegExp(regexPattern, 'i');
+        const termRegex = new RegExp(regexPattern, 'gi');
 
-        results = results.map((doc) => {
+        const expandedResults: typeof results = [];
+        for (const doc of results) {
           const content = contentMap.get(doc.id);
-          if (!content) return doc;
-          const match = termRegex.exec(content);
-          if (!match) return doc;
-          const idx = match.index;
-          const matchLen = match[0].length;
-          const start = Math.max(0, idx - 300);
-          const end = Math.min(content.length, idx + matchLen + 300);
-          const before = start > 0 ? '...' : '';
-          const after = end < content.length ? '...' : '';
-          return { ...doc, snippet: before + content.slice(start, end) + after };
-        });
+          if (!content) continue;
+          let match: RegExpExecArray | null;
+          let found = false;
+          while ((match = termRegex.exec(content)) !== null) {
+            found = true;
+            const idx = match.index;
+            const matchLen = match[0].length;
+            const start = Math.max(0, idx - 300);
+            const end = Math.min(content.length, idx + matchLen + 300);
+            const before = start > 0 ? '...' : '';
+            const after = end < content.length ? '...' : '';
+            expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
+          }
+          if (!found) continue;
+        }
+        results = expandedResults;
       }
-
-      // Filter out documents that didn't produce a snippet (no real match in content)
-      results = results.filter((doc) => doc.snippet);
     }
 
     return results;
