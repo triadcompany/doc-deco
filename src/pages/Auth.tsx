@@ -26,12 +26,18 @@ const Auth = () => {
         await signIn(email, password);
       } else {
         await signUp(email, password, displayName);
+        toast({
+          title: 'Conta criada',
+          description: 'Sua conta foi criada com sucesso!',
+        });
       }
-      navigate('/');
     } catch (err: any) {
+      const msg = err?.message || 'Algo deu errado';
       toast({
         title: 'Erro',
-        description: err.message || 'Algo deu errado',
+        description: msg.includes('tempo limite')
+          ? 'O servidor está demorando para responder. Tente novamente em alguns segundos.'
+          : msg,
         variant: 'destructive',
       });
     } finally {
