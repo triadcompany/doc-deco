@@ -12,6 +12,7 @@ export const mockDocuments: PDFDocument[] = [
     tags: ['IA', 'Tecnologia'],
     favorite: true,
     createdAt: '2024-03-20T10:00:00Z',
+    visibility: 'personal',
   },
   {
     id: '2',
@@ -24,6 +25,7 @@ export const mockDocuments: PDFDocument[] = [
     tags: ['Direito', 'Constituição'],
     favorite: false,
     createdAt: '2024-01-05T14:30:00Z',
+    visibility: 'personal',
   },
   {
     id: '3',
@@ -36,6 +38,7 @@ export const mockDocuments: PDFDocument[] = [
     tags: ['Matemática', 'Cálculo'],
     favorite: true,
     createdAt: '2024-02-01T09:15:00Z',
+    visibility: 'personal',
   },
   {
     id: '4',
@@ -48,6 +51,7 @@ export const mockDocuments: PDFDocument[] = [
     tags: ['Economia', 'Educação'],
     favorite: false,
     createdAt: '2024-06-10T16:45:00Z',
+    visibility: 'personal',
   },
   {
     id: '5',
@@ -60,6 +64,7 @@ export const mockDocuments: PDFDocument[] = [
     tags: ['Programação', 'Python'],
     favorite: false,
     createdAt: '2024-03-01T11:20:00Z',
+    visibility: 'personal',
   },
   {
     id: '6',
@@ -72,6 +77,7 @@ export const mockDocuments: PDFDocument[] = [
     tags: ['Filosofia'],
     favorite: true,
     createdAt: '2023-10-15T08:00:00Z',
+    visibility: 'personal',
   },
 ];
 
