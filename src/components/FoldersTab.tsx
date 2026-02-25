@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { PDFDocument } from '@/lib/types';
 import { PDFCard } from '@/components/PDFCard';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, CalendarDays, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, CalendarDays, BookOpen } from 'lucide-react';
 
 interface FoldersTabProps {
   documents: PDFDocument[];
@@ -12,54 +11,87 @@ interface FoldersTabProps {
   onEdit?: (doc: PDFDocument) => void;
 }
 
-interface AuthorFolder {
-  author: string;
-  dateFolders: { date: string; label: string; docs: PDFDocument[] }[];
+interface YearFolder {
+  year: string;
+  docs: PDFDocument[];
+}
+
+interface TranslatorFolder {
+  translator: string;
+  yearFolders: YearFolder[];
   totalDocs: number;
 }
 
-function buildSubfolderKey(doc: PDFDocument): string {
-  const year = doc.date?.slice(0, 4) || 'sem-data';
-  const translator = doc.translator?.trim();
-  if (translator) return `${translator} - ${year}`;
-  return year;
+interface AuthorFolder {
+  author: string;
+  // For William Branham: 3-level (translator → year)
+  translatorFolders?: TranslatorFolder[];
+  // For others: 2-level (year only)
+  yearFolders?: YearFolder[];
+  totalDocs: number;
 }
 
-function buildSubfolderLabel(key: string): string {
-  if (key === 'sem-data') return 'Sem data';
-  return key;
+function getYear(doc: PDFDocument): string {
+  return doc.date?.slice(0, 4) || 'sem-data';
+}
+
+function yearLabel(y: string): string {
+  return y === 'sem-data' ? 'Sem data' : y;
 }
 
 export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEdit }: FoldersTabProps) {
   const [expandedAuthor, setExpandedAuthor] = useState<string | null>(null);
-  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [expandedTranslator, setExpandedTranslator] = useState<string | null>(null);
+  const [expandedYear, setExpandedYear] = useState<string | null>(null);
 
   const folders = useMemo<AuthorFolder[]>(() => {
-    const byAuthor = new Map<string, Map<string, PDFDocument[]>>();
-
+    const byAuthor = new Map<string, PDFDocument[]>();
     for (const doc of documents) {
       const author = doc.author || 'Sem autor';
-      const dateKey = buildSubfolderKey(doc);
-      if (!byAuthor.has(author)) byAuthor.set(author, new Map());
-      const dateMap = byAuthor.get(author)!;
-      if (!dateMap.has(dateKey)) dateMap.set(dateKey, []);
-      dateMap.get(dateKey)!.push(doc);
+      if (!byAuthor.has(author)) byAuthor.set(author, []);
+      byAuthor.get(author)!.push(doc);
     }
 
     return Array.from(byAuthor.entries())
-      .map(([author, dateMap]) => {
-        const dateFolders = Array.from(dateMap.entries())
-          .map(([dateKey, docs]) => {
-            const label = buildSubfolderLabel(dateKey);
-            return { date: dateKey, label, docs: docs.sort((a, b) => a.title.localeCompare(b.title)) };
-          })
-          .sort((a, b) => b.date.localeCompare(a.date));
+      .map(([author, docs]): AuthorFolder => {
+        const isWB = author.toLowerCase().includes('william branham');
 
-        return {
-          author,
-          dateFolders,
-          totalDocs: dateFolders.reduce((sum, f) => sum + f.docs.length, 0),
-        };
+        if (isWB) {
+          // 3-level: translator → year → docs
+          const byTranslator = new Map<string, Map<string, PDFDocument[]>>();
+          for (const doc of docs) {
+            const translator = doc.translator?.trim() || 'Sem tradutor';
+            const year = getYear(doc);
+            if (!byTranslator.has(translator)) byTranslator.set(translator, new Map());
+            const yearMap = byTranslator.get(translator)!;
+            if (!yearMap.has(year)) yearMap.set(year, []);
+            yearMap.get(year)!.push(doc);
+          }
+
+          const translatorFolders: TranslatorFolder[] = Array.from(byTranslator.entries())
+            .map(([translator, yearMap]) => {
+              const yearFolders = Array.from(yearMap.entries())
+                .map(([year, docs]) => ({ year, docs: docs.sort((a, b) => a.title.localeCompare(b.title)) }))
+                .sort((a, b) => b.year.localeCompare(a.year));
+              return { translator, yearFolders, totalDocs: docs.filter(d => (d.translator?.trim() || 'Sem tradutor') === translator).length };
+            })
+            .sort((a, b) => a.translator.localeCompare(b.translator));
+
+          return { author, translatorFolders, totalDocs: docs.length };
+        } else {
+          // 2-level: year → docs
+          const byYear = new Map<string, PDFDocument[]>();
+          for (const doc of docs) {
+            const year = getYear(doc);
+            if (!byYear.has(year)) byYear.set(year, []);
+            byYear.get(year)!.push(doc);
+          }
+          const yearFolders = Array.from(byYear.entries())
+            .map(([year, docs]) => ({ year, docs: docs.sort((a, b) => a.title.localeCompare(b.title)) }))
+            .sort((a, b) => b.year.localeCompare(a.year));
+
+          return { author, yearFolders, totalDocs: docs.length };
+        }
       })
       .sort((a, b) => a.author.localeCompare(b.author));
   }, [documents]);
@@ -75,11 +107,11 @@ export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEd
 
         return (
           <div key={folder.author} className="rounded-lg border border-border overflow-hidden">
-            {/* Author row */}
             <button
               onClick={() => {
                 setExpandedAuthor(isAuthorOpen ? null : folder.author);
-                setExpandedDate(null);
+                setExpandedTranslator(null);
+                setExpandedYear(null);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
             >
@@ -95,41 +127,93 @@ export function FoldersTab({ documents, onView, onToggleFavorite, onDelete, onEd
                 : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
             </button>
 
-            {/* Date subfolders */}
-            {isAuthorOpen && (
+            {isAuthorOpen && folder.translatorFolders && (
               <div className="border-t border-border bg-secondary/20">
-                {folder.dateFolders.map((df) => {
-                  const isDateOpen = expandedDate === `${folder.author}__${df.date}`;
-                  const dateKey = `${folder.author}__${df.date}`;
+                {folder.translatorFolders.map((tf) => {
+                  const transKey = `${folder.author}__${tf.translator}`;
+                  const isTransOpen = expandedTranslator === transKey;
 
                   return (
-                    <div key={df.date}>
+                    <div key={tf.translator}>
                       <button
-                        onClick={() => setExpandedDate(isDateOpen ? null : dateKey)}
+                        onClick={() => {
+                          setExpandedTranslator(isTransOpen ? null : transKey);
+                          setExpandedYear(null);
+                        }}
                         className="w-full flex items-center gap-3 px-4 pl-10 py-2.5 hover:bg-secondary/50 transition-colors text-left"
                       >
-                        <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="text-sm flex-1 truncate capitalize">{df.label}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {df.docs.length}
-                        </span>
-                        {isDateOpen
+                        {isTransOpen
+                          ? <FolderOpen className="w-4 h-4 text-primary shrink-0" />
+                          : <Folder className="w-4 h-4 text-muted-foreground shrink-0" />}
+                        <span className="text-sm flex-1 truncate">{tf.translator}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums">{tf.totalDocs}</span>
+                        {isTransOpen
                           ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                       </button>
 
-                      {isDateOpen && (
+                      {isTransOpen && (
+                        <div className="border-t border-border/50">
+                          {tf.yearFolders.map((yf) => {
+                            const yearKey = `${transKey}__${yf.year}`;
+                            const isYearOpen = expandedYear === yearKey;
+
+                            return (
+                              <div key={yf.year}>
+                                <button
+                                  onClick={() => setExpandedYear(isYearOpen ? null : yearKey)}
+                                  className="w-full flex items-center gap-3 px-4 pl-16 py-2 hover:bg-secondary/50 transition-colors text-left"
+                                >
+                                  <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+                                  <span className="text-sm flex-1 truncate">{yearLabel(yf.year)}</span>
+                                  <span className="text-xs text-muted-foreground tabular-nums">{yf.docs.length}</span>
+                                  {isYearOpen
+                                    ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                    : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                                </button>
+
+                                {isYearOpen && (
+                                  <div className="px-4 pl-20 pb-3 pt-1 space-y-2">
+                                    {yf.docs.map((doc) => (
+                                      <PDFCard key={doc.id} doc={doc} viewMode="list" onView={onView} onToggleFavorite={onToggleFavorite} onDelete={onDelete} onEdit={onEdit} />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {isAuthorOpen && folder.yearFolders && (
+              <div className="border-t border-border bg-secondary/20">
+                {folder.yearFolders.map((yf) => {
+                  const yearKey = `${folder.author}__${yf.year}`;
+                  const isYearOpen = expandedYear === yearKey;
+
+                  return (
+                    <div key={yf.year}>
+                      <button
+                        onClick={() => setExpandedYear(isYearOpen ? null : yearKey)}
+                        className="w-full flex items-center gap-3 px-4 pl-10 py-2.5 hover:bg-secondary/50 transition-colors text-left"
+                      >
+                        <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm flex-1 truncate capitalize">{yearLabel(yf.year)}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums">{yf.docs.length}</span>
+                        {isYearOpen
+                          ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                      </button>
+
+                      {isYearOpen && (
                         <div className="px-4 pl-14 pb-3 pt-1 space-y-2">
-                          {df.docs.map((doc) => (
-                            <PDFCard
-                              key={doc.id}
-                              doc={doc}
-                              viewMode="list"
-                              onView={onView}
-                              onToggleFavorite={onToggleFavorite}
-                              onDelete={onDelete}
-                              onEdit={onEdit}
-                            />
+                          {yf.docs.map((doc) => (
+                            <PDFCard key={doc.id} doc={doc} viewMode="list" onView={onView} onToggleFavorite={onToggleFavorite} onDelete={onDelete} onEdit={onEdit} />
                           ))}
                         </div>
                       )}
