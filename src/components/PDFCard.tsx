@@ -41,7 +41,7 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
           <FileText className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm truncate">{doc.title}</h3>
+          <h3 className="font-medium text-sm">{doc.title}</h3>
           <p className="text-xs text-muted-foreground">{doc.author} · {doc.date} · {formatFileSize(doc.fileSize)}</p>
         </div>
         <div className="flex items-center gap-1">
@@ -125,7 +125,7 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
         )}
       </div>
       <div className="p-3 space-y-1.5">
-        <h3 className="font-semibold text-sm leading-tight line-clamp-2">{doc.title}</h3>
+        <h3 className="font-semibold text-sm leading-tight">{doc.title}</h3>
         <p className="text-xs text-muted-foreground truncate">{doc.author}</p>
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground">{doc.date}</span>
