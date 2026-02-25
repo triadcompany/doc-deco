@@ -377,7 +377,10 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
                 const rects = h.position?.rects || [];
                 return (
                   <div key={h.id} className="pointer-events-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                    {rects.map((r, i) => (
+                    {rects.map((r, i) => {
+                      // Parse HSL and set fixed alpha for uniform color
+                      const bgColor = h.color.replace('hsl(', 'hsla(').replace(')', ', 0.4)');
+                      return (
                       <div
                         key={i}
                         className="absolute pointer-events-auto cursor-pointer"
@@ -386,9 +389,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
                           left: r.left,
                           width: r.width,
                           height: r.height,
-                          backgroundColor: h.color,
-                          opacity: 0.35,
-                          mixBlendMode: 'multiply',
+                          backgroundColor: bgColor,
                           borderRadius: 2,
                         }}
                         onClick={() => {
@@ -396,7 +397,8 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
                         }}
                         title={highlightMode ? 'Clique para remover grifo' : h.text}
                       />
-                    ))}
+                      );
+                    })}
                   </div>
                 );
               })}
