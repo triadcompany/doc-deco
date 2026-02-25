@@ -34,6 +34,7 @@ import {
   BookOpen,
   ChevronsUpDown,
   Check,
+  Eye,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,6 +56,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [summaryText, setSummaryText] = useState('');
   const [saving, setSaving] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
+  const [viewingSummary, setViewingSummary] = useState<DocSummary | null>(null);
 
   const normalizeForSearch = (text: string) =>
     text
@@ -132,18 +134,21 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           {summaries.map((s) => {
             const doc = getDoc(s.documentId);
             return (
-              <Card key={s.id} className="group">
+              <Card key={s.id} className="group cursor-pointer" onClick={() => setViewingSummary(s)}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-sm font-medium truncate flex-1">
                       {getDocTitle(s.documentId)}
                     </CardTitle>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
                       {doc && onViewDoc && (
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onViewDoc(doc)} title="Abrir documento">
                           <BookOpen className="w-3.5 h-3.5" />
                         </Button>
                       )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar resumo">
+                        <Eye className="w-3.5 h-3.5" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar resumo">
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
@@ -231,6 +236,35 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             <Button onClick={handleSave} disabled={!selectedDocId || !summaryText.trim() || saving}>
               {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
               Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Summary Dialog */}
+      <Dialog open={!!viewingSummary} onOpenChange={(open) => !open && setViewingSummary(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              {viewingSummary ? getDocTitle(viewingSummary.documentId) : ''}
+            </DialogTitle>
+            {viewingSummary && (
+              <p className="text-xs text-muted-foreground">
+                Atualizado em {format(new Date(viewingSummary.updatedAt), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
+              </p>
+            )}
+          </DialogHeader>
+          {viewingSummary && (
+            <div
+              className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+              dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingSummary(null)}>Fechar</Button>
+            <Button onClick={() => { if (viewingSummary) { openEdit(viewingSummary); setViewingSummary(null); } }}>
+              <Pencil className="w-4 h-4 mr-1" />
+              Editar
             </Button>
           </DialogFooter>
         </DialogContent>
