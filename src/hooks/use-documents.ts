@@ -225,8 +225,8 @@ export function useDocuments() {
           if (!content) return doc;
           const idx = content.toLowerCase().indexOf(lowerTerm);
           if (idx === -1) return doc;
-          const start = Math.max(0, idx - 150);
-          const end = Math.min(content.length, idx + lowerTerm.length + 150);
+          const start = Math.max(0, idx - 300);
+          const end = Math.min(content.length, idx + lowerTerm.length + 300);
           const before = start > 0 ? '...' : '';
           const after = end < content.length ? '...' : '';
           return { ...doc, snippet: before + content.slice(start, end) + after };
