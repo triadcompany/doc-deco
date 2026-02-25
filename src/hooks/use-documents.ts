@@ -192,15 +192,20 @@ export function useDocuments() {
     let query = supabase.from('documents').select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility');
 
     if (term) {
+      // Normalize: remove accents for accent-insensitive search
+      const normalize = (s: string) =>
+        s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const normalizedTerm = normalize(term);
+
       if (searchType === 'exact') {
-        // PDF content often has multiple spaces between words, so we replace
-        // spaces with % wildcards to match regardless of whitespace differences
-        const pattern = term.split(/\s+/).filter(Boolean).join('%');
-        query = query.ilike('content', `%${pattern}%`);
+        const pattern = normalizedTerm.split(/\s+/).filter(Boolean).join('%');
+        // Use ilike with both original and unaccented patterns
+        query = query.or(`content.ilike.%${term.split(/\s+/).filter(Boolean).join('%')}%,content.ilike.%${pattern}%`);
       } else {
         const words = term.split(/\s+/).filter(Boolean);
         for (const word of words) {
-          query = query.ilike('content', `%${word}%`);
+          const nw = normalize(word);
+          query = query.or(`content.ilike.%${word}%,content.ilike.%${nw}%`);
         }
       }
     }
@@ -240,19 +245,23 @@ export function useDocuments() {
           if (row.content) contentMap.set(row.id, row.content);
         }
 
-        const termWords = term.toLowerCase().split(/\s+/).filter(Boolean);
+        const normalizeStr = (s: string) =>
+          s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const termWords = normalizeStr(term).split(/\s+/).filter(Boolean);
 
         const expandedResults: typeof results = [];
         for (const doc of results) {
           const content = contentMap.get(doc.id);
           if (!content) continue;
 
+          // Normalize content for matching, but keep original for snippets
+          const contentNorm = normalizeStr(content);
+
           if (searchType === 'exact') {
-            // Exact: words must appear together (allowing flexible whitespace)
             const regexPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s]+');
             const termRegex = new RegExp(regexPattern, 'gi');
             let match: RegExpExecArray | null;
-            while ((match = termRegex.exec(content)) !== null) {
+            while ((match = termRegex.exec(contentNorm)) !== null) {
               const idx = match.index;
               const matchLen = match[0].length;
               const start = Math.max(0, idx - 300);
@@ -263,12 +272,11 @@ export function useDocuments() {
             }
           } else {
             // Proximity: find all positions of each word, then find clusters within 300 chars
-            const contentLower = content.toLowerCase();
             const wordPositions: { word: string; index: number }[] = [];
             for (const w of termWords) {
               const wRegex = new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
               let m: RegExpExecArray | null;
-              while ((m = wRegex.exec(content)) !== null) {
+              while ((m = wRegex.exec(contentNorm)) !== null) {
                 wordPositions.push({ word: w, index: m.index });
               }
             }
