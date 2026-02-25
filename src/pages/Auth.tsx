@@ -26,19 +26,37 @@ const Auth = () => {
         await signIn(email, password);
       } else {
         await signUp(email, password, displayName);
-        toast({
-          title: 'Conta criada',
-          description: 'Sua conta foi criada com sucesso!',
-        });
+        // After signup, try to auto-login immediately
+        try {
+          await signIn(email, password);
+        } catch (loginErr: any) {
+          const loginMsg = loginErr?.message || '';
+          if (loginMsg.includes('Email not confirmed') || loginMsg.includes('email_not_confirmed')) {
+            toast({
+              title: 'Conta criada!',
+              description: 'Verifique seu email para confirmar sua conta antes de fazer login.',
+            });
+          } else {
+            toast({
+              title: 'Conta criada!',
+              description: 'Sua conta foi criada com sucesso! Faça login.',
+            });
+            setIsLogin(true);
+          }
+        }
       }
     } catch (err: any) {
       const msg = err?.message || 'Algo deu errado';
+      const isTimeout = msg.includes('tempo limite');
+      const isEmailNotConfirmed = msg.includes('Email not confirmed') || msg.includes('email_not_confirmed');
       toast({
-        title: 'Erro',
-        description: msg.includes('tempo limite')
+        title: isEmailNotConfirmed ? 'Email não confirmado' : 'Erro',
+        description: isTimeout
           ? 'O servidor está demorando para responder. Tente novamente em alguns segundos.'
+          : isEmailNotConfirmed
+          ? 'Verifique seu email e clique no link de confirmação antes de fazer login.'
           : msg,
-        variant: 'destructive',
+        variant: isEmailNotConfirmed ? 'default' : 'destructive',
       });
     } finally {
       setLoading(false);
