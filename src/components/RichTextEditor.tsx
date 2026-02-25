@@ -86,9 +86,28 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     }
   }, [value]);
 
-  const applyBlock = useCallback((tag: string) => {
-    exec('formatBlock', `<${tag}>`);
-  }, [exec]);
+  const applyBlock = useCallback((tag: 'h1' | 'h2' | 'p') => {
+    editorRef.current?.focus();
+    restoreSelection();
+
+    // Browser compatibility: different engines accept different formatBlock values
+    const candidates = [`<${tag}>`, tag.toUpperCase(), tag];
+    let applied = false;
+
+    for (const candidate of candidates) {
+      applied = document.execCommand('formatBlock', false, candidate);
+      if (applied) break;
+    }
+
+    if (!applied && tag === 'p') {
+      document.execCommand('formatBlock', false, 'P');
+    }
+
+    saveSelection();
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  }, [onChange, restoreSelection, saveSelection]);
 
   return (
     <div className="border border-input rounded-md overflow-hidden bg-background">
@@ -188,7 +207,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         onMouseUp={saveSelection}
         onKeyUp={saveSelection}
         onBlur={saveSelection}
-        className="min-h-[200px] max-h-[400px] overflow-y-auto p-3 text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 prose prose-sm max-w-none dark:prose-invert"
+        data-placeholder={placeholder}
         style={{ wordBreak: 'break-word' }}
       />
     </div>
