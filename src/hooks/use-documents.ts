@@ -223,26 +223,59 @@ export function useDocuments() {
         }
 
         const termWords = term.toLowerCase().split(/\s+/).filter(Boolean);
-        const regexPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
-        const termRegex = new RegExp(regexPattern, 'gi');
 
         const expandedResults: typeof results = [];
         for (const doc of results) {
           const content = contentMap.get(doc.id);
           if (!content) continue;
-          let match: RegExpExecArray | null;
-          let found = false;
-          while ((match = termRegex.exec(content)) !== null) {
-            found = true;
-            const idx = match.index;
-            const matchLen = match[0].length;
-            const start = Math.max(0, idx - 300);
-            const end = Math.min(content.length, idx + matchLen + 300);
-            const before = start > 0 ? '...' : '';
-            const after = end < content.length ? '...' : '';
-            expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
+
+          if (searchType === 'exact') {
+            // Exact: words must appear together (allowing flexible whitespace)
+            const regexPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s]+');
+            const termRegex = new RegExp(regexPattern, 'gi');
+            let match: RegExpExecArray | null;
+            while ((match = termRegex.exec(content)) !== null) {
+              const idx = match.index;
+              const matchLen = match[0].length;
+              const start = Math.max(0, idx - 300);
+              const end = Math.min(content.length, idx + matchLen + 300);
+              const before = start > 0 ? '...' : '';
+              const after = end < content.length ? '...' : '';
+              expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
+            }
+          } else {
+            // Proximity: find all positions of each word, then find clusters within 300 chars
+            const contentLower = content.toLowerCase();
+            const wordPositions: { word: string; index: number }[] = [];
+            for (const w of termWords) {
+              const wRegex = new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+              let m: RegExpExecArray | null;
+              while ((m = wRegex.exec(content)) !== null) {
+                wordPositions.push({ word: w, index: m.index });
+              }
+            }
+            // For each occurrence of the first word, check if all other words appear within 300 chars
+            const firstWordPositions = wordPositions.filter(p => p.word === termWords[0]);
+            const addedSnippets = new Set<number>();
+            for (const pos of firstWordPositions) {
+              const rangeStart = pos.index - 300;
+              const rangeEnd = pos.index + 300;
+              const allFound = termWords.every(w =>
+                wordPositions.some(p => p.word === w && p.index >= rangeStart && p.index <= rangeEnd)
+              );
+              if (allFound) {
+                // Round to nearest 50 to avoid near-duplicate snippets
+                const snipKey = Math.round(pos.index / 50);
+                if (addedSnippets.has(snipKey)) continue;
+                addedSnippets.add(snipKey);
+                const start = Math.max(0, pos.index - 300);
+                const end = Math.min(content.length, pos.index + termWords[0].length + 300);
+                const before = start > 0 ? '...' : '';
+                const after = end < content.length ? '...' : '';
+                expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
+              }
+            }
           }
-          if (!found) continue;
         }
         results = expandedResults;
       }
