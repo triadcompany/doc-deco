@@ -164,14 +164,13 @@ export function useDocuments() {
     term: string,
     searchType: 'exact' | 'proximity',
     filters?: { author?: string; tags?: string[]; startDate?: string; endDate?: string }
-  ): Promise<PDFDocument[]> => {
-    let query = supabase.from('documents').select('*');
+  ): Promise<(PDFDocument & { snippet?: string })[]> => {
+    let query = supabase.from('documents').select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, content');
 
     if (term) {
       if (searchType === 'exact') {
         query = query.ilike('content', `%${term}%`);
       } else {
-        // Proximity: all words must appear in content
         const words = term.split(/\s+/).filter(Boolean);
         for (const word of words) {
           query = query.ilike('content', `%${word}%`);
@@ -195,11 +194,30 @@ export function useDocuments() {
 
     if (error || !data) return [];
 
-    let results = (data as DbDocument[]).map(toAppDoc);
+    let results = (data as any[]).map((d) => {
+      const doc = toAppDoc(d);
+      let snippet: string | undefined;
+
+      if (term && d.content) {
+        const content = d.content as string;
+        const lowerContent = content.toLowerCase();
+        const lowerTerm = term.toLowerCase();
+        const idx = lowerContent.indexOf(lowerTerm);
+        if (idx !== -1) {
+          const start = Math.max(0, idx - 150);
+          const end = Math.min(content.length, idx + lowerTerm.length + 150);
+          const before = start > 0 ? '...' : '';
+          const after = end < content.length ? '...' : '';
+          snippet = before + content.slice(start, end) + after;
+        }
+      }
+
+      return { ...doc, snippet };
+    });
 
     if (filters?.tags && filters.tags.length > 0) {
       results = results.filter((d) =>
-        filters.tags!.some((st) => d.tags.some((t) => t.toLowerCase().includes(st)))
+        filters.tags!.some((st) => d.tags.some((t: string) => t.toLowerCase().includes(st)))
       );
     }
 
