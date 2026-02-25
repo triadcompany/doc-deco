@@ -126,8 +126,8 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-        <ScrollArea className="max-h-[90vh]">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <ScrollArea className="flex-1 overflow-auto">
           <div className="p-6 space-y-6">
             <p className="text-sm text-muted-foreground">Adicione PDFs à sua biblioteca</p>
 
