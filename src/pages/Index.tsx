@@ -11,6 +11,7 @@ import { SearchTab } from '@/components/SearchTab';
 import { FoldersTab } from '@/components/FoldersTab';
 import { SettingsTab } from '@/components/SettingsTab';
 import { MetaTab } from '@/components/MetaTab';
+import { BibleTab } from '@/components/BibleTab';
 import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
@@ -151,6 +152,10 @@ const Index = () => {
               <TabsTrigger value="meta" className="gap-1.5">
                 <Target className="w-3.5 h-3.5" />
                 Meta
+              </TabsTrigger>
+              <TabsTrigger value="biblia" className="gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" />
+                Bíblia
               </TabsTrigger>
               <TabsTrigger value="configuracoes" className="gap-1.5">
                 <Settings className="w-3.5 h-3.5" />
@@ -327,6 +332,10 @@ const Index = () => {
                 goal={goal}
                 upsertGoal={upsertGoal}
               />
+            </TabsContent>
+
+            <TabsContent value="biblia">
+              <BibleTab />
             </TabsContent>
 
             <TabsContent value="configuracoes">
