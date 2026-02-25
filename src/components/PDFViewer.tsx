@@ -125,27 +125,81 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     const container = pageContainerRef.current;
     if (!container) return;
 
-    // Small delay to wait for text layer render
     const timeout = setTimeout(() => {
       const textLayer = container.querySelector('.react-pdf__Page__textContent');
       if (!textLayer) return;
 
+      // Collect all text nodes in the text layer
+      const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
+      const textNodes: Text[] = [];
+      let node: Text | null;
+      while ((node = walker.nextNode() as Text | null)) {
+        textNodes.push(node);
+      }
+
+      // Build full concatenated text and track character offsets per node
+      let fullText = '';
+      const nodeOffsets: { node: Text; start: number; end: number }[] = [];
+      for (const tn of textNodes) {
+        const start = fullText.length;
+        fullText += tn.textContent || '';
+        nodeOffsets.push({ node: tn, start, end: fullText.length });
+      }
+
+      // Build regex for the search term
       const words = searchContext.searchTerm.split(/\s+/).filter(Boolean);
-      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
+      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s]*');
       const regex = new RegExp(pattern, 'gi');
 
-      const spans = textLayer.querySelectorAll('span');
-      spans.forEach((span) => {
-        const text = span.textContent || '';
-        if (regex.test(text)) {
-          const html = text.replace(regex, (match) =>
-            `<mark style="background: hsl(48, 96%, 53%, 0.5); color: inherit; border-radius: 2px; padding: 0 1px;">${match}</mark>`
-          );
-          span.innerHTML = html;
+      // Find all matches and wrap them with highlight marks
+      const matches: { start: number; end: number }[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = regex.exec(fullText)) !== null) {
+        matches.push({ start: m.index, end: m.index + m[0].length });
+      }
+
+      if (matches.length === 0) return;
+
+      // Process matches in reverse order to avoid offset shifts
+      for (let mi = matches.length - 1; mi >= 0; mi--) {
+        const { start: mStart, end: mEnd } = matches[mi];
+
+        // Find which text nodes are affected
+        for (let ni = nodeOffsets.length - 1; ni >= 0; ni--) {
+          const { node: textNode, start: nStart, end: nEnd } = nodeOffsets[ni];
+          if (nEnd <= mStart || nStart >= mEnd) continue;
+
+          const highlightStart = Math.max(0, mStart - nStart);
+          const highlightEnd = Math.min(textNode.textContent!.length, mEnd - nStart);
+
+          const before = textNode.textContent!.slice(0, highlightStart);
+          const highlighted = textNode.textContent!.slice(highlightStart, highlightEnd);
+          const after = textNode.textContent!.slice(highlightEnd);
+
+          const parent = textNode.parentNode;
+          if (!parent) continue;
+
+          const frag = document.createDocumentFragment();
+          if (before) frag.appendChild(document.createTextNode(before));
+          const mark = document.createElement('mark');
+          mark.style.background = 'hsl(48, 96%, 53%, 0.6)';
+          mark.style.color = 'inherit';
+          mark.style.borderRadius = '2px';
+          mark.style.padding = '0 1px';
+          mark.textContent = highlighted;
+          frag.appendChild(mark);
+          if (after) frag.appendChild(document.createTextNode(after));
+
+          parent.replaceChild(frag, textNode);
         }
-        regex.lastIndex = 0;
-      });
-    }, 500);
+      }
+
+      // Scroll to first highlight
+      const firstMark = textLayer.querySelector('mark');
+      if (firstMark) {
+        firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 800);
 
     return () => clearTimeout(timeout);
   }, [currentPage, searchContext, loading]);
