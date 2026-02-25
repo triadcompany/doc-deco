@@ -16,6 +16,7 @@ interface DbDocument {
   storage_path: string;
   created_at: string;
   updated_at: string;
+  visibility: string;
 }
 
 function toAppDoc(d: any): PDFDocument {
@@ -43,16 +44,22 @@ export function useDocuments() {
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
+
     const { data, error } = await supabase
       .from('documents')
-      .select('*')
+      .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility')
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setDocuments((data as DbDocument[]).map(toAppDoc));
+    if (error) {
+      console.error('Erro ao buscar documentos:', error.message);
+      setDocuments([]);
+      setLoading(false);
+      return;
     }
+
+    setDocuments((data as DbDocument[]).map(toAppDoc));
     setLoading(false);
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchDocuments();
