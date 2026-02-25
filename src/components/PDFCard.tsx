@@ -59,7 +59,7 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100">
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 sm:opacity-0 sm:group-hover:opacity-100">
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>

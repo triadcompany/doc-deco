@@ -43,24 +43,24 @@ export function CurrentReadings({
         return (
           <Card
             key={rp.id}
-            className="glass border-border/50 p-4 flex items-center gap-4 hover:bg-secondary/30 transition-colors cursor-pointer group"
+            className="glass border-border/50 p-3 sm:p-4 flex items-start sm:items-center gap-3 sm:gap-4 hover:bg-secondary/30 transition-colors cursor-pointer group"
             onClick={() => onView(doc)}
           >
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <BookOpen className="w-5 h-5 text-primary" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </div>
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <p className="text-sm font-semibold leading-tight">{doc.title}</p>
+            <div className="flex-1 min-w-0 space-y-1 sm:space-y-1.5">
+              <p className="text-sm font-semibold leading-tight line-clamp-2">{doc.title}</p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{doc.author}</span>
+                <span className="truncate">{doc.author}</span>
                 <span>·</span>
-                <span>
+                <span className="whitespace-nowrap">
                   Pág. {rp.current_page}{totalPages > 0 ? ` / ${totalPages}` : ''}
                 </span>
               </div>
               {totalPages > 0 && <Progress value={pct} className="h-1.5" />}
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
