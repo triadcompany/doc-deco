@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { SettingsEntry } from '@/hooks/use-settings';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Plus, Trash2, Users, Languages, Settings2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Plus, Trash2, Users, Languages, Settings2, Sun, Moon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SettingsTabProps {
@@ -121,6 +123,43 @@ function EntryManager({
   );
 }
 
+function AppSettings() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <div className="glass rounded-xl p-6 space-y-6">
+      <div>
+        <h3 className="text-xl font-bold">Aplicativo</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configurações gerais do aplicativo
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Tema</Label>
+        <div className="flex gap-3">
+          <Button
+            variant={theme === 'light' ? 'default' : 'outline'}
+            className="flex-1 gap-2"
+            onClick={() => setTheme('light')}
+          >
+            <Sun className="w-4 h-4" />
+            Claro
+          </Button>
+          <Button
+            variant={theme === 'dark' ? 'default' : 'outline'}
+            className="flex-1 gap-2"
+            onClick={() => setTheme('dark')}
+          >
+            <Moon className="w-4 h-4" />
+            Escuro
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsTab({
   authors,
   translators,
@@ -177,15 +216,7 @@ export function SettingsTab({
         </TabsContent>
 
         <TabsContent value="aplicativo">
-          <div className="glass rounded-xl p-6">
-            <h3 className="text-xl font-bold">Aplicativo</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configurações gerais do aplicativo
-            </p>
-            <p className="text-sm text-muted-foreground mt-6 text-center py-8">
-              Em breve...
-            </p>
-          </div>
+          <AppSettings />
         </TabsContent>
       </Tabs>
     </div>
