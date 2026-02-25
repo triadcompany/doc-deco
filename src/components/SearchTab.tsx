@@ -288,9 +288,9 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
             </div>
           ) : (
             <div className="space-y-3">
-              {results.map((doc) => (
+              {results.map((doc, index) => (
                 <SearchResultItem
-                  key={doc.id}
+                  key={`${doc.id}-${index}`}
                   doc={doc}
                   currentTerm={currentTerm}
                   onView={onView}
