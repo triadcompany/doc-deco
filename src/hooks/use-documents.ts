@@ -194,7 +194,7 @@ export function useDocuments() {
       query = query.lte('date', filters.endDate);
     }
 
-    const { data, error } = await query.order('date', { ascending: true });
+    const { data, error } = await query.order('date', { ascending: false });
     if (error || !data) return [];
 
     let results = (data as any[]).map((d) => ({ ...toAppDoc(d), snippet: undefined as string | undefined }));
