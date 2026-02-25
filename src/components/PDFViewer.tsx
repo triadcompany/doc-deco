@@ -146,9 +146,9 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         nodeOffsets.push({ node: tn, start, end: fullText.length });
       }
 
-      // Build regex for the search term
+      // Build regex for each word individually so proximity matches also highlight
       const words = searchContext.searchTerm.split(/\s+/).filter(Boolean);
-      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s]*');
+      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
       const regex = new RegExp(pattern, 'gi');
 
       // Find all matches and wrap them with highlight marks
