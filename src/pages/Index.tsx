@@ -42,6 +42,7 @@ const Index = () => {
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
   const [searchContext, setSearchContext] = useState<SearchContext | null>(null);
   const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
+  const [activeTab, setActiveTab] = useState('inicio');
 
   const handleViewDoc = (doc: PDFDocument, ctx?: SearchContext) => {
     setSearchContext(ctx || null);
@@ -54,12 +55,12 @@ const Index = () => {
     return Array.from(tags);
   }, [documents]);
 
-  if (viewingDoc) {
-    return <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />;
-  }
-
   return (
-    <div className="min-h-screen bg-background safe-top safe-x pb-20 sm:pb-0 sm:safe-bottom">
+    <>
+      {viewingDoc && (
+        <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />
+      )}
+    <div className={`min-h-screen bg-background safe-top safe-x pb-20 sm:pb-0 sm:safe-bottom ${viewingDoc ? 'hidden' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
@@ -91,7 +92,7 @@ const Index = () => {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <Tabs defaultValue="inicio" className="space-y-4 sm:space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
             {/* Desktop/Tablet tabs - hidden on mobile */}
             <div className="hidden sm:block overflow-x-auto scrollbar-none">
               <TabsList className="bg-secondary/50 w-auto">
@@ -281,6 +282,7 @@ const Index = () => {
         onSave={updateDocument}
       />
     </div>
+    </>
   );
 };
 
