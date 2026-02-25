@@ -34,16 +34,17 @@ function formatCitationAPA(doc: PDFDocument): string {
 function highlightTerm(text: string, term: string): React.ReactNode {
   if (!term) return text;
   const words = term.split(/\s+/).filter(Boolean);
-  const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+  // Highlight each word individually so both exact and proximity matches work
+  const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   const regex = new RegExp(`(${pattern})`, 'gi');
   const parts = text.split(regex);
-  return parts.map((part, i) =>
-    regex.test(part) ? (
-      <mark key={i} className="bg-primary/30 text-foreground rounded-sm px-0.5 font-medium">{part}</mark>
-    ) : (
-      part
-    )
-  );
+  return parts.map((part, i) => {
+    // Re-test each part with a fresh regex to avoid lastIndex issues
+    const testRegex = new RegExp(`^(${pattern})$`, 'i');
+    return testRegex.test(part)
+      ? <mark key={i} className="bg-yellow-300/60 text-foreground rounded-sm px-0.5 font-medium">{part}</mark>
+      : part;
+  });
 }
 function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete }: {
   doc: PDFDocument & { snippet?: string };
