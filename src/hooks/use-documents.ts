@@ -46,19 +46,34 @@ export function useDocuments() {
   const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
+      const batchSize = 1000;
+      let offset = 0;
+      let allData: any[] = [];
+      let hasMore = true;
 
-      const { data, error } = await supabase
-        .from('documents')
-        .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator')
-        .order('created_at', { ascending: false });
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + batchSize - 1);
 
-      if (error) {
-        console.error('Erro ao buscar documentos:', error.message);
-        setDocuments([]);
-        return;
+        if (error) {
+          console.error('Erro ao buscar documentos:', error.message);
+          setDocuments([]);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          allData.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
       }
 
-      setDocuments((data as DbDocument[]).map(toAppDoc));
+      setDocuments((allData as DbDocument[]).map(toAppDoc));
     } catch (err) {
       console.error('Erro inesperado ao buscar documentos:', err);
       setDocuments([]);
