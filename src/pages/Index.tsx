@@ -89,7 +89,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background dark">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
