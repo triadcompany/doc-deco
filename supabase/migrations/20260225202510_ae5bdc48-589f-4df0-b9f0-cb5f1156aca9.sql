@@ -1,0 +1,1 @@
+ALTER TABLE public.documents ADD COLUMN translator text NOT NULL DEFAULT '';

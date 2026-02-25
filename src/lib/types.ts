@@ -13,6 +13,7 @@ export interface PDFDocument {
   createdAt: string;
   url?: string;
   visibility: DocVisibility;
+  translator?: string;
 }
 
 export interface SearchContext {
