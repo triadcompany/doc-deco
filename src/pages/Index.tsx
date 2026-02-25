@@ -15,6 +15,8 @@ import { BibleTab } from '@/components/BibleTab';
 import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
+import { useDocumentSummaries } from '@/hooks/use-document-summaries';
+import { SummariesTab } from '@/components/SummariesTab';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -38,6 +40,7 @@ const Index = () => {
   const { signOut } = useAuth();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
   const { goal, currentReadings, completedThisMonth, upsertGoal, markCompleted, removeReading } = useReadingGoals();
+  const { summaries, loading: summariesLoading, upsertSummary, deleteSummary } = useDocumentSummaries();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
   const [searchContext, setSearchContext] = useState<SearchContext | null>(null);
@@ -119,6 +122,10 @@ const Index = () => {
                 <TabsTrigger value="meta" className="gap-1.5 text-sm px-3">
                   <Target className="w-3.5 h-3.5" />
                   Meta
+                </TabsTrigger>
+                <TabsTrigger value="resumos" className="gap-1.5 text-sm px-3">
+                  <FileText className="w-3.5 h-3.5" />
+                  Resumos
                 </TabsTrigger>
                 <TabsTrigger value="biblia" className="gap-1.5 text-sm px-3">
                   <BookOpen className="w-3.5 h-3.5" />
@@ -223,6 +230,17 @@ const Index = () => {
               />
             </TabsContent>
 
+            <TabsContent value="resumos">
+              <SummariesTab
+                documents={documents}
+                summaries={summaries}
+                loading={summariesLoading}
+                onUpsert={upsertSummary}
+                onDelete={deleteSummary}
+                onViewDoc={(doc) => handleViewDoc(doc)}
+              />
+            </TabsContent>
+
             <TabsContent value="biblia">
               <BibleTab />
             </TabsContent>
@@ -240,7 +258,7 @@ const Index = () => {
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
-              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-8 gap-0 p-0">
+              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-9 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
                   { value: 'documentos', icon: FolderSearch, label: 'Docs' },
@@ -248,6 +266,7 @@ const Index = () => {
                   { value: 'favoritos', icon: Star, label: 'Favoritos' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
                   { value: 'meta', icon: Target, label: 'Meta' },
+                  { value: 'resumos', icon: FileText, label: 'Resumos' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'configuracoes', icon: Settings, label: 'Config' },
                 ].map((tab) => (
