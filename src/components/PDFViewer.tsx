@@ -214,15 +214,17 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
 
     const clientRects = range.getClientRects();
     const rects: { top: number; left: number; width: number; height: number }[] = [];
+    const pw = pageRect.width;
+    const ph = pageRect.height;
 
     for (let i = 0; i < clientRects.length; i++) {
       const r = clientRects[i];
       if (r.width < 1 || r.height < 1) continue;
       rects.push({
-        top: r.top - pageRect.top,
-        left: r.left - pageRect.left,
-        width: r.width,
-        height: r.height,
+        top: ((r.top - pageRect.top) / ph) * 100,
+        left: ((r.left - pageRect.left) / pw) * 100,
+        width: (r.width / pw) * 100,
+        height: (r.height / ph) * 100,
       });
     }
 
@@ -376,19 +378,20 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
               {pageAnnotations.map((h) => {
                 const rects = h.position?.rects || [];
                 return (
-                  <div key={h.id} className="pointer-events-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                  <div key={h.id} className="pointer-events-none" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
                     {rects.map((r, i) => {
-                      // Parse HSL and set fixed alpha for uniform color
                       const bgColor = h.color.replace('hsl(', 'hsla(').replace(')', ', 0.4)');
+                      // Detect legacy absolute-pixel values (>100 means pixels, not %)
+                      const isPercent = r.top <= 100 && r.left <= 100 && r.width <= 100 && r.height <= 100;
                       return (
                       <div
                         key={i}
                         className="absolute pointer-events-auto cursor-pointer"
                         style={{
-                          top: r.top,
-                          left: r.left,
-                          width: r.width,
-                          height: r.height,
+                          top: isPercent ? `${r.top}%` : r.top,
+                          left: isPercent ? `${r.left}%` : r.left,
+                          width: isPercent ? `${r.width}%` : r.width,
+                          height: isPercent ? `${r.height}%` : r.height,
                           backgroundColor: bgColor,
                           borderRadius: 2,
                         }}
