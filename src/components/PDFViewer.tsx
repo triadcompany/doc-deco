@@ -374,35 +374,44 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
                 />
               </Document>
 
-              {/* Render persisted highlights overlay */}
+              {/* Render persisted highlights overlay — SVG so overlapping rects don't double-up */}
               {pageAnnotations.map((h) => {
                 const rects = h.position?.rects || [];
+                if (rects.length === 0) return null;
+                const bgColor = h.color.replace('hsl(', 'hsla(').replace(')', ', 0.4)');
+                // Build a single SVG path from all rects so fill is uniform
+                const pathD = rects.map((r) => {
+                  const isPercent = r.top <= 100 && r.left <= 100 && r.width <= 100 && r.height <= 100;
+                  const x = isPercent ? `${r.left}%` : `${r.left}px`;
+                  const y = isPercent ? `${r.top}%` : `${r.top}px`;
+                  const w = isPercent ? `${r.width}%` : `${r.width}px`;
+                  const ht = isPercent ? `${r.height}%` : `${r.height}px`;
+                  return { x, y, w, ht, isPercent, raw: r };
+                });
                 return (
-                  <div key={h.id} className="pointer-events-none" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                  <svg
+                    key={h.id}
+                    className="pointer-events-none"
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
+                    onClick={() => { if (highlightMode) removeAnnotation(h.id); }}
+                  >
+                    <title>{highlightMode ? 'Clique para remover grifo' : h.text}</title>
                     {rects.map((r, i) => {
-                      const bgColor = h.color.replace('hsl(', 'hsla(').replace(')', ', 0.4)');
-                      // Detect legacy absolute-pixel values (>100 means pixels, not %)
                       const isPercent = r.top <= 100 && r.left <= 100 && r.width <= 100 && r.height <= 100;
                       return (
-                      <div
-                        key={i}
-                        className="absolute pointer-events-auto cursor-pointer"
-                        style={{
-                          top: isPercent ? `${r.top}%` : r.top,
-                          left: isPercent ? `${r.left}%` : r.left,
-                          width: isPercent ? `${r.width}%` : r.width,
-                          height: isPercent ? `${r.height}%` : r.height,
-                          backgroundColor: bgColor,
-                          borderRadius: 2,
-                        }}
-                        onClick={() => {
-                          if (highlightMode) removeAnnotation(h.id);
-                        }}
-                        title={highlightMode ? 'Clique para remover grifo' : h.text}
-                      />
+                        <rect
+                          key={i}
+                          x={isPercent ? `${r.left}%` : r.left}
+                          y={isPercent ? `${r.top}%` : r.top}
+                          width={isPercent ? `${r.width}%` : r.width}
+                          height={isPercent ? `${r.height}%` : r.height}
+                          rx="2"
+                          fill={bgColor}
+                          className="pointer-events-auto cursor-pointer"
+                        />
                       );
                     })}
-                  </div>
+                  </svg>
                 );
               })}
 
