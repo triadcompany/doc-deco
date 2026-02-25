@@ -67,7 +67,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
   }, []);
 
   const applyBlock = useCallback((tag: string) => {
-    exec('formatBlock', tag);
+    exec('formatBlock', `<${tag}>`);
   }, [exec]);
 
   return (
