@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PDFDocument } from '@/lib/types';
+import { useAuth } from '@/hooks/use-auth';
 
 interface DbDocument {
   id: string;
@@ -36,6 +37,7 @@ function toAppDoc(d: DbDocument): PDFDocument {
 
 export function useDocuments() {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
   const fetchDocuments = useCallback(async () => {
@@ -90,6 +92,7 @@ export function useDocuments() {
       tags: meta.tags,
       storage_path: storagePath,
       content,
+      user_id: user?.id,
     } as any);
 
     if (dbError) throw dbError;
