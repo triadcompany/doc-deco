@@ -104,6 +104,8 @@ export function useDocuments() {
     let content = '';
     try {
       content = await extractTextFromPDF(file);
+      // Remove null bytes and unsupported Unicode escape sequences that PostgreSQL rejects
+      content = content.replace(/\u0000/g, '').replace(/\\u0000/g, '');
     } catch (e) {
       console.warn('Could not extract text from PDF:', e);
     }
