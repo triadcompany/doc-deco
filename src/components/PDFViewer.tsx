@@ -150,7 +150,7 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top bar */}
-      <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0 glass">
+      <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0 glass mt-[20px]">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="w-5 h-5" />
@@ -324,7 +324,7 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
       </div>
 
       {/* Bottom bar */}
-      <footer className="h-12 border-t border-border flex items-center justify-center gap-3 shrink-0">
+      <footer className="h-12 border-t border-border flex items-center justify-center gap-3 shrink-0 mb-[20px]">
         <Button
           variant="ghost"
           size="icon"
