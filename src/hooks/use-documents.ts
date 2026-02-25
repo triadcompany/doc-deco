@@ -240,6 +240,9 @@ export function useDocuments() {
           return { ...doc, snippet: before + content.slice(start, end) + after };
         });
       }
+
+      // Filter out documents that didn't produce a snippet (no real match in content)
+      results = results.filter((doc) => doc.snippet);
     }
 
     return results;
