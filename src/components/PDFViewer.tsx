@@ -4,6 +4,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { useDocumentAnnotations } from '@/hooks/use-document-annotations';
 import {
   ArrowLeft,
   ZoomIn,
@@ -27,14 +28,6 @@ interface PDFViewerProps {
   searchContext?: SearchContext | null;
 }
 
-interface Highlight {
-  id: string;
-  page: number;
-  color: string;
-  rects: { top: number; left: number; width: number; height: number }[];
-  text: string;
-}
-
 const highlightColors = [
   { name: 'Amarelo', color: 'hsl(48, 96%, 53%)' },
   { name: 'Verde', color: 'hsl(142, 71%, 45%)' },
@@ -49,12 +42,13 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
   const [zoom, setZoom] = useState(100);
   const [activeColor, setActiveColor] = useState(highlightColors[0].color);
   const [highlightMode, setHighlightMode] = useState(false);
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchPageFound, setSearchPageFound] = useState(false);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
+
+  const { annotations, addAnnotation, removeAnnotation, clearPageAnnotations } = useDocumentAnnotations(doc.id);
 
   const pdfUrl = doc.url;
 
@@ -64,7 +58,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width - 32); // subtract padding
+        setContainerWidth(entry.contentRect.width - 32);
       }
     });
     observer.observe(el);
@@ -75,39 +69,32 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     setTotalPages(numPages);
     setLoading(false);
 
-    // If we have a search context, find the page containing the search term
     if (searchContext && !searchPageFound && doc.url) {
       try {
         const pdfjsLib = pdfjs;
         const loadingTask = pdfjsLib.getDocument(doc.url);
         const pdf = await loadingTask.promise;
         
-        // Build a flexible regex from the search term
         const termWords = searchContext.searchTerm.split(/\s+/).filter(Boolean);
         const termPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
         const termRegex = new RegExp(termPattern, 'i');
 
-        // Also prepare a snippet-based needle as fallback
         const cleanSnippet = (searchContext.snippet || '').replace(/^\.{3}/, '').replace(/\.{3}$/, '').trim();
         const snippetWords = cleanSnippet.slice(0, 100).split(/\s+/).filter(Boolean).slice(0, 8);
         const snippetPattern = snippetWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*?');
         const snippetRegex = snippetWords.length > 3 ? new RegExp(snippetPattern, 'i') : null;
         
-        // Search through pages - try term first, then snippet
         let found = false;
         for (let i = 1; i <= numPages && !found; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
           const pageText = textContent.items.map((item: any) => item.str).join(' ');
           
-          // First: check if the snippet content is on this page
           if (snippetRegex && snippetRegex.test(pageText)) {
             setCurrentPage(i);
             setSearchPageFound(true);
             found = true;
-          }
-          // Fallback: check if the search term is on this page
-          else if (termRegex.test(pageText)) {
+          } else if (termRegex.test(pageText)) {
             setCurrentPage(i);
             setSearchPageFound(true);
             found = true;
@@ -129,7 +116,6 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
       const textLayer = container.querySelector('.react-pdf__Page__textContent');
       if (!textLayer) return;
 
-      // Collect all text nodes in the text layer
       const walker = document.createTreeWalker(textLayer, NodeFilter.SHOW_TEXT);
       const textNodes: Text[] = [];
       let node: Text | null;
@@ -137,7 +123,6 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         textNodes.push(node);
       }
 
-      // Build full concatenated text and track character offsets per node
       let fullText = '';
       const nodeOffsets: { node: Text; start: number; end: number }[] = [];
       for (const tn of textNodes) {
@@ -146,12 +131,10 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         nodeOffsets.push({ node: tn, start, end: fullText.length });
       }
 
-      // Build regex for each word individually so proximity matches also highlight
       const words = searchContext.searchTerm.split(/\s+/).filter(Boolean);
       const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
       const regex = new RegExp(pattern, 'gi');
 
-      // Find all matches and wrap them with highlight marks
       const matches: { start: number; end: number }[] = [];
       let m: RegExpExecArray | null;
       while ((m = regex.exec(fullText)) !== null) {
@@ -160,11 +143,9 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
 
       if (matches.length === 0) return;
 
-      // Process matches in reverse order to avoid offset shifts
       for (let mi = matches.length - 1; mi >= 0; mi--) {
         const { start: mStart, end: mEnd } = matches[mi];
 
-        // Find which text nodes are affected
         for (let ni = nodeOffsets.length - 1; ni >= 0; ni--) {
           const { node: textNode, start: nStart, end: nEnd } = nodeOffsets[ni];
           if (nEnd <= mStart || nStart >= mEnd) continue;
@@ -194,7 +175,6 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         }
       }
 
-      // Scroll to first highlight
       const firstMark = textLayer.querySelector('mark');
       if (firstMark) {
         firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -204,7 +184,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     return () => clearTimeout(timeout);
   }, [currentPage, searchContext, loading]);
 
-  // Capture text selection and create highlight
+  // Capture text selection and create highlight (persisted to DB)
   const handleSelectionEnd = useCallback(() => {
     if (!highlightMode) return;
 
@@ -215,14 +195,12 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     const container = pageContainerRef.current;
     if (!container) return;
 
-    // Check if selection is within our PDF text layer
     const textLayer = container.querySelector('.react-pdf__Page__textContent');
     if (!textLayer) return;
 
     const selectionContents = range.cloneContents();
     if (!selectionContents.textContent?.trim()) return;
 
-    // Check if at least part of the selection is within the text layer
     const commonAncestor = range.commonAncestorContainer;
     const isInTextLayer =
       textLayer.contains(commonAncestor) ||
@@ -230,19 +208,16 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
 
     if (!isInTextLayer) return;
 
-    // Get rects relative to the page container
     const pageEl = container.querySelector('.react-pdf__Page');
     if (!pageEl) return;
     const pageRect = pageEl.getBoundingClientRect();
 
     const clientRects = range.getClientRects();
-    const rects: Highlight['rects'] = [];
+    const rects: { top: number; left: number; width: number; height: number }[] = [];
 
     for (let i = 0; i < clientRects.length; i++) {
       const r = clientRects[i];
-      // Filter out zero-size rects and rects outside the page
       if (r.width < 1 || r.height < 1) continue;
-
       rects.push({
         top: r.top - pageRect.top,
         left: r.left - pageRect.left,
@@ -253,17 +228,15 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
 
     if (rects.length === 0) return;
 
-    const newHighlight: Highlight = {
-      id: crypto.randomUUID(),
+    addAnnotation({
       page: currentPage,
       color: activeColor,
       rects,
       text: selection.toString().trim(),
-    };
+    });
 
-    setHighlights((prev) => [...prev, newHighlight]);
     selection.removeAllRanges();
-  }, [highlightMode, activeColor, currentPage]);
+  }, [highlightMode, activeColor, currentPage, addAnnotation]);
 
   // Listen for selection end events
   useEffect(() => {
@@ -271,7 +244,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     if (!container || !highlightMode) return;
 
     const onMouseUp = () => setTimeout(handleSelectionEnd, 10);
-    const onTouchEnd = () => setTimeout(handleSelectionEnd, 300); // longer delay for mobile selection UI
+    const onTouchEnd = () => setTimeout(handleSelectionEnd, 300);
 
     container.addEventListener('mouseup', onMouseUp);
     container.addEventListener('touchend', onTouchEnd);
@@ -282,15 +255,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     };
   }, [highlightMode, handleSelectionEnd]);
 
-  const removeHighlight = (id: string) => {
-    setHighlights((prev) => prev.filter((h) => h.id !== id));
-  };
-
-  const clearPageHighlights = () => {
-    setHighlights((prev) => prev.filter((h) => h.page !== currentPage));
-  };
-
-  const pageHighlights = highlights.filter((h) => h.page === currentPage);
+  const pageAnnotations = annotations.filter((a) => a.page === currentPage);
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -338,7 +303,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         </div>
       </header>
 
-      {/* Highlight color bar - visible when highlight mode is on */}
+      {/* Highlight color bar */}
       {highlightMode && (
         <div className="h-12 border-b border-border flex items-center justify-center gap-3 shrink-0 bg-muted/50">
           <span className="text-xs text-muted-foreground mr-1">Cor:</span>
@@ -355,12 +320,12 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
               title={c.name}
             />
           ))}
-          {pageHighlights.length > 0 && (
+          {pageAnnotations.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
               className="ml-3 text-xs h-7 text-destructive"
-              onClick={clearPageHighlights}
+              onClick={() => clearPageAnnotations(currentPage)}
             >
               <Trash2 className="w-3 h-3 mr-1" />
               Limpar página
@@ -378,7 +343,6 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Main PDF area */}
         <main ref={mainRef} className="flex-1 flex items-center justify-center bg-muted/30 overflow-auto p-4">
           {pdfUrl ? (
             <div className="relative" ref={pageContainerRef}>
@@ -408,33 +372,36 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
                 />
               </Document>
 
-              {/* Render highlights overlay */}
-              {pageHighlights.map((h) => (
-                <div key={h.id} className="pointer-events-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                  {h.rects.map((r, i) => (
-                    <div
-                      key={i}
-                      className="absolute pointer-events-auto cursor-pointer group"
-                      style={{
-                        top: r.top,
-                        left: r.left,
-                        width: r.width,
-                        height: r.height,
-                        backgroundColor: h.color,
-                        opacity: 0.35,
-                        mixBlendMode: 'multiply',
-                        borderRadius: 2,
-                      }}
-                      onClick={() => {
-                        if (highlightMode) removeHighlight(h.id);
-                      }}
-                      title={highlightMode ? 'Clique para remover grifo' : h.text}
-                    />
-                  ))}
-                </div>
-              ))}
+              {/* Render persisted highlights overlay */}
+              {pageAnnotations.map((h) => {
+                const rects = h.position?.rects || [];
+                return (
+                  <div key={h.id} className="pointer-events-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                    {rects.map((r, i) => (
+                      <div
+                        key={i}
+                        className="absolute pointer-events-auto cursor-pointer"
+                        style={{
+                          top: r.top,
+                          left: r.left,
+                          width: r.width,
+                          height: r.height,
+                          backgroundColor: h.color,
+                          opacity: 0.35,
+                          mixBlendMode: 'multiply',
+                          borderRadius: 2,
+                        }}
+                        onClick={() => {
+                          if (highlightMode) removeAnnotation(h.id);
+                        }}
+                        title={highlightMode ? 'Clique para remover grifo' : h.text}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
 
-              {/* Tap zones for mobile/tablet navigation - hidden when highlight mode is on */}
+              {/* Tap zones for mobile navigation */}
               {totalPages > 1 && !highlightMode && (
                 <>
                   <button
