@@ -10,7 +10,10 @@ import { DocumentsTab } from '@/components/DocumentsTab';
 import { SearchTab } from '@/components/SearchTab';
 import { FoldersTab } from '@/components/FoldersTab';
 import { SettingsTab } from '@/components/SettingsTab';
+import { MetaTab } from '@/components/MetaTab';
+import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
+import { useReadingGoals } from '@/hooks/use-reading-goals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -36,12 +39,14 @@ import {
   Loader2,
   Settings,
   LogOut,
+  Target,
 } from 'lucide-react';
 
 const Index = () => {
   const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument } = useDocuments();
   const { signOut } = useAuth();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
+  const { goal, currentReadings, completedThisMonth, upsertGoal, markCompleted, removeReading } = useReadingGoals();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('createdAt');
@@ -143,6 +148,10 @@ const Index = () => {
                 <Search className="w-3.5 h-3.5" />
                 Pesquisa
               </TabsTrigger>
+              <TabsTrigger value="meta" className="gap-1.5">
+                <Target className="w-3.5 h-3.5" />
+                Meta
+              </TabsTrigger>
               <TabsTrigger value="configuracoes" className="gap-1.5">
                 <Settings className="w-3.5 h-3.5" />
                 Configurações
@@ -150,6 +159,23 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="inicio">
+              {/* Current Readings */}
+              {currentReadings.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-primary" />
+                    Leituras Atuais
+                  </h2>
+                  <CurrentReadings
+                    documents={documents}
+                    currentReadings={currentReadings}
+                    onView={setViewingDoc}
+                    onMarkCompleted={markCompleted}
+                    onRemove={removeReading}
+                  />
+                </div>
+              )}
+
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
@@ -291,6 +317,15 @@ const Index = () => {
                 onDelete={deleteDocument}
                 authorsList={authors.map((a) => a.name)}
                 translatorsList={translators.map((t) => t.name)}
+              />
+            </TabsContent>
+
+            <TabsContent value="meta">
+              <MetaTab
+                documents={documents}
+                completedThisMonth={completedThisMonth}
+                goal={goal}
+                upsertGoal={upsertGoal}
               />
             </TabsContent>
 
