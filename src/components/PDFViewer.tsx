@@ -51,8 +51,23 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
   const pageContainerRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
   const pdfUrl = doc.url;
+
+  // Measure container width for auto-fit on mobile
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width - 32); // subtract padding
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setTotalPages(numPages);
@@ -234,7 +249,7 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main PDF area */}
-        <main className="flex-1 flex items-center justify-center bg-muted/30 overflow-auto p-4">
+        <main ref={mainRef} className="flex-1 flex items-center justify-center bg-muted/30 overflow-auto p-4">
           {pdfUrl ? (
             <div className="relative" ref={pageContainerRef}>
               <Document
@@ -256,6 +271,7 @@ export function PDFViewer({ doc, onBack }: PDFViewerProps) {
                 <Page
                   pageNumber={currentPage}
                   scale={zoom / 100}
+                  width={containerWidth && containerWidth < 700 ? containerWidth / (zoom / 100) : undefined}
                   className="shadow-2xl rounded-lg"
                   renderTextLayer
                   renderAnnotationLayer
