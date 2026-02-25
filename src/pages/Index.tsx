@@ -8,6 +8,7 @@ import { UploadDialog } from '@/components/UploadDialog';
 import { EditDocumentDialog } from '@/components/EditDocumentDialog';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { SearchTab } from '@/components/SearchTab';
+import { FoldersTab } from '@/components/FoldersTab';
 import { SettingsTab } from '@/components/SettingsTab';
 import { useSettings } from '@/hooks/use-settings';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import {
   SlidersHorizontal,
   FileText,
   FolderSearch,
+  FolderTree,
   Loader2,
   Settings,
   LogOut,
@@ -132,6 +134,10 @@ const Index = () => {
               <TabsTrigger value="documentos" className="gap-1.5">
                 <FolderSearch className="w-3.5 h-3.5" />
                 Documentos
+              </TabsTrigger>
+              <TabsTrigger value="pastas" className="gap-1.5">
+                <FolderTree className="w-3.5 h-3.5" />
+                Pastas
               </TabsTrigger>
               <TabsTrigger value="pesquisa" className="gap-1.5">
                 <Search className="w-3.5 h-3.5" />
@@ -259,6 +265,16 @@ const Index = () => {
 
             <TabsContent value="documentos">
               <DocumentsTab
+                documents={documents}
+                onView={setViewingDoc}
+                onToggleFavorite={toggleFavorite}
+                onDelete={deleteDocument}
+                onEdit={setEditingDoc}
+              />
+            </TabsContent>
+
+            <TabsContent value="pastas">
+              <FoldersTab
                 documents={documents}
                 onView={setViewingDoc}
                 onToggleFavorite={toggleFavorite}
