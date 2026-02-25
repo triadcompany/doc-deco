@@ -264,6 +264,38 @@ export function useBible() {
     if (user) { fetchBookmarks(); fetchNotes(); fetchHighlights(); }
   }, [user, fetchBookmarks, fetchNotes, fetchHighlights]);
 
+  // Realtime sync for bible data across devices
+  useEffect(() => {
+    if (!user) return;
+
+    const bookmarksChannel = supabase
+      .channel('bible-bookmarks-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_bookmarks' }, () => {
+        fetchBookmarks();
+      })
+      .subscribe();
+
+    const highlightsChannel = supabase
+      .channel('bible-highlights-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_highlights' }, () => {
+        fetchHighlights();
+      })
+      .subscribe();
+
+    const notesChannel = supabase
+      .channel('bible-notes-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_notes' }, () => {
+        fetchNotes();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookmarksChannel);
+      supabase.removeChannel(highlightsChannel);
+      supabase.removeChannel(notesChannel);
+    };
+  }, [user, fetchBookmarks, fetchHighlights, fetchNotes]);
+
   return {
     books, loadingBooks,
     verses, loadingVerses, currentBookInfo, fetchError,
