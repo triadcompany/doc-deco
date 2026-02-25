@@ -26,9 +26,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+    }).catch((err) => {
+      console.error('Erro ao obter sessão:', err);
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Safety timeout: if loading doesn't resolve in 8s, stop loading
+    const timeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) console.warn('Auth loading timeout - forçando desbloqueio');
+        return false;
+      });
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
