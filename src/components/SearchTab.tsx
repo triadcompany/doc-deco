@@ -14,6 +14,20 @@ import {
 } from '@/components/ui/select';
 import { Search, FileText, Loader2 } from 'lucide-react';
 import { PDFDocument } from '@/lib/types';
+import React from 'react';
+
+function highlightTerm(text: string, term: string): React.ReactNode {
+  if (!term) return text;
+  const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return parts.map((part, i) =>
+    regex.test(part) ? (
+      <mark key={i} className="bg-primary/30 text-foreground rounded-sm px-0.5">{part}</mark>
+    ) : (
+      part
+    )
+  );
+}
 interface SearchTabProps {
   documents: PDFDocument[];
   onView: (doc: PDFDocument) => void;
@@ -34,8 +48,9 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
-  const [results, setResults] = useState<PDFDocument[]>([]);
+  const [results, setResults] = useState<(PDFDocument & { snippet?: string })[]>([]);
   const [searching, setSearching] = useState(false);
+  const [currentTerm, setCurrentTerm] = useState('');
 
   const { searchContent } = useDocuments();
 
@@ -48,6 +63,7 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
   const handleSearch = async () => {
     setHasSearched(true);
     setSearching(true);
+    setCurrentTerm(searchTerm);
     try {
       const searchTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
       const res = await searchContent(searchTerm, searchType, {
@@ -220,16 +236,24 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {results.map((doc) => (
-                <PDFCard
-                  key={doc.id}
-                  doc={doc}
-                  viewMode="list"
-                  onView={onView}
-                  onToggleFavorite={onToggleFavorite}
-                  onDelete={onDelete}
-                />
+                <div key={doc.id} className="space-y-0">
+                  <PDFCard
+                    doc={doc}
+                    viewMode="list"
+                    onView={onView}
+                    onToggleFavorite={onToggleFavorite}
+                    onDelete={onDelete}
+                  />
+                  {doc.snippet && (
+                    <div className="ml-14 mr-4 -mt-1 mb-2 px-3 py-2 rounded-b-lg bg-secondary/30 border border-t-0 border-border/50">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {highlightTerm(doc.snippet, currentTerm)}
+                      </p>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
