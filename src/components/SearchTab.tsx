@@ -32,11 +32,13 @@ function formatCitationAPA(doc: PDFDocument): string {
 
 function highlightTerm(text: string, term: string): React.ReactNode {
   if (!term) return text;
-  const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const words = term.split(/\s+/).filter(Boolean);
+  const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+  const regex = new RegExp(`(${pattern})`, 'gi');
   const parts = text.split(regex);
   return parts.map((part, i) =>
     regex.test(part) ? (
-      <mark key={i} className="bg-primary/30 text-foreground rounded-sm px-0.5">{part}</mark>
+      <mark key={i} className="bg-primary/30 text-foreground rounded-sm px-0.5 font-medium">{part}</mark>
     ) : (
       part
     )
