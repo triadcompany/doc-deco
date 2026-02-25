@@ -53,88 +53,90 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background safe-top safe-bottom safe-x">
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center glow-amber">
-              <BookOpen className="w-5 h-5 text-primary-foreground" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary flex items-center justify-center glow-amber">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">DocVault</h1>
-              <p className="text-[10px] text-muted-foreground -mt-0.5">Biblioteca Digital</p>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight">DocVault</h1>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground -mt-0.5 hidden sm:block">Biblioteca Digital</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button onClick={() => setUploadOpen(true)} className="glow-amber">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button onClick={() => setUploadOpen(true)} size="sm" className="glow-amber h-9 sm:h-10">
               <Upload className="w-4 h-4" />
-              Upload
+              <span className="hidden sm:inline">Upload</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => signOut()} title="Sair">
+            <Button variant="ghost" size="icon" onClick={() => signOut()} title="Sair" className="h-9 w-9 sm:h-10 sm:w-10">
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <Tabs defaultValue="inicio" className="space-y-6">
-            <TabsList className="bg-secondary/50">
-              <TabsTrigger value="inicio" className="gap-1.5">
-                <BookOpen className="w-3.5 h-3.5" />
-                Início
-              </TabsTrigger>
-              <TabsTrigger value="documentos" className="gap-1.5">
-                <FolderSearch className="w-3.5 h-3.5" />
-                Documentos
-              </TabsTrigger>
-              <TabsTrigger value="pastas" className="gap-1.5">
-                <FolderTree className="w-3.5 h-3.5" />
-                Pastas
-              </TabsTrigger>
-              <TabsTrigger value="favoritos" className="gap-1.5">
-                <Star className="w-3.5 h-3.5" />
-                Favoritos
-              </TabsTrigger>
-              <TabsTrigger value="pesquisa" className="gap-1.5">
-                <Search className="w-3.5 h-3.5" />
-                Pesquisa
-              </TabsTrigger>
-              <TabsTrigger value="meta" className="gap-1.5">
-                <Target className="w-3.5 h-3.5" />
-                Meta
-              </TabsTrigger>
-              <TabsTrigger value="biblia" className="gap-1.5">
-                <BookOpen className="w-3.5 h-3.5" />
-                Bíblia
-              </TabsTrigger>
-              <TabsTrigger value="configuracoes" className="gap-1.5">
-                <Settings className="w-3.5 h-3.5" />
-                Configurações
-              </TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="inicio" className="space-y-4 sm:space-y-6">
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
+              <TabsList className="bg-secondary/50 w-max sm:w-auto">
+                <TabsTrigger value="inicio" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Início</span>
+                </TabsTrigger>
+                <TabsTrigger value="documentos" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <FolderSearch className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Documentos</span>
+                </TabsTrigger>
+                <TabsTrigger value="pastas" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <FolderTree className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Pastas</span>
+                </TabsTrigger>
+                <TabsTrigger value="favoritos" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <Star className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Favoritos</span>
+                </TabsTrigger>
+                <TabsTrigger value="pesquisa" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <Search className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Pesquisa</span>
+                </TabsTrigger>
+                <TabsTrigger value="meta" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <Target className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Meta</span>
+                </TabsTrigger>
+                <TabsTrigger value="biblia" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Bíblia</span>
+                </TabsTrigger>
+                <TabsTrigger value="configuracoes" className="gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3">
+                  <Settings className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Config</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="inicio">
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
                 {[
                   { label: 'Total de PDFs', value: documents.length, icon: FileText },
                   { label: 'Favoritos', value: documents.filter((d) => d.favorite).length, icon: Star },
                   { label: 'Tags', value: allTags.length, icon: SlidersHorizontal },
                 ].map((stat) => (
-                  <div key={stat.label} className="glass rounded-xl p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
-                      <stat.icon className="w-5 h-5 text-accent-foreground" />
+                  <div key={stat.label} className="glass rounded-xl p-3 sm:p-4 flex items-center gap-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-accent flex items-center justify-center">
+                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-accent-foreground" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   </div>

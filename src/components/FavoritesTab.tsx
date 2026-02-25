@@ -32,7 +32,7 @@ export function FavoritesTab({ documents, onView, onToggleFavorite, onDelete, on
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {favDocs.map((doc) => (
             <PDFCard
               key={doc.id}
