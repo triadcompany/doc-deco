@@ -70,6 +70,24 @@ export function useDocuments() {
     fetchDocuments();
   }, [fetchDocuments]);
 
+  // Realtime sync: refetch documents when changes happen on any device
+  useEffect(() => {
+    const channel = supabase
+      .channel('documents-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'documents' },
+        () => {
+          fetchDocuments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchDocuments]);
+
   const uploadDocument = async (
     file: File,
     meta: { title: string; author: string; date: string; tags: string[]; visibility?: string }

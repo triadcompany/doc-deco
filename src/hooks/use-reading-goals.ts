@@ -71,6 +71,28 @@ export function useReadingGoals() {
     Promise.all([fetchGoal(), fetchProgress()]).finally(() => setLoading(false));
   }, [fetchGoal, fetchProgress]);
 
+  // Realtime sync for reading progress and goals
+  useEffect(() => {
+    const progressChannel = supabase
+      .channel('reading-progress-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reading_progress' }, () => {
+        fetchProgress();
+      })
+      .subscribe();
+
+    const goalsChannel = supabase
+      .channel('reading-goals-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reading_goals' }, () => {
+        fetchGoal();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(progressChannel);
+      supabase.removeChannel(goalsChannel);
+    };
+  }, [fetchGoal, fetchProgress]);
+
   const upsertGoal = async (monthlyDocs: number, dailyPages: number) => {
     if (!user) return;
     if (goal) {
