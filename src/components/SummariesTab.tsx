@@ -158,7 +158,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                 </CardHeader>
                 <CardContent>
                   <div
-                    className="text-sm text-muted-foreground line-clamp-6 prose prose-sm max-w-none dark:prose-invert"
+                    className="text-sm line-clamp-6 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-1 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-1 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
                     dangerouslySetInnerHTML={{ __html: s.summary }}
                   />
                 </CardContent>
