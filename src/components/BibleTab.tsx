@@ -40,13 +40,13 @@ export function BibleTab() {
   const {
     books, loadingBooks,
     verses, loadingVerses, currentBookInfo,
-    fetchChapter,
+    fetchChapter, fetchBooks,
     searchResults, loadingSearch, searchVerses,
     bookmarks, addBookmark, removeBookmark, isBookmarked,
     notes, addNote, updateNote, deleteNote,
   } = useBible();
 
-  const [version, setVersion] = useState('nvi');
+  const [version, setVersion] = useState('arc');
   const [selectedBook, setSelectedBook] = useState('');
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,7 +74,8 @@ export function BibleTab() {
 
   const handleVersionChange = (v: string) => {
     setVersion(v);
-    if (selectedBook) fetchChapter(v, selectedBook, selectedChapter);
+    setSelectedBook('');
+    fetchBooks(v);
   };
 
   const handleSearch = () => {

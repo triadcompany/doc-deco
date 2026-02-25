@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+
+const GITHUB_BASE = 'https://raw.githubusercontent.com/maatheusgois/bible/main/versions/pt-br';
 
 export interface BibleBook {
   abbrev: string;
@@ -45,101 +47,26 @@ export interface BibleNote {
 }
 
 export const BIBLE_VERSIONS = [
-  { value: 'almeida', label: 'Almeida - João Ferreira de Almeida' },
+  { value: 'arc', label: 'ARC - Almeida Revista e Corrigida' },
+  { value: 'acf', label: 'ACF - Almeida Corrigida e Fiel' },
+  { value: 'nvi', label: 'NVI - Nova Versão Internacional' },
+  { value: 'aa', label: 'AA - Almeida Revisada Imprensa Bíblica' },
+  { value: 'kja', label: 'KJA - King James Atualizada' },
 ];
 
-// Static list of Bible books
-const BIBLE_BOOKS: BibleBook[] = [
-  { abbrev: 'gn', name: 'Gênesis', chapters: 50, testament: 'VT' },
-  { abbrev: 'ex', name: 'Êxodo', chapters: 40, testament: 'VT' },
-  { abbrev: 'lv', name: 'Levítico', chapters: 27, testament: 'VT' },
-  { abbrev: 'nm', name: 'Números', chapters: 36, testament: 'VT' },
-  { abbrev: 'dt', name: 'Deuteronômio', chapters: 34, testament: 'VT' },
-  { abbrev: 'js', name: 'Josué', chapters: 24, testament: 'VT' },
-  { abbrev: 'jz', name: 'Juízes', chapters: 21, testament: 'VT' },
-  { abbrev: 'rt', name: 'Rute', chapters: 4, testament: 'VT' },
-  { abbrev: '1sm', name: '1 Samuel', chapters: 31, testament: 'VT' },
-  { abbrev: '2sm', name: '2 Samuel', chapters: 24, testament: 'VT' },
-  { abbrev: '1rs', name: '1 Reis', chapters: 22, testament: 'VT' },
-  { abbrev: '2rs', name: '2 Reis', chapters: 25, testament: 'VT' },
-  { abbrev: '1cr', name: '1 Crônicas', chapters: 29, testament: 'VT' },
-  { abbrev: '2cr', name: '2 Crônicas', chapters: 36, testament: 'VT' },
-  { abbrev: 'ed', name: 'Esdras', chapters: 10, testament: 'VT' },
-  { abbrev: 'ne', name: 'Neemias', chapters: 13, testament: 'VT' },
-  { abbrev: 'et', name: 'Ester', chapters: 10, testament: 'VT' },
-  { abbrev: 'job', name: 'Jó', chapters: 42, testament: 'VT' },
-  { abbrev: 'sl', name: 'Salmos', chapters: 150, testament: 'VT' },
-  { abbrev: 'pv', name: 'Provérbios', chapters: 31, testament: 'VT' },
-  { abbrev: 'ec', name: 'Eclesiastes', chapters: 12, testament: 'VT' },
-  { abbrev: 'ct', name: 'Cânticos', chapters: 8, testament: 'VT' },
-  { abbrev: 'is', name: 'Isaías', chapters: 66, testament: 'VT' },
-  { abbrev: 'jr', name: 'Jeremias', chapters: 52, testament: 'VT' },
-  { abbrev: 'lm', name: 'Lamentações', chapters: 5, testament: 'VT' },
-  { abbrev: 'ez', name: 'Ezequiel', chapters: 48, testament: 'VT' },
-  { abbrev: 'dn', name: 'Daniel', chapters: 12, testament: 'VT' },
-  { abbrev: 'os', name: 'Oséias', chapters: 14, testament: 'VT' },
-  { abbrev: 'jl', name: 'Joel', chapters: 3, testament: 'VT' },
-  { abbrev: 'am', name: 'Amós', chapters: 9, testament: 'VT' },
-  { abbrev: 'ob', name: 'Obadias', chapters: 1, testament: 'VT' },
-  { abbrev: 'jn', name: 'Jonas', chapters: 4, testament: 'VT' },
-  { abbrev: 'mq', name: 'Miquéias', chapters: 7, testament: 'VT' },
-  { abbrev: 'na', name: 'Naum', chapters: 3, testament: 'VT' },
-  { abbrev: 'hc', name: 'Habacuque', chapters: 3, testament: 'VT' },
-  { abbrev: 'sf', name: 'Sofonias', chapters: 3, testament: 'VT' },
-  { abbrev: 'ag', name: 'Ageu', chapters: 2, testament: 'VT' },
-  { abbrev: 'zc', name: 'Zacarias', chapters: 14, testament: 'VT' },
-  { abbrev: 'ml', name: 'Malaquias', chapters: 4, testament: 'VT' },
-  { abbrev: 'mt', name: 'Mateus', chapters: 28, testament: 'NT' },
-  { abbrev: 'mc', name: 'Marcos', chapters: 16, testament: 'NT' },
-  { abbrev: 'lc', name: 'Lucas', chapters: 24, testament: 'NT' },
-  { abbrev: 'jo', name: 'João', chapters: 21, testament: 'NT' },
-  { abbrev: 'at', name: 'Atos', chapters: 28, testament: 'NT' },
-  { abbrev: 'rm', name: 'Romanos', chapters: 16, testament: 'NT' },
-  { abbrev: '1co', name: '1 Coríntios', chapters: 16, testament: 'NT' },
-  { abbrev: '2co', name: '2 Coríntios', chapters: 13, testament: 'NT' },
-  { abbrev: 'gl', name: 'Gálatas', chapters: 6, testament: 'NT' },
-  { abbrev: 'ef', name: 'Efésios', chapters: 6, testament: 'NT' },
-  { abbrev: 'fp', name: 'Filipenses', chapters: 4, testament: 'NT' },
-  { abbrev: 'cl', name: 'Colossenses', chapters: 4, testament: 'NT' },
-  { abbrev: '1ts', name: '1 Tessalonicenses', chapters: 5, testament: 'NT' },
-  { abbrev: '2ts', name: '2 Tessalonicenses', chapters: 3, testament: 'NT' },
-  { abbrev: '1tm', name: '1 Timóteo', chapters: 6, testament: 'NT' },
-  { abbrev: '2tm', name: '2 Timóteo', chapters: 4, testament: 'NT' },
-  { abbrev: 'tt', name: 'Tito', chapters: 3, testament: 'NT' },
-  { abbrev: 'fm', name: 'Filemom', chapters: 1, testament: 'NT' },
-  { abbrev: 'hb', name: 'Hebreus', chapters: 13, testament: 'NT' },
-  { abbrev: 'tg', name: 'Tiago', chapters: 5, testament: 'NT' },
-  { abbrev: '1pe', name: '1 Pedro', chapters: 5, testament: 'NT' },
-  { abbrev: '2pe', name: '2 Pedro', chapters: 3, testament: 'NT' },
-  { abbrev: '1jo', name: '1 João', chapters: 5, testament: 'NT' },
-  { abbrev: '2jo', name: '2 João', chapters: 1, testament: 'NT' },
-  { abbrev: '3jo', name: '3 João', chapters: 1, testament: 'NT' },
-  { abbrev: 'jd', name: 'Judas', chapters: 1, testament: 'NT' },
-  { abbrev: 'ap', name: 'Apocalipse', chapters: 22, testament: 'NT' },
-];
+// NT book IDs for testament detection
+const NT_IDS = new Set(['mt', 'mc', 'lc', 'jo', 'at', 'rm', '1co', '2co', 'gl', 'ef', 'fp', 'cl', '1ts', '2ts', '1tm', '2tm', 'tt', 'fm', 'hb', 'tg', '1pe', '2pe', '1jo', '2jo', '3jo', 'jd', 'ap']);
 
-// Mapping from our abbrev to bible-api.com book names
-const BOOK_API_NAMES: Record<string, string> = {
-  gn: 'genesis', ex: 'exodus', lv: 'leviticus', nm: 'numbers', dt: 'deuteronomy',
-  js: 'joshua', jz: 'judges', rt: 'ruth', '1sm': '1samuel', '2sm': '2samuel',
-  '1rs': '1kings', '2rs': '2kings', '1cr': '1chronicles', '2cr': '2chronicles',
-  ed: 'ezra', ne: 'nehemiah', et: 'esther', job: 'job', sl: 'psalms',
-  pv: 'proverbs', ec: 'ecclesiastes', ct: 'songofsolomon', is: 'isaiah',
-  jr: 'jeremiah', lm: 'lamentations', ez: 'ezekiel', dn: 'daniel',
-  os: 'hosea', jl: 'joel', am: 'amos', ob: 'obadiah', jn: 'jonah',
-  mq: 'micah', na: 'nahum', hc: 'habakkuk', sf: 'zephaniah', ag: 'haggai',
-  zc: 'zechariah', ml: 'malachi',
-  mt: 'matthew', mc: 'mark', lc: 'luke', jo: 'john', at: 'acts',
-  rm: 'romans', '1co': '1corinthians', '2co': '2corinthians', gl: 'galatians',
-  ef: 'ephesians', fp: 'philippians', cl: 'colossians', '1ts': '1thessalonians',
-  '2ts': '2thessalonians', '1tm': '1timothy', '2tm': '2timothy', tt: 'titus',
-  fm: 'philemon', hb: 'hebrews', tg: 'james', '1pe': '1peter', '2pe': '2peter',
-  '1jo': '1john', '2jo': '2john', '3jo': '3john', jd: 'jude', ap: 'revelation',
-};
+interface RawBook {
+  id: string;
+  name: string;
+  chapters: string[][];
+}
 
 export function useBible() {
   const { user } = useAuth();
-  const [books] = useState<BibleBook[]>(BIBLE_BOOKS);
+  const [books, setBooks] = useState<BibleBook[]>([]);
+  const [loadingBooks, setLoadingBooks] = useState(false);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [loadingVerses, setLoadingVerses] = useState(false);
   const [searchResults, setSearchResults] = useState<BibleSearchResult[]>([]);
@@ -149,116 +76,99 @@ export function useBible() {
   const [currentBookInfo, setCurrentBookInfo] = useState<{ name: string } | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Fetch chapter verses from bible-api.com
+  // Cache loaded bible data per version
+  const bibleCache = useRef<Record<string, RawBook[]>>({});
+
+  const loadBible = useCallback(async (version: string): Promise<RawBook[]> => {
+    if (bibleCache.current[version]) return bibleCache.current[version];
+    const url = `${GITHUB_BASE}/${version}.json`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to load ${version}`);
+    const data: RawBook[] = await res.json();
+    bibleCache.current[version] = data;
+    return data;
+  }, []);
+
+  // Load books list from default version
+  const fetchBooks = useCallback(async (version: string) => {
+    setLoadingBooks(true);
+    try {
+      const data = await loadBible(version);
+      setBooks(data.map(b => ({
+        abbrev: b.id,
+        name: b.name,
+        chapters: b.chapters.length,
+        testament: NT_IDS.has(b.id) ? 'NT' : 'VT',
+      })));
+    } catch (err) {
+      console.error('Error loading bible:', err);
+    } finally {
+      setLoadingBooks(false);
+    }
+  }, [loadBible]);
+
+  // Fetch chapter
   const fetchChapter = useCallback(async (version: string, abbrev: string, chapter: number) => {
     setLoadingVerses(true);
     setFetchError(null);
-    const book = BIBLE_BOOKS.find(b => b.abbrev === abbrev);
-    const apiName = BOOK_API_NAMES[abbrev];
-    if (!apiName || !book) {
-      setLoadingVerses(false);
-      setFetchError('Livro não encontrado');
-      return;
-    }
     try {
-      // bible-api.com format: book+chapter?translation=almeida
-      const url = `https://bible-api.com/${apiName}+${chapter}?translation=${version}`;
-      const res = await fetch(url);
-      const text = await res.text();
-
-      if (!res.ok) {
-        console.error('Bible API error:', res.status, text.substring(0, 200));
-        setFetchError(`Erro ao carregar: ${res.status}`);
-        setVerses([]);
-        setLoadingVerses(false);
-        return;
+      const data = await loadBible(version);
+      const book = data.find(b => b.id === abbrev);
+      if (!book) { setFetchError('Livro não encontrado'); setVerses([]); return; }
+      const chapterIdx = chapter - 1;
+      if (chapterIdx < 0 || chapterIdx >= book.chapters.length) {
+        setFetchError('Capítulo não encontrado'); setVerses([]); return;
       }
-
-      let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.error('Invalid JSON from Bible API:', text.substring(0, 200));
-        setFetchError('Resposta inválida da API');
-        setVerses([]);
-        setLoadingVerses(false);
-        return;
-      }
-
-      if (data.verses && Array.isArray(data.verses)) {
-        setVerses(data.verses.map((v: any) => ({
-          number: v.verse,
-          text: v.text?.trim() || '',
-        })));
-        setCurrentBookInfo({ name: book.name });
-      } else {
-        setVerses([]);
-        setFetchError('Formato de resposta inesperado');
-      }
+      const chapterVerses = book.chapters[chapterIdx];
+      setVerses(chapterVerses.map((text, i) => ({ number: i + 1, text: text.trim() })));
+      setCurrentBookInfo({ name: book.name });
     } catch (err) {
       console.error('Error fetching chapter:', err);
-      setFetchError('Erro de conexão com a API');
+      setFetchError('Erro ao carregar capítulo');
       setVerses([]);
     } finally {
       setLoadingVerses(false);
     }
-  }, []);
+  }, [loadBible]);
 
-  // Search - bible-api.com doesn't have search, so we search locally within fetched content
+  // Search
   const searchVerses = useCallback(async (version: string, term: string) => {
     if (!term.trim()) return;
     setLoadingSearch(true);
     setSearchResults([]);
-    const results: BibleSearchResult[] = [];
-    const lowerTerm = term.toLowerCase();
-
-    // Search through a few popular books for demo (full search would need a different API)
-    const booksToSearch = ['jo', 'sl', 'gn', 'mt', 'rm', 'pv', '1co', 'is', 'ap', 'at'];
-    
     try {
-      for (const abbrev of booksToSearch) {
-        const apiName = BOOK_API_NAMES[abbrev];
-        const book = BIBLE_BOOKS.find(b => b.abbrev === abbrev);
-        if (!apiName || !book) continue;
-
-        // Search first 5 chapters of each book
-        for (let ch = 1; ch <= Math.min(5, book.chapters); ch++) {
-          try {
-            const res = await fetch(`https://bible-api.com/${apiName}+${ch}?translation=${version}`);
-            if (!res.ok) continue;
-            const data = await res.json();
-            if (data.verses) {
-              for (const v of data.verses) {
-                if (v.text && v.text.toLowerCase().includes(lowerTerm)) {
-                  results.push({
-                    book_name: book.name,
-                    chapter: ch,
-                    verse: v.verse,
-                    text: v.text.trim(),
-                  });
-                }
-              }
+      const data = await loadBible(version);
+      const lowerTerm = term.toLowerCase();
+      const results: BibleSearchResult[] = [];
+      for (const book of data) {
+        for (let ci = 0; ci < book.chapters.length; ci++) {
+          for (let vi = 0; vi < book.chapters[ci].length; vi++) {
+            if (book.chapters[ci][vi].toLowerCase().includes(lowerTerm)) {
+              results.push({
+                book_name: book.name,
+                chapter: ci + 1,
+                verse: vi + 1,
+                text: book.chapters[ci][vi].trim(),
+              });
+              if (results.length >= 50) break;
             }
-          } catch { /* skip failed chapters */ }
-          if (results.length >= 20) break;
+          }
+          if (results.length >= 50) break;
         }
-        if (results.length >= 20) break;
+        if (results.length >= 50) break;
       }
+      setSearchResults(results);
     } catch (err) {
       console.error('Search error:', err);
+    } finally {
+      setLoadingSearch(false);
     }
-
-    setSearchResults(results);
-    setLoadingSearch(false);
-  }, []);
+  }, [loadBible]);
 
   // Bookmarks
   const fetchBookmarks = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('bible_bookmarks')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data } = await supabase.from('bible_bookmarks').select('*').order('created_at', { ascending: false });
     if (data) setBookmarks(data as BibleBookmark[]);
   }, [user]);
 
@@ -280,10 +190,7 @@ export function useBible() {
   // Notes
   const fetchNotes = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('bible_notes')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data } = await supabase.from('bible_notes').select('*').order('created_at', { ascending: false });
     if (data) setNotes(data as BibleNote[]);
   }, [user]);
 
@@ -304,16 +211,17 @@ export function useBible() {
   }, [fetchNotes]);
 
   useEffect(() => {
-    if (user) {
-      fetchBookmarks();
-      fetchNotes();
-    }
+    fetchBooks('arc');
+  }, [fetchBooks]);
+
+  useEffect(() => {
+    if (user) { fetchBookmarks(); fetchNotes(); }
   }, [user, fetchBookmarks, fetchNotes]);
 
   return {
-    books, loadingBooks: false,
+    books, loadingBooks,
     verses, loadingVerses, currentBookInfo, fetchError,
-    fetchChapter,
+    fetchChapter, fetchBooks,
     searchResults, loadingSearch, searchVerses,
     bookmarks, addBookmark, removeBookmark, isBookmarked,
     notes, addNote, updateNote, deleteNote,
