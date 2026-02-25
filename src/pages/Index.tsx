@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
-import { PDFDocument, ViewMode, SortBy } from '@/lib/types';
+import { PDFDocument } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
-import { PDFCard } from '@/components/PDFCard';
 import { PDFViewer } from '@/components/PDFViewer';
 import { UploadDialog } from '@/components/UploadDialog';
 import { EditDocumentDialog } from '@/components/EditDocumentDialog';
@@ -16,21 +15,10 @@ import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Upload,
-  Search,
-  LayoutGrid,
-  List,
   BookOpen,
   Star,
   SlidersHorizontal,
@@ -41,6 +29,7 @@ import {
   Settings,
   LogOut,
   Target,
+  Search,
 } from 'lucide-react';
 
 const Index = () => {
@@ -48,11 +37,6 @@ const Index = () => {
   const { signOut } = useAuth();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
   const { goal, currentReadings, completedThisMonth, upsertGoal, markCompleted, removeReading } = useReadingGoals();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortBy>('createdAt');
-  const [filterFavorites, setFilterFavorites] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
   const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
@@ -62,28 +46,6 @@ const Index = () => {
     documents.forEach((d) => d.tags.forEach((t) => tags.add(t)));
     return Array.from(tags);
   }, [documents]);
-
-  const filteredDocs = useMemo(() => {
-    let docs = [...documents];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      docs = docs.filter(
-        (d) =>
-          d.title.toLowerCase().includes(q) ||
-          d.author.toLowerCase().includes(q) ||
-          d.tags.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-    if (filterFavorites) docs = docs.filter((d) => d.favorite);
-    if (selectedTag) docs = docs.filter((d) => d.tags.includes(selectedTag));
-    docs.sort((a, b) => {
-      if (sortBy === 'title') return a.title.localeCompare(b.title);
-      if (sortBy === 'author') return a.author.localeCompare(b.author);
-      if (sortBy === 'date') return b.date.localeCompare(a.date);
-      return b.createdAt.localeCompare(a.createdAt);
-    });
-    return docs;
-  }, [documents, searchQuery, sortBy, filterFavorites, selectedTag]);
 
   if (viewingDoc) {
     return <PDFViewer doc={viewingDoc} onBack={() => setViewingDoc(null)} />;
@@ -105,15 +67,6 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar documentos..."
-                className="pl-9 w-64 h-9 bg-secondary/50"
-              />
-            </div>
             <Button onClick={() => setUploadOpen(true)} className="glow-amber">
               <Upload className="w-4 h-4" />
               Upload
@@ -164,23 +117,6 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="inicio">
-              {/* Current Readings */}
-              {currentReadings.length > 0 && (
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                    Leituras Atuais
-                  </h2>
-                  <CurrentReadings
-                    documents={documents}
-                    currentReadings={currentReadings}
-                    onView={setViewingDoc}
-                    onMarkCompleted={markCompleted}
-                    onRemove={removeReading}
-                  />
-                </div>
-              )}
-
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
@@ -200,96 +136,24 @@ const Index = () => {
                 ))}
               </div>
 
-              {/* Toolbar */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    variant={filterFavorites ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setFilterFavorites(!filterFavorites)}
-                  >
-                    <Star className={`w-3.5 h-3.5 ${filterFavorites ? 'fill-current' : ''}`} />
-                    Favoritos
-                  </Button>
-                  {allTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={selectedTag === tag ? 'default' : 'secondary'}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                    <SelectTrigger className="w-[140px] h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="createdAt">Mais recente</SelectItem>
-                      <SelectItem value="title">Título</SelectItem>
-                      <SelectItem value="author">Autor</SelectItem>
-                      <SelectItem value="date">Data</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex border border-border rounded-md">
-                    <Button
-                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                      size="icon"
-                      className="h-9 w-9 rounded-r-none"
-                      onClick={() => setViewMode('grid')}
-                    >
-                      <LayoutGrid className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                      size="icon"
-                      className="h-9 w-9 rounded-l-none"
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Documents */}
-              {filteredDocs.length === 0 ? (
-                <div className="text-center py-20">
-                  <FileText className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-                  <p className="text-lg font-medium text-muted-foreground">Nenhum documento encontrado</p>
-                  <p className="text-sm text-muted-foreground/70 mt-1">Faça upload de PDFs para começar</p>
-                </div>
-              ) : viewMode === 'grid' ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {filteredDocs.map((doc) => (
-                    <PDFCard
-                      key={doc.id}
-                      doc={doc}
-                      viewMode="grid"
-                      onView={setViewingDoc}
-                      onToggleFavorite={toggleFavorite}
-                      onDelete={deleteDocument}
-                      onEdit={setEditingDoc}
-                    />
-                  ))}
-                </div>
+              {/* Current Readings */}
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-primary" />
+                Leituras Atuais
+              </h2>
+              {currentReadings.length > 0 ? (
+                <CurrentReadings
+                  documents={documents}
+                  currentReadings={currentReadings}
+                  onView={setViewingDoc}
+                  onMarkCompleted={markCompleted}
+                  onRemove={removeReading}
+                />
               ) : (
-                <div className="space-y-2">
-                  {filteredDocs.map((doc) => (
-                    <PDFCard
-                      key={doc.id}
-                      doc={doc}
-                      viewMode="list"
-                      onView={setViewingDoc}
-                      onToggleFavorite={toggleFavorite}
-                      onDelete={deleteDocument}
-                      onEdit={setEditingDoc}
-                    />
-                  ))}
+                <div className="text-center py-16">
+                  <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-muted-foreground">Nenhuma leitura em andamento</p>
+                  <p className="text-sm text-muted-foreground/60 mt-1">Abra um documento para iniciar uma leitura</p>
                 </div>
               )}
             </TabsContent>
