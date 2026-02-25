@@ -56,6 +56,19 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [saving, setSaving] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
 
+  const normalizeForSearch = (text: string) =>
+    text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const accentInsensitiveFilter = (value: string, search: string) => {
+    if (!search) return 1;
+    return normalizeForSearch(value).includes(normalizeForSearch(search)) ? 1 : 0;
+  };
+
   const openNew = () => {
     setEditingSummary(null);
     setSelectedDocId('');
@@ -179,7 +192,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command>
+                  <Command filter={accentInsensitiveFilter}>
                     <CommandInput placeholder="Pesquisar documento..." />
                     <CommandList>
                       <CommandEmpty>Nenhum documento encontrado.</CommandEmpty>
