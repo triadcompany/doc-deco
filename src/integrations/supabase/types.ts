@@ -95,6 +95,83 @@ export type Database = {
         }
         Relationships: []
       }
+      reading_goals: {
+        Row: {
+          created_at: string
+          daily_pages_goal: number
+          id: string
+          month: number
+          monthly_docs_goal: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          daily_pages_goal?: number
+          id?: string
+          month: number
+          monthly_docs_goal?: number
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          daily_pages_goal?: number
+          id?: string
+          month?: number
+          monthly_docs_goal?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      reading_progress: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          current_page: number
+          document_id: string
+          id: string
+          is_reading: boolean
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          current_page?: number
+          document_id: string
+          id?: string
+          is_reading?: boolean
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          current_page?: number
+          document_id?: string
+          id?: string
+          is_reading?: boolean
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_progress_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
