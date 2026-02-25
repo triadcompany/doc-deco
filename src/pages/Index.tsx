@@ -8,6 +8,7 @@ import { EditDocumentDialog } from '@/components/EditDocumentDialog';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { SearchTab } from '@/components/SearchTab';
 import { FoldersTab } from '@/components/FoldersTab';
+import { FavoritesTab } from '@/components/FavoritesTab';
 import { SettingsTab } from '@/components/SettingsTab';
 import { MetaTab } from '@/components/MetaTab';
 import { BibleTab } from '@/components/BibleTab';
@@ -98,6 +99,10 @@ const Index = () => {
                 <FolderTree className="w-3.5 h-3.5" />
                 Pastas
               </TabsTrigger>
+              <TabsTrigger value="favoritos" className="gap-1.5">
+                <Star className="w-3.5 h-3.5" />
+                Favoritos
+              </TabsTrigger>
               <TabsTrigger value="pesquisa" className="gap-1.5">
                 <Search className="w-3.5 h-3.5" />
                 Pesquisa
@@ -170,6 +175,16 @@ const Index = () => {
 
             <TabsContent value="pastas">
               <FoldersTab
+                documents={documents}
+                onView={setViewingDoc}
+                onToggleFavorite={toggleFavorite}
+                onDelete={deleteDocument}
+                onEdit={setEditingDoc}
+              />
+            </TabsContent>
+
+            <TabsContent value="favoritos">
+              <FavoritesTab
                 documents={documents}
                 onView={setViewingDoc}
                 onToggleFavorite={toggleFavorite}
