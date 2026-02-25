@@ -68,27 +68,13 @@ function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete
         onToggleFavorite={onToggleFavorite}
         onDelete={onDelete}
       />
-      <div className="ml-14 mr-4 -mt-1 mb-2 px-3 py-2 rounded-b-lg bg-secondary/30 border border-t-0 border-border/50 space-y-1.5">
-        {doc.snippet && (
+      {doc.snippet && (
+        <div className="ml-14 mr-4 -mt-1 mb-2 px-3 py-2 rounded-b-lg bg-secondary/30 border border-t-0 border-border/50">
           <p className="text-xs text-muted-foreground leading-relaxed">
             {highlightTerm(doc.snippet, currentTerm)}
           </p>
-        )}
-        <div className="flex items-center gap-2">
-          <p className="text-xs italic text-muted-foreground/80 flex-1 select-all">
-            {citation}
-          </p>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={handleCopy}
-            title="Copiar citação"
-          >
-            {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
-          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
