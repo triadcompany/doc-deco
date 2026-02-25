@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useBible, BIBLE_VERSIONS, BibleVerse } from '@/hooks/use-bible';
+import { useBible, BIBLE_VERSIONS, HIGHLIGHT_COLORS, BibleVerse } from '@/hooks/use-bible';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +38,8 @@ import {
   Copy,
   Trash2,
   Pencil,
+  Highlighter,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,6 +51,7 @@ export function BibleTab() {
     searchResults, loadingSearch, searchVerses,
     bookmarks, addBookmark, removeBookmark, isBookmarked,
     notes, addNote, updateNote, deleteNote,
+    highlights, addHighlight, removeHighlight, getHighlight,
   } = useBible();
 
   const [version, setVersion] = useState('arc');
@@ -263,12 +271,45 @@ export function BibleTab() {
                     {verses.map(v => {
                       const isFav = isBookmarked(version, selectedBook, selectedChapter, v.number);
                       const verseNote = chapterNotes.find(n => n.verse === v.number);
+                      const highlight = getHighlight(version, selectedBook, selectedChapter, v.number);
+                      const hlColor = highlight ? HIGHLIGHT_COLORS.find(c => c.value === highlight.color) : null;
                       return (
                         <div key={v.number} className="group">
-                          <div className="flex gap-2 py-2 px-3 rounded-lg hover:bg-secondary/50 transition-colors">
+                          <div className={`flex gap-2 py-2 px-3 rounded-lg transition-colors ${hlColor ? hlColor.bg : 'hover:bg-secondary/50'}`}>
                             <span className="text-xs font-bold text-primary mt-1 min-w-[24px]">{v.number}</span>
                             <p className="flex-1 text-sm leading-relaxed">{v.text}</p>
                             <div className="opacity-0 group-hover:opacity-100 flex items-start gap-1 transition-opacity">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Grifar">
+                                    <Highlighter className={`w-3.5 h-3.5 ${hlColor ? hlColor.text : ''}`} />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-2" side="left">
+                                  <div className="flex gap-1.5 items-center">
+                                    {HIGHLIGHT_COLORS.map(c => (
+                                      <button
+                                        key={c.value}
+                                        className={`w-6 h-6 rounded-full ${c.dot} hover:scale-110 transition-transform ring-2 ${highlight?.color === c.value ? 'ring-foreground' : 'ring-transparent'}`}
+                                        onClick={() => {
+                                          addHighlight({ version, book_abbrev: selectedBook, chapter: selectedChapter, verse: v.number, color: c.value });
+                                          toast.success(`Grifado com ${c.label}`);
+                                        }}
+                                        title={c.label}
+                                      />
+                                    ))}
+                                    {highlight && (
+                                      <button
+                                        className="w-6 h-6 rounded-full border-2 border-destructive flex items-center justify-center hover:scale-110 transition-transform"
+                                        onClick={() => { removeHighlight(highlight.id); toast.success('Grifo removido'); }}
+                                        title="Remover grifo"
+                                      >
+                                        <X className="w-3 h-3 text-destructive" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleBookmark(v)} title={isFav ? 'Remover favorito' : 'Favoritar'}>
                                 {isFav ? <Star className="w-3.5 h-3.5 fill-primary text-primary" /> : <StarOff className="w-3.5 h-3.5" />}
                               </Button>

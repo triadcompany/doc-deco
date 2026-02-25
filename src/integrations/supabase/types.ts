@@ -50,6 +50,39 @@ export type Database = {
         }
         Relationships: []
       }
+      bible_highlights: {
+        Row: {
+          book_abbrev: string
+          chapter: number
+          color: string
+          created_at: string
+          id: string
+          user_id: string
+          verse: number
+          version: string
+        }
+        Insert: {
+          book_abbrev: string
+          chapter: number
+          color?: string
+          created_at?: string
+          id?: string
+          user_id: string
+          verse: number
+          version: string
+        }
+        Update: {
+          book_abbrev?: string
+          chapter?: number
+          color?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          verse?: number
+          version?: string
+        }
+        Relationships: []
+      }
       bible_notes: {
         Row: {
           book_abbrev: string
