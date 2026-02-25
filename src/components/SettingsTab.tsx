@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { SettingsEntry } from '@/hooks/use-settings';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Users, Languages, Settings2, Sun, Moon } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Plus, Trash2, Users, Languages, Settings2, Sun, Moon, UserCircle, Camera, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface SettingsTabProps {
   authors: SettingsEntry[];
@@ -79,14 +83,11 @@ function EntryManager({
 
       {entries.length > 0 && (
         <div>
-          {/* Table Header */}
           <div className="grid grid-cols-[1fr_180px_80px] gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b border-border">
             <span>Nome</span>
             <span>Data de Cadastro</span>
             <span className="text-right">Ações</span>
           </div>
-
-          {/* Table Rows */}
           <div className="divide-y divide-border">
             {entries.map((entry) => (
               <div
@@ -119,6 +120,175 @@ function EntryManager({
           Nenhum registro cadastrado
         </p>
       )}
+    </div>
+  );
+}
+
+function ProfileSection() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const updateName = useMutation({
+    mutationFn: async (newName: string) => {
+      if (!user?.id) return;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: newName.trim() })
+        .eq('user_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      setEditingName(false);
+      toast.success('Nome atualizado!');
+    },
+    onError: () => toast.error('Erro ao atualizar nome'),
+  });
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione uma imagem');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 2MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${user.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('pdfs')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('pdfs').getPublicUrl(path);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlData.publicUrl + '?t=' + Date.now() })
+        .eq('user_id', user.id);
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      toast.success('Foto atualizada!');
+    } catch {
+      toast.error('Erro ao enviar foto');
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const initials = (profile?.display_name || user?.email || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div className="glass rounded-xl p-6 space-y-6">
+      <div>
+        <h3 className="text-xl font-bold">Meu Perfil</h3>
+        <p className="text-sm text-muted-foreground mt-1">Gerencie suas informações pessoais</p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center gap-6">
+        {/* Avatar */}
+        <div className="relative group">
+          <Avatar className="w-24 h-24 border-2 border-primary/20">
+            <AvatarImage src={profile?.avatar_url || undefined} />
+            <AvatarFallback className="text-2xl bg-primary/10 text-primary">{initials}</AvatarFallback>
+          </Avatar>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingAvatar}
+            className="absolute inset-0 flex items-center justify-center bg-background/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            {uploadingAvatar ? (
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            ) : (
+              <Camera className="w-6 h-6 text-primary" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarUpload}
+          />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 space-y-4 w-full">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Nome</Label>
+            {editingName ? (
+              <div className="flex gap-2">
+                <Input
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && nameValue.trim() && updateName.mutate(nameValue)}
+                  className="h-9 bg-secondary/50"
+                  autoFocus
+                />
+                <Button size="sm" onClick={() => nameValue.trim() && updateName.mutate(nameValue)} disabled={updateName.isPending}>
+                  Salvar
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{profile?.display_name || 'Sem nome'}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => {
+                    setNameValue(profile?.display_name || '');
+                    setEditingName(true);
+                  }}
+                >
+                  Editar
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Email</Label>
+            <p className="font-medium text-sm">{user?.email || '—'}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -173,12 +343,16 @@ export function SettingsTab({
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Configurações</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Gerencie autores e tradutores
+          Gerencie seu perfil, autores e tradutores
         </p>
       </div>
 
-      <Tabs defaultValue="autores" className="space-y-6">
+      <Tabs defaultValue="perfil" className="space-y-6">
         <TabsList className="bg-secondary/50 w-full justify-start">
+          <TabsTrigger value="perfil" className="gap-1.5 flex-1">
+            <UserCircle className="w-3.5 h-3.5" />
+            Perfil
+          </TabsTrigger>
           <TabsTrigger value="autores" className="gap-1.5 flex-1">
             <Users className="w-3.5 h-3.5" />
             Autores
@@ -192,6 +366,10 @@ export function SettingsTab({
             Aplicativo
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="perfil">
+          <ProfileSection />
+        </TabsContent>
 
         <TabsContent value="autores">
           <EntryManager
