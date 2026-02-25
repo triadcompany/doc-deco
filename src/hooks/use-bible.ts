@@ -94,11 +94,11 @@ export function useBible() {
     setLoadingBooks(true);
     try {
       const data = await loadBible(version);
-      setBooks(data.map(b => ({
+      setBooks(data.map((b, index) => ({
         abbrev: b.id,
         name: b.name,
         chapters: b.chapters.length,
-        testament: NT_IDS.has(b.id) ? 'NT' : 'VT',
+        testament: index < 39 ? 'VT' : 'NT',
       })));
     } catch (err) {
       console.error('Error loading bible:', err);
