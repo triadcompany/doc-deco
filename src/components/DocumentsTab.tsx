@@ -1,4 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+
+function normalize(str: string): string {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s]+/g, ' ').trim();
+}
 import { PDFDocument } from '@/lib/types';
 import { PDFCard } from '@/components/PDFCard';
 import { Input } from '@/components/ui/input';
@@ -58,8 +62,8 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
   const filteredDocs = useMemo(() => {
     let docs = [...documents];
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      docs = docs.filter((d) => d.title.toLowerCase().includes(q));
+      const q = normalize(searchQuery);
+      docs = docs.filter((d) => normalize(d.title).includes(q));
     }
     if (selectedYear !== 'all') {
       docs = docs.filter((d) => d.date.startsWith(selectedYear));
