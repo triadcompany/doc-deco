@@ -71,7 +71,7 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
     if (selectedAuthor !== 'all') {
       docs = docs.filter((d) => d.author === selectedAuthor);
     }
-    return docs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return docs.sort((a, b) => a.date.localeCompare(b.date));
   }, [documents, searchQuery, selectedYear, selectedAuthor]);
 
   const toggleSelect = (id: string) => {
