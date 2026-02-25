@@ -55,7 +55,7 @@ export function BibleTab() {
   const [noteVerse, setNoteVerse] = useState<number | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
-  const currentBook = useMemo(() => books.find(b => b.abbrev.pt === selectedBook), [books, selectedBook]);
+  const currentBook = useMemo(() => books.find(b => b.abbrev === selectedBook), [books, selectedBook]);
   const totalChapters = currentBook?.chapters || 0;
 
   const otBooks = useMemo(() => books.filter(b => b.testament === 'VT'), [books]);
@@ -194,7 +194,7 @@ export function BibleTab() {
                     <h3 className="text-lg font-semibold mb-3">Antigo Testamento</h3>
                     <div className="flex flex-wrap gap-2">
                       {otBooks.map(b => (
-                        <Button key={b.abbrev.pt} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev.pt)}>
+                        <Button key={b.abbrev} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev)}>
                           {b.name}
                         </Button>
                       ))}
@@ -204,7 +204,7 @@ export function BibleTab() {
                     <h3 className="text-lg font-semibold mb-3">Novo Testamento</h3>
                     <div className="flex flex-wrap gap-2">
                       {ntBooks.map(b => (
-                        <Button key={b.abbrev.pt} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev.pt)}>
+                        <Button key={b.abbrev} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev)}>
                           {b.name}
                         </Button>
                       ))}
@@ -247,7 +247,7 @@ export function BibleTab() {
               {currentBookInfo && (
                 <div className="text-center">
                   <h3 className="text-xl font-bold">{currentBookInfo.name}</h3>
-                  <p className="text-sm text-muted-foreground">Capítulo {selectedChapter} • Autor: {currentBookInfo.author}</p>
+                  <p className="text-sm text-muted-foreground">Capítulo {selectedChapter}</p>
                 </div>
               )}
 
@@ -335,7 +335,7 @@ export function BibleTab() {
                   {searchResults.map((r, i) => (
                     <div key={i} className="glass rounded-lg p-4 space-y-1">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{r.book.name} {r.chapter}:{r.number}</Badge>
+                        <Badge variant="secondary">{r.book_name} {r.chapter}:{r.verse}</Badge>
                       </div>
                       <p className="text-sm leading-relaxed">{r.text}</p>
                     </div>
