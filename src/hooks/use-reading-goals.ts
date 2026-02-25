@@ -32,22 +32,38 @@ export function useReadingGoals() {
 
   const fetchGoal = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('reading_goals')
-      .select('*')
-      .eq('month', currentMonth)
-      .eq('year', currentYear)
-      .maybeSingle();
-    setGoal(data as ReadingGoal | null);
+    try {
+      const { data, error } = await supabase
+        .from('reading_goals')
+        .select('*')
+        .eq('month', currentMonth)
+        .eq('year', currentYear)
+        .maybeSingle();
+      if (error) {
+        console.error('Erro ao buscar meta:', error.message);
+        return;
+      }
+      setGoal(data as ReadingGoal | null);
+    } catch (err) {
+      console.error('Erro inesperado ao buscar meta:', err);
+    }
   }, [user, currentMonth, currentYear]);
 
   const fetchProgress = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('reading_progress')
-      .select('*')
-      .order('updated_at', { ascending: false });
-    setProgress((data as ReadingProgressItem[] | null) ?? []);
+    try {
+      const { data, error } = await supabase
+        .from('reading_progress')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (error) {
+        console.error('Erro ao buscar progresso:', error.message);
+        return;
+      }
+      setProgress((data as ReadingProgressItem[] | null) ?? []);
+    } catch (err) {
+      console.error('Erro inesperado ao buscar progresso:', err);
+    }
   }, [user]);
 
   useEffect(() => {

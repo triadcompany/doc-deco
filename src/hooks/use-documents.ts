@@ -43,22 +43,27 @@ export function useDocuments() {
   const [loading, setLoading] = useState(true);
 
   const fetchDocuments = useCallback(async () => {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const { data, error } = await supabase
-      .from('documents')
-      .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility')
-      .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Erro ao buscar documentos:', error.message);
+      if (error) {
+        console.error('Erro ao buscar documentos:', error.message);
+        setDocuments([]);
+        return;
+      }
+
+      setDocuments((data as DbDocument[]).map(toAppDoc));
+    } catch (err) {
+      console.error('Erro inesperado ao buscar documentos:', err);
       setDocuments([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setDocuments((data as DbDocument[]).map(toAppDoc));
-    setLoading(false);
   }, [user?.id]);
 
   useEffect(() => {
