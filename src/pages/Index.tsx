@@ -125,7 +125,7 @@ const Index = () => {
                 </TabsTrigger>
                 <TabsTrigger value="resumos" className="gap-1.5 text-sm px-3">
                   <FileText className="w-3.5 h-3.5" />
-                  Resumos
+                  Estudo
                 </TabsTrigger>
                 <TabsTrigger value="biblia" className="gap-1.5 text-sm px-3">
                   <BookOpen className="w-3.5 h-3.5" />
@@ -266,7 +266,7 @@ const Index = () => {
                   { value: 'favoritos', icon: Star, label: 'Favoritos' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
                   { value: 'meta', icon: Target, label: 'Meta' },
-                  { value: 'resumos', icon: FileText, label: 'Resumos' },
+                  { value: 'resumos', icon: FileText, label: 'Estudo' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'configuracoes', icon: Settings, label: 'Config' },
                 ].map((tab) => (
