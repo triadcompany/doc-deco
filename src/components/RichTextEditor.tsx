@@ -43,20 +43,40 @@ const fontSizes = [
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const saveSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !editorRef.current) return;
+    const range = sel.getRangeAt(0);
+    if (editorRef.current.contains(range.commonAncestorContainer)) {
+      savedRangeRef.current = range.cloneRange();
+    }
+  }, []);
+
+  const restoreSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || !savedRangeRef.current) return;
+    sel.removeAllRanges();
+    sel.addRange(savedRangeRef.current);
+  }, []);
 
   const exec = useCallback((command: string, val?: string) => {
     editorRef.current?.focus();
+    restoreSelection();
     document.execCommand(command, false, val);
+    saveSelection();
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
-  }, [onChange]);
+  }, [onChange, restoreSelection, saveSelection]);
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
-  }, [onChange]);
+    saveSelection();
+  }, [onChange, saveSelection]);
 
   const handleRef = useCallback((el: HTMLDivElement | null) => {
     (editorRef as any).current = el;
@@ -64,7 +84,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
       el.innerHTML = value;
       isInitialized.current = true;
     }
-  }, []);
+  }, [value]);
 
   const applyBlock = useCallback((tag: string) => {
     exec('formatBlock', `<${tag}>`);
@@ -79,6 +99,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
           variant="ghost"
           size="icon"
           className="h-7 w-7"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => exec('bold')}
           title="Negrito"
         >
@@ -89,6 +110,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
           variant="ghost"
           size="icon"
           className="h-7 w-7"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => exec('italic')}
           title="Itálico"
         >
@@ -102,6 +124,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyBlock('h1')}
           title="Título 1"
         >
@@ -112,6 +135,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyBlock('h2')}
           title="Título 2"
         >
@@ -122,6 +146,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyBlock('p')}
           title="Corpo"
         >
@@ -160,7 +185,9 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         ref={handleRef}
         contentEditable
         onInput={handleInput}
-        data-placeholder={placeholder}
+        onMouseUp={saveSelection}
+        onKeyUp={saveSelection}
+        onBlur={saveSelection}
         className="min-h-[200px] max-h-[400px] overflow-y-auto p-3 text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 prose prose-sm max-w-none dark:prose-invert"
         style={{ wordBreak: 'break-word' }}
       />

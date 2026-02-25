@@ -189,26 +189,9 @@ export function useDocuments() {
     filters?: { author?: string; tags?: string[]; startDate?: string; endDate?: string }
   ): Promise<(PDFDocument & { snippet?: string })[]> => {
     // Step 1: Query only IDs + metadata (no content) for speed
-    let query = supabase.from('documents').select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility');
-
-    if (term) {
-      // Normalize: remove accents for accent-insensitive search
-      const normalize = (s: string) =>
-        s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const normalizedTerm = normalize(term);
-
-      if (searchType === 'exact') {
-        const pattern = normalizedTerm.split(/\s+/).filter(Boolean).join('%');
-        // Use ilike with both original and unaccented patterns
-        query = query.or(`content.ilike.%${term.split(/\s+/).filter(Boolean).join('%')}%,content.ilike.%${pattern}%`);
-      } else {
-        const words = term.split(/\s+/).filter(Boolean);
-        for (const word of words) {
-          const nw = normalize(word);
-          query = query.or(`content.ilike.%${word}%,content.ilike.%${nw}%`);
-        }
-      }
-    }
+    let query = supabase
+      .from('documents')
+      .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility');
 
     if (filters?.author && filters.author !== 'all') {
       query = query.eq('author', filters.author);
@@ -231,83 +214,96 @@ export function useDocuments() {
       );
     }
 
-    // Step 2: Fetch snippets only for the first 50 results (content field is heavy)
-    if (term && results.length > 0) {
-      const idsToSnippet = results.slice(0, 50).map((r) => r.id);
-      const { data: contentData } = await supabase
-        .from('documents')
-        .select('id, content')
-        .in('id', idsToSnippet);
+    if (!term.trim() || results.length === 0) {
+      return results;
+    }
 
-      if (contentData) {
-        const contentMap = new Map<string, string>();
-        for (const row of contentData as any[]) {
-          if (row.content) contentMap.set(row.id, row.content);
+    const normalizeText = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const termWords = normalizeText(term).split(/\s+/).filter(Boolean);
+    if (termWords.length === 0) return results;
+
+    // Step 2: Fetch content for candidate docs and filter with accent-insensitive matching
+    const idsToSnippet = results.map((r) => r.id);
+    const { data: contentData, error: contentError } = await supabase
+      .from('documents')
+      .select('id, content')
+      .in('id', idsToSnippet);
+
+    if (contentError || !contentData) return [];
+
+    const contentMap = new Map<string, string>();
+    for (const row of contentData as any[]) {
+      if (row.content) contentMap.set(row.id, row.content);
+    }
+
+    const expandedResults: typeof results = [];
+
+    for (const doc of results) {
+      const content = contentMap.get(doc.id);
+      if (!content) continue;
+
+      const contentNorm = normalizeText(content);
+
+      if (searchType === 'exact') {
+        const regexPattern = termWords.map(escapeRegex).join('\\s+');
+        const termRegex = new RegExp(regexPattern, 'gi');
+        let match: RegExpExecArray | null;
+
+        while ((match = termRegex.exec(contentNorm)) !== null) {
+          const idx = match.index;
+          const matchLen = match[0].length;
+          const start = Math.max(0, idx - 300);
+          const end = Math.min(content.length, idx + matchLen + 300);
+          const before = start > 0 ? '...' : '';
+          const after = end < content.length ? '...' : '';
+          expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
         }
+      } else {
+        const wordPositions: { word: string; index: number }[] = [];
 
-        const normalizeStr = (s: string) =>
-          s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const termWords = normalizeStr(term).split(/\s+/).filter(Boolean);
-
-        const expandedResults: typeof results = [];
-        for (const doc of results) {
-          const content = contentMap.get(doc.id);
-          if (!content) continue;
-
-          // Normalize content for matching, but keep original for snippets
-          const contentNorm = normalizeStr(content);
-
-          if (searchType === 'exact') {
-            const regexPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s]+');
-            const termRegex = new RegExp(regexPattern, 'gi');
-            let match: RegExpExecArray | null;
-            while ((match = termRegex.exec(contentNorm)) !== null) {
-              const idx = match.index;
-              const matchLen = match[0].length;
-              const start = Math.max(0, idx - 300);
-              const end = Math.min(content.length, idx + matchLen + 300);
-              const before = start > 0 ? '...' : '';
-              const after = end < content.length ? '...' : '';
-              expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
-            }
-          } else {
-            // Proximity: find all positions of each word, then find clusters within 300 chars
-            const wordPositions: { word: string; index: number }[] = [];
-            for (const w of termWords) {
-              const wRegex = new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-              let m: RegExpExecArray | null;
-              while ((m = wRegex.exec(contentNorm)) !== null) {
-                wordPositions.push({ word: w, index: m.index });
-              }
-            }
-            // For each occurrence of the first word, check if all other words appear within 300 chars
-            const firstWordPositions = wordPositions.filter(p => p.word === termWords[0]);
-            const addedSnippets = new Set<number>();
-            for (const pos of firstWordPositions) {
-              const rangeStart = pos.index - 300;
-              const rangeEnd = pos.index + 300;
-              const allFound = termWords.every(w =>
-                wordPositions.some(p => p.word === w && p.index >= rangeStart && p.index <= rangeEnd)
-              );
-              if (allFound) {
-                // Round to nearest 50 to avoid near-duplicate snippets
-                const snipKey = Math.round(pos.index / 50);
-                if (addedSnippets.has(snipKey)) continue;
-                addedSnippets.add(snipKey);
-                const start = Math.max(0, pos.index - 300);
-                const end = Math.min(content.length, pos.index + termWords[0].length + 300);
-                const before = start > 0 ? '...' : '';
-                const after = end < content.length ? '...' : '';
-                expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
-              }
-            }
+        for (const w of termWords) {
+          const wRegex = new RegExp(escapeRegex(w), 'gi');
+          let m: RegExpExecArray | null;
+          while ((m = wRegex.exec(contentNorm)) !== null) {
+            wordPositions.push({ word: w, index: m.index });
           }
         }
-        results = expandedResults;
+
+        const firstWordPositions = wordPositions.filter((p) => p.word === termWords[0]);
+        const addedSnippets = new Set<number>();
+
+        for (const pos of firstWordPositions) {
+          const rangeStart = pos.index - 300;
+          const rangeEnd = pos.index + 300;
+          const allFound = termWords.every((w) =>
+            wordPositions.some((p) => p.word === w && p.index >= rangeStart && p.index <= rangeEnd)
+          );
+
+          if (!allFound) continue;
+
+          const snipKey = Math.round(pos.index / 50);
+          if (addedSnippets.has(snipKey)) continue;
+          addedSnippets.add(snipKey);
+
+          const start = Math.max(0, pos.index - 300);
+          const end = Math.min(content.length, pos.index + termWords[0].length + 300);
+          const before = start > 0 ? '...' : '';
+          const after = end < content.length ? '...' : '';
+          expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
+        }
       }
     }
 
-    return results;
+    return expandedResults;
   };
 
   return { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent };
