@@ -75,26 +75,42 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     setTotalPages(numPages);
     setLoading(false);
 
-    // If we have a search context, find the page containing the snippet
-    if (searchContext?.snippet && !searchPageFound && doc.url) {
+    // If we have a search context, find the page containing the search term
+    if (searchContext && !searchPageFound && doc.url) {
       try {
         const pdfjsLib = pdfjs;
         const loadingTask = pdfjsLib.getDocument(doc.url);
         const pdf = await loadingTask.promise;
         
-        // Take a meaningful portion of the snippet (strip leading/trailing ellipsis)
-        const cleanSnippet = searchContext.snippet.replace(/^\.{3}/, '').replace(/\.{3}$/, '').trim();
-        // Use the first 80 chars as a search needle
-        const needle = cleanSnippet.slice(0, 80).replace(/\s+/g, ' ').trim().toLowerCase();
+        // Build a flexible regex from the search term
+        const termWords = searchContext.searchTerm.split(/\s+/).filter(Boolean);
+        const termPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
+        const termRegex = new RegExp(termPattern, 'i');
+
+        // Also prepare a snippet-based needle as fallback
+        const cleanSnippet = (searchContext.snippet || '').replace(/^\.{3}/, '').replace(/\.{3}$/, '').trim();
+        const snippetWords = cleanSnippet.slice(0, 100).split(/\s+/).filter(Boolean).slice(0, 8);
+        const snippetPattern = snippetWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*?');
+        const snippetRegex = snippetWords.length > 3 ? new RegExp(snippetPattern, 'i') : null;
         
-        for (let i = 1; i <= numPages; i++) {
+        // Search through pages - try term first, then snippet
+        let found = false;
+        for (let i = 1; i <= numPages && !found; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          const pageText = textContent.items.map((item: any) => item.str).join(' ').toLowerCase();
-          if (pageText.includes(needle.slice(0, 40))) {
+          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          
+          // First: check if the snippet content is on this page
+          if (snippetRegex && snippetRegex.test(pageText)) {
             setCurrentPage(i);
             setSearchPageFound(true);
-            break;
+            found = true;
+          }
+          // Fallback: check if the search term is on this page
+          else if (termRegex.test(pageText)) {
+            setCurrentPage(i);
+            setSearchPageFound(true);
+            found = true;
           }
         }
       } catch (e) {
