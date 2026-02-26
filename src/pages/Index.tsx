@@ -200,7 +200,7 @@ const Index = () => {
                 }
                 if (recentDocs.length === 0) {
                   recentDocs = [...documents]
-                    .filter(d => !pinIdSet.has(d.id))
+                    .filter(d => !pinIdSet.has(d.id) && !completedIds.has(d.id))
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .slice(0, 8);
                 }
