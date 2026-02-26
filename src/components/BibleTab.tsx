@@ -50,7 +50,7 @@ import { toast } from 'sonner';
 export function BibleTab() {
   const {
     books, loadingBooks,
-    verses, loadingVerses, currentBookInfo,
+    verses, loadingVerses, currentBookInfo, fetchError,
     fetchChapter, fetchBooks,
     searchResults, loadingSearch, searchVerses,
     bookmarks, addBookmark, removeBookmark, isBookmarked,
@@ -282,12 +282,22 @@ export function BibleTab() {
                 </div>
               )}
 
+              {/* Error */}
+              {fetchError && !loadingVerses && (
+                <div className="text-center py-8">
+                  <p className="text-destructive text-sm">{fetchError}</p>
+                  <Button variant="outline" size="sm" className="mt-2" onClick={() => setSelectedBook('')}>
+                    Voltar aos livros
+                  </Button>
+                </div>
+              )}
+
               {/* Verses */}
               {loadingVerses ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-              ) : (
+              ) : verses.length > 0 ? (
                 <ScrollArea className="h-[60vh]">
                   <div className="space-y-1 pr-4">
                     {verses.map(v => {
@@ -389,7 +399,7 @@ export function BibleTab() {
                     })}
                   </div>
                 </ScrollArea>
-              )}
+              ) : null}
 
               {/* Chapter notes */}
               {chapterNotes.length > 0 && (
