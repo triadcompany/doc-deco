@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { SearchContext } from '@/lib/types';
-import { useDocuments } from '@/hooks/use-documents';
 import { PDFCard } from '@/components/PDFCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -90,11 +89,12 @@ interface SearchTabProps {
   onDelete: (id: string) => void;
   authorsList?: string[];
   translatorsList?: string[];
+  searchContent: (term: string, searchType: 'exact' | 'proximity', filters?: { author?: string; tags?: string[]; startDate?: string; endDate?: string }) => Promise<(PDFDocument & { snippet?: string })[]>;
 }
 
 type SearchType = 'exact' | 'proximity';
 
-export function SearchTab({ documents, onView, onToggleFavorite, onDelete, authorsList = [], translatorsList = [] }: SearchTabProps) {
+export function SearchTab({ documents, onView, onToggleFavorite, onDelete, authorsList = [], translatorsList = [], searchContent }: SearchTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState<SearchType>('exact');
   const [selectedAuthor, setSelectedAuthor] = useState('all');
@@ -106,8 +106,6 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
   const [results, setResults] = useState<(PDFDocument & { snippet?: string })[]>([]);
   const [searching, setSearching] = useState(false);
   const [currentTerm, setCurrentTerm] = useState('');
-
-  const { searchContent } = useDocuments();
 
   const authors = authorsList.length > 0 ? authorsList : (() => {
     const set = new Set<string>();
