@@ -278,15 +278,17 @@ export function useDocuments() {
       const contentNorm = normalizeText(content);
 
       if (searchType === 'exact') {
-        const regexPattern = termWords.map(escapeRegex).join('\\s+');
-        const termRegex = new RegExp(regexPattern, 'gi');
+        // Match the exact phrase as typed (normalized), not individual words
+        const exactNorm = normalizeText(term);
+        const termRegex = new RegExp(escapeRegex(exactNorm), 'gi');
         let match: RegExpExecArray | null;
 
         while ((match = termRegex.exec(contentNorm)) !== null) {
           const idx = match.index;
           const matchLen = match[0].length;
-          const start = Math.max(0, idx - 300);
-          const end = Math.min(content.length, idx + matchLen + 300);
+          const snippetRadius = Math.floor((300 - matchLen) / 2);
+          const start = Math.max(0, idx - Math.max(snippetRadius, 0));
+          const end = Math.min(content.length, idx + matchLen + Math.max(snippetRadius, 0));
           const before = start > 0 ? '...' : '';
           const after = end < content.length ? '...' : '';
           expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
@@ -318,8 +320,8 @@ export function useDocuments() {
           if (addedSnippets.has(snipKey)) continue;
           addedSnippets.add(snipKey);
 
-          const start = Math.max(0, pos.index - 300);
-          const end = Math.min(content.length, pos.index + termWords[0].length + 300);
+          const start = Math.max(0, pos.index - 100);
+          const end = Math.min(content.length, start + 300);
           const before = start > 0 ? '...' : '';
           const after = end < content.length ? '...' : '';
           expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
