@@ -122,6 +122,10 @@ const Index = () => {
                   <BookOpen className="w-3.5 h-3.5" />
                   Início
                 </TabsTrigger>
+                <TabsTrigger value="biblia" className="gap-1.5 text-sm px-3">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Bíblia
+                </TabsTrigger>
                 <TabsTrigger value="documentos" className="gap-1.5 text-sm px-3">
                   <FolderSearch className="w-3.5 h-3.5" />
                   Documentos
@@ -141,10 +145,6 @@ const Index = () => {
                 <TabsTrigger value="resumos" className="gap-1.5 text-sm px-3">
                   <FileText className="w-3.5 h-3.5" />
                   Estudo
-                </TabsTrigger>
-                <TabsTrigger value="biblia" className="gap-1.5 text-sm px-3">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Bíblia
                 </TabsTrigger>
                 <TabsTrigger value="configuracoes" className="gap-1.5 text-sm px-3">
                   <Settings className="w-3.5 h-3.5" />
@@ -325,13 +325,12 @@ const Index = () => {
               <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-9 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
+                  { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'documentos', icon: FolderSearch, label: 'Docs' },
                   { value: 'pastas', icon: FolderTree, label: 'Pastas' },
                   { value: 'favoritos', icon: Star, label: 'Favoritos' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
-                  
                   { value: 'resumos', icon: FileText, label: 'Estudo' },
-                  { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'configuracoes', icon: Settings, label: 'Config' },
                 ].map((tab) => (
                   <TabsTrigger
