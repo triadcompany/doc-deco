@@ -220,7 +220,9 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
       normToOrig.push(fullText.length); // sentinel
 
       const termNorm = activeSearchTerm.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      const pattern = termNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Split term into words and join with flexible whitespace to handle PDF text layer spacing
+      const termWords = termNorm.split(/\s+/).filter(Boolean);
+      const pattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
       const regex = new RegExp(pattern, 'gi');
 
       const matches: { start: number; end: number }[] = [];
