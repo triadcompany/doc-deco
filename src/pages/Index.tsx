@@ -49,6 +49,25 @@ const Index = () => {
   const [searchContext, setSearchContext] = useState<SearchContext | null>(null);
   const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
   const [activeTab, setActiveTab] = useState('inicio');
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('pinned_docs') || '[]'); } catch { return []; }
+  });
+
+  const togglePin = useCallback((id: string) => {
+    setPinnedIds(prev => {
+      let next: string[];
+      if (prev.includes(id)) {
+        next = prev.filter(x => x !== id);
+      } else {
+        next = [...prev.slice(0, 1), id].slice(0, 2); // max 2
+        if (prev.length >= 2 && !prev.includes(id)) {
+          next = [prev[0], id]; // replace second
+        }
+      }
+      localStorage.setItem('pinned_docs', JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const handleViewDoc = (doc: PDFDocument, ctx?: SearchContext) => {
     setSearchContext(ctx || null);
@@ -155,34 +174,33 @@ const Index = () => {
 
               {/* Recent documents — last 5 accessed */}
               {(() => {
-                // Pin first 2 favorite documents, then fill with 8 most recently accessed
-                const favDocs = documents.filter(d => d.favorite)
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .slice(0, 2);
-                const favIds = new Set(favDocs.map(d => d.id));
+                // Pinned docs first (up to 2), then 8 most recently accessed
+                const pinDocs = pinnedIds
+                  .map(id => documents.find(d => d.id === id))
+                  .filter((d): d is PDFDocument => !!d);
+                const pinIdSet = new Set(pinnedIds);
 
-                // Get up to 8 recent (excluding pinned favs)
+                // Get up to 8 recent (excluding pinned)
                 let recentDocs: PDFDocument[] = [];
                 if (progress.length > 0) {
                   const seen = new Set<string>();
                   for (const rp of progress) {
-                    if (favIds.has(rp.document_id) || seen.has(rp.document_id)) continue;
+                    if (pinIdSet.has(rp.document_id) || seen.has(rp.document_id)) continue;
                     seen.add(rp.document_id);
                     const doc = documents.find(d => d.id === rp.document_id);
                     if (doc) recentDocs.push(doc);
                     if (recentDocs.length >= 8) break;
                   }
                 }
-                // Fallback if no progress
                 if (recentDocs.length === 0) {
                   recentDocs = [...documents]
-                    .filter(d => !favIds.has(d.id))
+                    .filter(d => !pinIdSet.has(d.id))
                     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .slice(0, 8);
                 }
 
-                let recentWithDocs = [
-                  ...favDocs.map(doc => ({ doc, pinned: true })),
+                const recentWithDocs = [
+                  ...pinDocs.map(doc => ({ doc, pinned: true })),
                   ...recentDocs.map(doc => ({ doc, pinned: false })),
                 ];
 
@@ -195,7 +213,7 @@ const Index = () => {
                       Acessados Recentemente
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {recentWithDocs.map(({ doc }) => (
+                      {recentWithDocs.map(({ doc, pinned }) => (
                         <PDFCard
                           key={doc.id}
                           doc={doc}
@@ -204,6 +222,8 @@ const Index = () => {
                           onToggleFavorite={toggleFavorite}
                           onDelete={deleteDocument}
                           onEdit={setEditingDoc}
+                          onTogglePin={togglePin}
+                          isPinned={pinned}
                         />
                       ))}
                     </div>
