@@ -30,24 +30,30 @@ function formatCitationAPA(doc: PDFDocument): string {
   return `${author}. (${year}). ${title}${pages}. [Documento digital].`;
 }
 
-function highlightTerm(text: string, term: string): React.ReactNode {
+function highlightTerm(text: string, term: string, searchType: 'exact' | 'proximity' = 'exact'): React.ReactNode {
   if (!term) return text;
-  const words = term.split(/\s+/).filter(Boolean);
-  // Highlight each word individually so both exact and proximity matches work
-  const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  let pattern: string;
+  if (searchType === 'exact') {
+    // Highlight the full phrase as one unit
+    pattern = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  } else {
+    // Highlight each word individually for proximity mode
+    const words = term.split(/\s+/).filter(Boolean);
+    pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  }
   const regex = new RegExp(`(${pattern})`, 'gi');
   const parts = text.split(regex);
   return parts.map((part, i) => {
-    // Re-test each part with a fresh regex to avoid lastIndex issues
     const testRegex = new RegExp(`^(${pattern})$`, 'i');
     return testRegex.test(part)
       ? <mark key={i} className="bg-yellow-300/60 text-foreground rounded-sm px-0.5 font-medium">{part}</mark>
       : part;
   });
 }
-function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete }: {
+function SearchResultItem({ doc, currentTerm, searchType, onView, onToggleFavorite, onDelete }: {
   doc: PDFDocument & { snippet?: string };
   currentTerm: string;
+  searchType: 'exact' | 'proximity';
   onView: (doc: PDFDocument, searchContext?: SearchContext) => void;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
@@ -74,7 +80,7 @@ function SearchResultItem({ doc, currentTerm, onView, onToggleFavorite, onDelete
       {doc.snippet && (
         <div className="ml-14 mr-4 -mt-1 mb-2 px-3 py-2 rounded-b-lg bg-secondary/30 border border-t-0 border-border/50">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            {highlightTerm(doc.snippet, currentTerm)}
+            {highlightTerm(doc.snippet, currentTerm, searchType)}
           </p>
         </div>
       )}
@@ -295,6 +301,7 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
                   key={`${doc.id}-${index}`}
                   doc={doc}
                   currentTerm={currentTerm}
+                  searchType={searchType}
                   onView={onView}
                   onToggleFavorite={onToggleFavorite}
                   onDelete={onDelete}
