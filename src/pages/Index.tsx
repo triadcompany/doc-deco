@@ -180,9 +180,10 @@ const Index = () => {
               {/* Recent documents — last 5 accessed */}
               {(() => {
                 // Pinned docs first (up to 2), then 8 most recently accessed
+                const completedIds = new Set(progress.filter(p => p.completed).map(p => p.document_id));
                 const pinDocs = pinnedIds
                   .map(id => documents.find(d => d.id === id))
-                  .filter((d): d is PDFDocument => !!d);
+                  .filter((d): d is PDFDocument => !!d && !completedIds.has(d.id));
                 const pinIdSet = new Set(pinnedIds);
 
                 // Get up to 8 recent (excluding pinned)
@@ -190,7 +191,7 @@ const Index = () => {
                 if (progress.length > 0) {
                   const seen = new Set<string>();
                   for (const rp of progress) {
-                    if (pinIdSet.has(rp.document_id) || seen.has(rp.document_id)) continue;
+                    if (rp.completed || pinIdSet.has(rp.document_id) || seen.has(rp.document_id)) continue;
                     seen.add(rp.document_id);
                     const doc = documents.find(d => d.id === rp.document_id);
                     if (doc) recentDocs.push(doc);
