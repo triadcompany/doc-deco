@@ -206,26 +206,6 @@ const Index = () => {
                 );
               })()}
 
-              {/* Current Readings */}
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-primary" />
-                Leituras Atuais
-              </h2>
-              {currentReadings.length > 0 ? (
-                <CurrentReadings
-                  documents={documents}
-                  currentReadings={currentReadings}
-                  onView={(doc) => handleViewDoc(doc)}
-                  onMarkCompleted={markCompleted}
-                  onRemove={removeReading}
-                />
-              ) : (
-                <div className="text-center py-16">
-                  <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-                  <p className="text-muted-foreground">Nenhuma leitura em andamento</p>
-                  <p className="text-sm text-muted-foreground/60 mt-1">Abra um documento para iniciar uma leitura</p>
-                </div>
-              )}
 
               {/* Goals / Meta section */}
               <div className="mt-6">
