@@ -75,10 +75,17 @@ export function BibleTab() {
   // Mobile: track which verse has actions expanded
   const [expandedVerse, setExpandedVerse] = useState<number | null>(null);
 
+  // Navigate to a scripture reference — normalise abbrev against current books list
   const handleNavigateToRef = (bookAbbrev: string, chapter: number, _verse: number) => {
-    setSelectedBook(bookAbbrev);
+    // Try exact match first, then case-insensitive, then by name prefix
+    const match = books.find(b => b.abbrev === bookAbbrev)
+      || books.find(b => b.abbrev.toLowerCase() === bookAbbrev.toLowerCase())
+      || books.find(b => b.name.toLowerCase().startsWith(bookAbbrev.toLowerCase()));
+    const resolvedAbbrev = match ? match.abbrev : bookAbbrev;
+    setSelectedBook(resolvedAbbrev);
     setSelectedChapter(chapter);
-    fetchChapter(version, bookAbbrev, chapter);
+    setExpandedVerse(null);
+    fetchChapter(version, resolvedAbbrev, chapter);
   };
 
   const currentBook = useMemo(() => books.find(b => b.abbrev === selectedBook), [books, selectedBook]);
