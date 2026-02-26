@@ -42,7 +42,11 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-medium text-sm">{doc.title}</h3>
-          <p className="text-xs text-muted-foreground">{doc.author} · {doc.date} · {formatFileSize(doc.fileSize)}</p>
+          <p className="text-xs text-muted-foreground">
+            {doc.author}
+            {doc.author === 'William Branham' && doc.translator && ` · ${doc.translator}`}
+            {' · '}{doc.date} · {formatFileSize(doc.fileSize)}
+          </p>
         </div>
         <div className="flex items-center gap-1">
           {doc.tags.slice(0, 2).map((tag) => (
@@ -126,7 +130,10 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
       </div>
       <div className="p-3 space-y-1.5">
         <h3 className="font-semibold text-sm leading-tight">{doc.title}</h3>
-        <p className="text-xs text-muted-foreground truncate">{doc.author}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {doc.author}
+              {doc.author === 'William Branham' && doc.translator && ` · ${doc.translator}`}
+            </p>
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground">{doc.date}</span>
           <span className="text-[10px] text-muted-foreground">{formatFileSize(doc.fileSize)}</span>
