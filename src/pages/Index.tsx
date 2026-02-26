@@ -140,11 +140,10 @@ const Index = () => {
 
             <TabsContent value="inicio">
               {/* Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
                 {[
                   { label: 'Total de PDFs', value: documents.length, icon: FileText },
                   { label: 'Favoritos', value: documents.filter((d) => d.favorite).length, icon: Star },
-                  { label: 'Tags', value: allTags.length, icon: SlidersHorizontal },
                 ].map((stat) => (
                   <div key={stat.label} className="glass rounded-xl p-3 sm:p-4 flex items-center gap-3">
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-accent flex items-center justify-center">
