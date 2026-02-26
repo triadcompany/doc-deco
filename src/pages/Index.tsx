@@ -179,31 +179,30 @@ const Index = () => {
 
               {/* Recent documents — last 5 accessed */}
               {(() => {
-                // Pinned docs first (up to 2), then 8 most recently accessed
-                const completedIds = new Set(progress.filter(p => p.completed).map(p => p.document_id));
+                // Pinned docs first (up to 2), then most recently accessed (unfinished)
+                const latestProgressByDoc = new Map<string, typeof progress[number]>();
+                for (const rp of progress) {
+                  if (!latestProgressByDoc.has(rp.document_id)) {
+                    latestProgressByDoc.set(rp.document_id, rp);
+                  }
+                }
+
+                const completedIds = new Set(
+                  Array.from(latestProgressByDoc.values())
+                    .filter((p) => p.completed)
+                    .map((p) => p.document_id)
+                );
+
+                const pinIdSet = new Set(pinnedIds);
                 const pinDocs = pinnedIds
                   .map(id => documents.find(d => d.id === id))
                   .filter((d): d is PDFDocument => !!d && !completedIds.has(d.id));
-                const pinIdSet = new Set(pinnedIds);
 
-                // Get up to 8 recent (excluding pinned)
-                let recentDocs: PDFDocument[] = [];
-                if (progress.length > 0) {
-                  const seen = new Set<string>();
-                  for (const rp of progress) {
-                    if (rp.completed || pinIdSet.has(rp.document_id) || seen.has(rp.document_id)) continue;
-                    seen.add(rp.document_id);
-                    const doc = documents.find(d => d.id === rp.document_id);
-                    if (doc) recentDocs.push(doc);
-                    if (recentDocs.length >= 8) break;
-                  }
-                }
-                if (recentDocs.length === 0) {
-                  recentDocs = [...documents]
-                    .filter(d => !pinIdSet.has(d.id) && !completedIds.has(d.id))
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .slice(0, 8);
-                }
+                const recentDocs = Array.from(latestProgressByDoc.values())
+                  .filter((rp) => !rp.completed && !pinIdSet.has(rp.document_id))
+                  .map((rp) => documents.find((d) => d.id === rp.document_id))
+                  .filter((d): d is PDFDocument => !!d)
+                  .slice(0, 8);
 
                 const recentWithDocs = [
                   ...pinDocs.map(doc => ({ doc, pinned: true })),
@@ -220,7 +219,7 @@ const Index = () => {
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {recentWithDocs.map(({ doc, pinned }) => {
-                        const rp = progress.find(p => p.document_id === doc.id);
+                        const rp = latestProgressByDoc.get(doc.id);
                         return (
                           <PDFCard
                             key={doc.id}

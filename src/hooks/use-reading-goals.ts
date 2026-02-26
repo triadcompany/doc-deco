@@ -60,7 +60,14 @@ export function useReadingGoals() {
         console.error('Erro ao buscar progresso:', error.message);
         return;
       }
-      setProgress((data as ReadingProgressItem[] | null) ?? []);
+      const rows = (data as ReadingProgressItem[] | null) ?? [];
+      const latestByDocument = new Map<string, ReadingProgressItem>();
+      for (const item of rows) {
+        if (!latestByDocument.has(item.document_id)) {
+          latestByDocument.set(item.document_id, item);
+        }
+      }
+      setProgress(Array.from(latestByDocument.values()));
     } catch (err) {
       console.error('Erro inesperado ao buscar progresso:', err);
     }
