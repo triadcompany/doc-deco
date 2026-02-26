@@ -12,6 +12,7 @@ import { FavoritesTab } from '@/components/FavoritesTab';
 import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
+import { Progress } from '@/components/ui/progress';
 import { useDocumentSummaries } from '@/hooks/use-document-summaries';
 
 const SettingsTab = lazy(() => import('@/components/SettingsTab').then(m => ({ default: m.SettingsTab })));
@@ -40,7 +41,7 @@ const Index = () => {
   const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent } = useDocuments();
   const { signOut } = useAuth();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
-  const { goal, currentReadings, completedThisMonth, upsertGoal, markCompleted, removeReading } = useReadingGoals();
+  const { goal, progress, currentReadings, completedThisMonth, upsertGoal, markCompleted, removeReading } = useReadingGoals();
   const { summaries, loading: summariesLoading, upsertSummary, deleteSummary } = useDocumentSummaries();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
@@ -152,6 +153,61 @@ const Index = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Recent documents — last 5 accessed */}
+              {(() => {
+                // progress is already sorted by updated_at desc from the hook
+                const recentDocs = [...progress];
+                // Deduplicate by document_id and take 5
+                const seen = new Set<string>();
+                const recent5: typeof progress = [];
+                for (const rp of recentDocs) {
+                  if (!seen.has(rp.document_id)) {
+                    seen.add(rp.document_id);
+                    recent5.push(rp);
+                  }
+                  if (recent5.length >= 5) break;
+                }
+                const recentWithDocs = recent5
+                  .map(rp => ({ rp, doc: documents.find(d => d.id === rp.document_id) }))
+                  .filter((x): x is { rp: typeof progress[0]; doc: PDFDocument } => !!x.doc);
+
+                if (recentWithDocs.length === 0) return null;
+
+                return (
+                  <div className="mb-6">
+                    <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-primary" />
+                      Acessados Recentemente
+                    </h2>
+                    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2">
+                      {recentWithDocs.map(({ rp, doc }) => {
+                        const totalPages = doc.pages ?? 0;
+                        const pct = totalPages > 0 ? Math.min((rp.current_page / totalPages) * 100, 100) : 0;
+                        return (
+                          <div
+                            key={doc.id}
+                            className="glass rounded-xl p-3 min-w-[160px] max-w-[180px] shrink-0 cursor-pointer hover:bg-secondary/30 transition-colors space-y-2"
+                            onClick={() => handleViewDoc(doc)}
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <BookOpen className="w-4 h-4 text-primary" />
+                            </div>
+                            <p className="text-xs font-semibold line-clamp-2 leading-tight">{doc.title}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{doc.author}</p>
+                            {totalPages > 0 && (
+                              <div className="space-y-0.5">
+                                <Progress value={pct} className="h-1" />
+                                <p className="text-[9px] text-muted-foreground">Pág. {rp.current_page}/{totalPages}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Current Readings */}
               <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
