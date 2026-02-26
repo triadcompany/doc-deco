@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
@@ -9,22 +9,23 @@ import { DocumentsTab } from '@/components/DocumentsTab';
 import { SearchTab } from '@/components/SearchTab';
 import { FoldersTab } from '@/components/FoldersTab';
 import { FavoritesTab } from '@/components/FavoritesTab';
-import { SettingsTab } from '@/components/SettingsTab';
-import { MetaTab } from '@/components/MetaTab';
-import { BibleTab } from '@/components/BibleTab';
 import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
 import { useDocumentSummaries } from '@/hooks/use-document-summaries';
-import { SummariesTab } from '@/components/SummariesTab';
+
+const SettingsTab = lazy(() => import('@/components/SettingsTab').then(m => ({ default: m.SettingsTab })));
+const MetaTab = lazy(() => import('@/components/MetaTab').then(m => ({ default: m.MetaTab })));
+const BibleTab = lazy(() => import('@/components/BibleTab').then(m => ({ default: m.BibleTab })));
+const SummariesTab = lazy(() => import('@/components/SummariesTab').then(m => ({ default: m.SummariesTab })));
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Upload,
   BookOpen,
   Star,
-  SlidersHorizontal,
+  
   FileText,
   FolderSearch,
   FolderTree,
@@ -36,7 +37,7 @@ import {
 } from 'lucide-react';
 
 const Index = () => {
-  const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument } = useDocuments();
+  const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent } = useDocuments();
   const { signOut } = useAuth();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
   const { goal, currentReadings, completedThisMonth, upsertGoal, markCompleted, removeReading } = useReadingGoals();
@@ -52,11 +53,6 @@ const Index = () => {
     setViewingDoc(doc);
   };
 
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    documents.forEach((d) => d.tags.forEach((t) => tags.add(t)));
-    return Array.from(tags);
-  }, [documents]);
 
   return (
     <>
@@ -217,42 +213,51 @@ const Index = () => {
                 onDelete={deleteDocument}
                 authorsList={authors.map((a) => a.name)}
                 translatorsList={translators.map((t) => t.name)}
+                searchContent={searchContent}
               />
             </TabsContent>
 
             <TabsContent value="meta">
-              <MetaTab
-                documents={documents}
-                completedThisMonth={completedThisMonth}
-                goal={goal}
-                upsertGoal={upsertGoal}
-              />
+              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+                <MetaTab
+                  documents={documents}
+                  completedThisMonth={completedThisMonth}
+                  goal={goal}
+                  upsertGoal={upsertGoal}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="resumos">
-              <SummariesTab
-                documents={documents}
-                summaries={summaries}
-                loading={summariesLoading}
-                onUpsert={upsertSummary}
-                onDelete={deleteSummary}
-                onViewDoc={(doc) => handleViewDoc(doc)}
-              />
+              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+                <SummariesTab
+                  documents={documents}
+                  summaries={summaries}
+                  loading={summariesLoading}
+                  onUpsert={upsertSummary}
+                  onDelete={deleteSummary}
+                  onViewDoc={(doc) => handleViewDoc(doc)}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="biblia">
-              <BibleTab />
+              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+                <BibleTab />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="configuracoes">
-              <SettingsTab
-                authors={authors}
-                translators={translators}
-                addAuthor={addAuthor}
-                removeAuthor={removeAuthor}
-                addTranslator={addTranslator}
-                removeTranslator={removeTranslator}
-              />
+              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+                <SettingsTab
+                  authors={authors}
+                  translators={translators}
+                  addAuthor={addAuthor}
+                  removeAuthor={removeAuthor}
+                  addTranslator={addTranslator}
+                  removeTranslator={removeTranslator}
+                />
+              </Suspense>
             </TabsContent>
 
             {/* Mobile bottom tab bar */}
