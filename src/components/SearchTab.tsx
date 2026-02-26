@@ -30,15 +30,18 @@ function formatCitationAPA(doc: PDFDocument): string {
   return `${author}. (${year}). ${title}${pages}. [Documento digital].`;
 }
 
+function normalizeForHighlight(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function highlightTerm(text: string, term: string, searchType: 'exact' | 'proximity' = 'exact'): React.ReactNode {
   if (!term) return text;
+  const normTerm = normalizeForHighlight(term);
   let pattern: string;
   if (searchType === 'exact') {
-    // Highlight the full phrase as one unit
-    pattern = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    pattern = normTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   } else {
-    // Highlight each word individually for proximity mode
-    const words = term.split(/\s+/).filter(Boolean);
+    const words = normTerm.split(/\s+/).filter(Boolean);
     pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   }
   const regex = new RegExp(`(${pattern})`, 'gi');
