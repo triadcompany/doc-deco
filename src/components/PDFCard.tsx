@@ -3,7 +3,7 @@ import { formatFileSize } from '@/lib/mock-data';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, FileText, MoreVertical, Eye, Trash2, Pencil } from 'lucide-react';
+import { Star, FileText, MoreVertical, Eye, Trash2, Pencil, Pin } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,8 @@ interface PDFCardProps {
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit?: (doc: PDFDocument) => void;
+  onTogglePin?: (id: string) => void;
+  isPinned?: boolean;
 }
 
 const colors = [
@@ -28,7 +30,7 @@ const colors = [
   'from-rose-500/20 to-red-500/10',
 ];
 
-export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onEdit }: PDFCardProps) {
+export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onEdit, onTogglePin, isPinned }: PDFCardProps) {
   const colorIndex = doc.title.length % colors.length;
 
   if (viewMode === 'list') {
@@ -76,6 +78,11 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
                 <Pencil className="w-4 h-4 mr-2" /> Editar
               </DropdownMenuItem>
             )}
+            {onTogglePin && (
+              <DropdownMenuItem onClick={() => onTogglePin(doc.id)}>
+                <Pin className="w-4 h-4 mr-2" /> {isPinned ? 'Desafixar' : 'Fixar'}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem className="text-destructive" onClick={() => onDelete(doc.id)}>
               <Trash2 className="w-4 h-4 mr-2" /> Excluir
             </DropdownMenuItem>
@@ -114,6 +121,11 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
               {onEdit && (
                 <DropdownMenuItem onClick={() => onEdit(doc)}>
                   <Pencil className="w-4 h-4 mr-2" /> Editar
+                </DropdownMenuItem>
+              )}
+              {onTogglePin && (
+                <DropdownMenuItem onClick={() => onTogglePin(doc.id)}>
+                  <Pin className="w-4 h-4 mr-2" /> {isPinned ? 'Desafixar' : 'Fixar'}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem className="text-destructive" onClick={() => onDelete(doc.id)}>
