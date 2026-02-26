@@ -71,7 +71,8 @@ export const HIGHLIGHT_COLORS = [
 
 export const BIBLE_VERSIONS = [
   { value: 'arc', label: 'ARC - Almeida Revista e Corrigida' },
-  { value: 'kjv', label: 'KJV - King James 1611' },
+  { value: 'kja', label: 'KJA - King James Atualizada (PT)' },
+  { value: 'kjv', label: 'KJV - King James 1611 (EN)' },
   { value: 'textusreceptus', label: 'Grego - Textus Receptus (NT)' },
   { value: 'aleppo', label: 'Hebraico - Aleppo Codex (AT)' },
 ];
