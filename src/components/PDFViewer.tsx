@@ -92,12 +92,14 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     }
 
     if (searchContext && !searchPageFound && doc.url) {
+      const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       try {
         const pdfjsLib = pdfjs;
         const loadingTask = pdfjsLib.getDocument(doc.url);
         const pdf = await loadingTask.promise;
         
-        const termWords = searchContext.searchTerm.split(/\s+/).filter(Boolean);
+        const termNorm = normalize(searchContext.searchTerm);
+        const termWords = termNorm.split(/\s+/).filter(Boolean);
         const termPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
         const termRegex = new RegExp(termPattern, 'i');
 
@@ -110,7 +112,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         for (let i = 1; i <= numPages && !found; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          const pageText = normalize(textContent.items.map((item: any) => item.str).join(' '));
           
           if (snippetRegex && snippetRegex.test(pageText)) {
             setCurrentPage(i);
@@ -199,13 +201,34 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         nodeOffsets.push({ node: tn, start, end: fullText.length });
       }
 
-      const pattern = activeSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Build normalized text with position mapping to original
+      const nfdText = fullText.normalize('NFD');
+      let normText = '';
+      const normToOrig: number[] = []; // normText index -> original fullText index
+      let origIdx = 0;
+      for (let ci = 0; ci < nfdText.length; ci++) {
+        const code = nfdText.charCodeAt(ci);
+        // Skip combining diacritical marks (0x0300–0x036f)
+        if (code >= 0x0300 && code <= 0x036f) {
+          // don't increment origIdx for combining chars within same base char
+          continue;
+        }
+        normText += nfdText[ci].toLowerCase();
+        normToOrig.push(origIdx);
+        origIdx++;
+      }
+      normToOrig.push(fullText.length); // sentinel
+
+      const termNorm = activeSearchTerm.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const pattern = termNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(pattern, 'gi');
 
       const matches: { start: number; end: number }[] = [];
       let m: RegExpExecArray | null;
-      while ((m = regex.exec(fullText)) !== null) {
-        matches.push({ start: m.index, end: m.index + m[0].length });
+      while ((m = regex.exec(normText)) !== null) {
+        const origStart = normToOrig[m.index];
+        const origEnd = normToOrig[m.index + m[0].length] ?? fullText.length;
+        matches.push({ start: origStart, end: origEnd });
       }
 
       if (matches.length === 0) return;
