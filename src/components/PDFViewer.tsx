@@ -405,9 +405,9 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <main ref={mainRef} className="flex-1 flex items-center justify-center bg-muted/30 overflow-auto p-4">
+        <main ref={mainRef} className="flex-1 bg-muted/30 overflow-auto p-4">
           {pdfUrl ? (
-            <div className="relative" ref={pageContainerRef}>
+            <div className="relative mx-auto w-fit" ref={pageContainerRef}>
               <Document
                 file={pdfUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
