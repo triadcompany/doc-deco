@@ -277,7 +277,12 @@ export function BibleTab() {
                         <div key={v.number} className="group">
                           <div className={`flex gap-2 py-2 px-3 rounded-lg transition-colors ${hlColor ? hlColor.bg : 'hover:bg-secondary/50'}`}>
                             <span className="text-xs font-bold text-primary mt-1 min-w-[24px]">{v.number}</span>
-                            <p className="flex-1 text-sm leading-relaxed">{v.text}</p>
+                            <div className="flex-1">
+                              <p className={`text-sm leading-relaxed ${version === 'aleppo' ? 'text-right font-serif' : ''} ${version === 'textusreceptus' ? 'font-serif' : ''}`} dir={version === 'aleppo' ? 'rtl' : 'ltr'}>{v.text}</p>
+                              {v.translation && (
+                                <p className="text-xs text-muted-foreground mt-1 italic leading-relaxed">{v.translation}</p>
+                              )}
+                            </div>
                             <div className="opacity-0 group-hover:opacity-100 flex items-start gap-1 transition-opacity">
                               <Popover>
                                 <PopoverTrigger asChild>
