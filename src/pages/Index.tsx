@@ -119,10 +119,6 @@ const Index = () => {
                   <Search className="w-3.5 h-3.5" />
                   Pesquisa
                 </TabsTrigger>
-                <TabsTrigger value="meta" className="gap-1.5 text-sm px-3">
-                  <Target className="w-3.5 h-3.5" />
-                  Meta
-                </TabsTrigger>
                 <TabsTrigger value="resumos" className="gap-1.5 text-sm px-3">
                   <FileText className="w-3.5 h-3.5" />
                   Estudo
@@ -230,6 +226,18 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground/60 mt-1">Abra um documento para iniciar uma leitura</p>
                 </div>
               )}
+
+              {/* Goals / Meta section */}
+              <div className="mt-6">
+                <Suspense fallback={<div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+                  <MetaTab
+                    documents={documents}
+                    completedThisMonth={completedThisMonth}
+                    goal={goal}
+                    upsertGoal={upsertGoal}
+                  />
+                </Suspense>
+              </div>
             </TabsContent>
 
             <TabsContent value="documentos">
@@ -274,16 +282,6 @@ const Index = () => {
               />
             </TabsContent>
 
-            <TabsContent value="meta">
-              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
-                <MetaTab
-                  documents={documents}
-                  completedThisMonth={completedThisMonth}
-                  goal={goal}
-                  upsertGoal={upsertGoal}
-                />
-              </Suspense>
-            </TabsContent>
 
             <TabsContent value="resumos">
               <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
@@ -326,7 +324,7 @@ const Index = () => {
                   { value: 'pastas', icon: FolderTree, label: 'Pastas' },
                   { value: 'favoritos', icon: Star, label: 'Favoritos' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
-                  { value: 'meta', icon: Target, label: 'Meta' },
+                  
                   { value: 'resumos', icon: FileText, label: 'Estudo' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'configuracoes', icon: Settings, label: 'Config' },
