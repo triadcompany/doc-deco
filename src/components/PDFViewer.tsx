@@ -5,6 +5,7 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useDocumentAnnotations } from '@/hooks/use-document-annotations';
+import { Input } from '@/components/ui/input';
 import {
   ArrowLeft,
   ZoomIn,
@@ -17,6 +18,7 @@ import {
   FileText,
   Loader2,
   Trash2,
+  Search,
   X,
 } from 'lucide-react';
 
@@ -49,12 +51,19 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
   const [highlightMode, setHighlightMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchPageFound, setSearchPageFound] = useState(false);
+  const [inDocSearch, setInDocSearch] = useState(false);
+  const [inDocSearchTerm, setInDocSearchTerm] = useState('');
+  const [inDocResults, setInDocResults] = useState<{ page: number; index: number }[]>([]);
+  const [inDocResultIdx, setInDocResultIdx] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
   const { annotations, addAnnotation, removeAnnotation, clearPageAnnotations } = useDocumentAnnotations(doc.id);
 
+  const pdfDocRef = useRef<any>(null);
   const pdfUrl = doc.url;
 
   // Measure container width for auto-fit on mobile
@@ -73,6 +82,14 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
   const onDocumentLoadSuccess = useCallback(async ({ numPages }: { numPages: number }) => {
     setTotalPages(numPages);
     setLoading(false);
+
+    // Store pdf instance for in-doc search
+    if (doc.url) {
+      try {
+        const loadingTask = pdfjs.getDocument(doc.url);
+        pdfDocRef.current = await loadingTask.promise;
+      } catch {}
+    }
 
     if (searchContext && !searchPageFound && doc.url) {
       try {
@@ -111,9 +128,55 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     }
   }, [searchContext, searchPageFound, doc.url]);
 
-  // Highlight search term in the text layer after page render
+  // In-document search
+  const executeInDocSearch = useCallback(async (term: string) => {
+    if (!term.trim() || !pdfDocRef.current) {
+      setInDocResults([]);
+      setInDocResultIdx(0);
+      return;
+    }
+    setIsSearching(true);
+    const pdf = pdfDocRef.current;
+    const results: { page: number; index: number }[] = [];
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedTerm, 'gi');
+
+    for (let i = 1; i <= totalPages; i++) {
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(pageText)) !== null) {
+          results.push({ page: i, index: results.length });
+        }
+      } catch {}
+    }
+    setInDocResults(results);
+    setInDocResultIdx(0);
+    if (results.length > 0) {
+      setCurrentPage(results[0].page);
+    }
+    setIsSearching(false);
+  }, [totalPages]);
+
+  const goToInDocResult = useCallback((idx: number) => {
+    if (inDocResults.length === 0) return;
+    const wrapped = ((idx % inDocResults.length) + inDocResults.length) % inDocResults.length;
+    setInDocResultIdx(wrapped);
+    setCurrentPage(inDocResults[wrapped].page);
+  }, [inDocResults]);
+
   useEffect(() => {
-    if (!searchContext?.searchTerm) return;
+    if (inDocSearch) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
+  }, [inDocSearch]);
+
+  const activeSearchTerm = inDocSearch && inDocSearchTerm.trim() ? inDocSearchTerm.trim() : searchContext?.searchTerm || '';
+
+  useEffect(() => {
+    if (!activeSearchTerm) return;
     const container = pageContainerRef.current;
     if (!container) return;
 
@@ -136,7 +199,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         nodeOffsets.push({ node: tn, start, end: fullText.length });
       }
 
-      const words = searchContext.searchTerm.split(/\s+/).filter(Boolean);
+      const words = activeSearchTerm.split(/\s+/).filter(Boolean);
       const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
       const regex = new RegExp(pattern, 'gi');
 
@@ -187,7 +250,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     }, 800);
 
     return () => clearTimeout(timeout);
-  }, [currentPage, searchContext, loading]);
+  }, [currentPage, activeSearchTerm, loading]);
 
   // Capture text selection and create highlight (persisted to DB)
   const handleSelectionEnd = useCallback(() => {
@@ -351,6 +414,22 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
             >
               <Highlighter className="w-3.5 h-3.5" />
             </Button>
+            <Button
+              variant={inDocSearch ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setInDocSearch(!inDocSearch);
+                if (inDocSearch) {
+                  setInDocSearchTerm('');
+                  setInDocResults([]);
+                  setInDocResultIdx(0);
+                }
+              }}
+              title="Pesquisar no documento"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8">
               <Bookmark className="w-3.5 h-3.5" />
             </Button>
@@ -364,6 +443,62 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
           </div>
         </div>
       </header>
+
+      {/* In-document search bar */}
+      {inDocSearch && (
+        <div className="h-12 border-b border-border flex items-center gap-2 px-3 shrink-0 bg-muted/50">
+          <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Input
+            ref={searchInputRef}
+            value={inDocSearchTerm}
+            onChange={(e) => setInDocSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (inDocResults.length > 0 && inDocSearchTerm.trim()) {
+                  goToInDocResult(inDocResultIdx + 1);
+                } else {
+                  executeInDocSearch(inDocSearchTerm);
+                }
+              } else if (e.key === 'Escape') {
+                setInDocSearch(false);
+                setInDocSearchTerm('');
+                setInDocResults([]);
+              }
+            }}
+            placeholder="Pesquisar no documento..."
+            className="h-8 text-sm flex-1"
+          />
+          {isSearching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          {inDocResults.length > 0 && (
+            <>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {inDocResultIdx + 1}/{inDocResults.length}
+              </span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => goToInDocResult(inDocResultIdx - 1)}>
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => goToInDocResult(inDocResultIdx + 1)}>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+            </>
+          )}
+          {inDocSearchTerm && inDocResults.length === 0 && !isSearching && (
+            <span className="text-xs text-muted-foreground">Nenhum resultado</span>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => {
+              setInDocSearch(false);
+              setInDocSearchTerm('');
+              setInDocResults([]);
+            }}
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
 
       {/* Highlight color bar */}
       {highlightMode && (
