@@ -288,10 +288,10 @@ export function useDocuments() {
           const matchLen = match[0].length;
           const snippetRadius = Math.floor((300 - matchLen) / 2);
           const start = Math.max(0, idx - Math.max(snippetRadius, 0));
-          const end = Math.min(content.length, idx + matchLen + Math.max(snippetRadius, 0));
+          const end = Math.min(contentNorm.length, idx + matchLen + Math.max(snippetRadius, 0));
           const before = start > 0 ? '...' : '';
-          const after = end < content.length ? '...' : '';
-          expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
+          const after = end < contentNorm.length ? '...' : '';
+          expandedResults.push({ ...doc, snippet: before + contentNorm.slice(start, end) + after });
         }
       } else {
         const wordPositions: { word: string; index: number }[] = [];
@@ -321,10 +321,10 @@ export function useDocuments() {
           addedSnippets.add(snipKey);
 
           const start = Math.max(0, pos.index - 100);
-          const end = Math.min(content.length, start + 300);
+          const end = Math.min(contentNorm.length, start + 300);
           const before = start > 0 ? '...' : '';
-          const after = end < content.length ? '...' : '';
-          expandedResults.push({ ...doc, snippet: before + content.slice(start, end) + after });
+          const after = end < contentNorm.length ? '...' : '';
+          expandedResults.push({ ...doc, snippet: before + contentNorm.slice(start, end) + after });
         }
       }
     }
