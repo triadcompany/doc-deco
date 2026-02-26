@@ -111,8 +111,8 @@ function CrossRefContent({
   const filteredOt = bookFilter ? otBooks.filter(b => b.name.toLowerCase().includes(bookFilter.toLowerCase())) : otBooks;
   const filteredNt = bookFilter ? ntBooks.filter(b => b.name.toLowerCase().includes(bookFilter.toLowerCase())) : ntBooks;
 
-  const scrollH = isMobile ? 'h-[45vh]' : 'h-[300px]';
-  const previewScrollH = isMobile ? 'h-[35vh]' : 'h-[220px]';
+  const scrollH = isMobile ? 'h-[40vh]' : 'h-[300px]';
+  const previewScrollH = isMobile ? 'h-[28vh]' : 'h-[220px]';
 
   return (
     <>
@@ -274,17 +274,17 @@ export function CrossRefDialog(props: CrossRefDialogProps) {
   if (isMobile) {
     return (
       <Drawer open={props.open} onOpenChange={props.onOpenChange}>
-        <DrawerContent className="max-h-[90vh] px-4 pb-safe">
-          <DrawerHeader className="px-0">
+        <DrawerContent className="max-h-[85vh] px-4 pb-safe">
+          <DrawerHeader className="px-0 pb-1">
             <DrawerTitle className="flex items-center gap-2 text-base">
               <Link2 className="w-4 h-4" /> Referências Cruzadas
             </DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pb-2">
             <CrossRefContent {...props} />
           </div>
-          <DrawerFooter className="px-0 pt-2">
-            <Button variant="outline" onClick={() => props.onOpenChange(false)} className="w-full">Fechar</Button>
+          <DrawerFooter className="px-0 pt-1 pb-2">
+            <Button variant="outline" onClick={() => props.onOpenChange(false)} className="w-full h-10">Fechar</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
