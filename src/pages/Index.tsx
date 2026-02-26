@@ -10,6 +10,7 @@ import { PDFCard } from '@/components/PDFCard';
 import { SearchTab } from '@/components/SearchTab';
 import { FoldersTab } from '@/components/FoldersTab';
 import { FavoritesTab } from '@/components/FavoritesTab';
+import { CompletedTab } from '@/components/CompletedTab';
 import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
@@ -27,7 +28,7 @@ import {
   Upload,
   BookOpen,
   Star,
-  
+  CheckCircle2,
   FileText,
   FolderSearch,
   FolderTree,
@@ -141,6 +142,10 @@ const Index = () => {
                 <TabsTrigger value="pesquisa" className="gap-1.5 text-sm px-3">
                   <Search className="w-3.5 h-3.5" />
                   Pesquisa
+                </TabsTrigger>
+                <TabsTrigger value="concluidos" className="gap-1.5 text-sm px-3">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Concluídos
                 </TabsTrigger>
                 <TabsTrigger value="resumos" className="gap-1.5 text-sm px-3">
                   <FileText className="w-3.5 h-3.5" />
@@ -280,6 +285,17 @@ const Index = () => {
               />
             </TabsContent>
 
+            <TabsContent value="concluidos">
+              <CompletedTab
+                documents={documents}
+                progress={progress}
+                onView={(doc) => handleViewDoc(doc)}
+                onToggleFavorite={toggleFavorite}
+                onDelete={deleteDocument}
+                onEdit={setEditingDoc}
+              />
+            </TabsContent>
+
             <TabsContent value="pesquisa">
               <SearchTab
                 documents={documents}
@@ -327,13 +343,14 @@ const Index = () => {
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
-              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-9 gap-0 p-0">
+              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-10 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'documentos', icon: FolderSearch, label: 'Docs' },
                   { value: 'pastas', icon: FolderTree, label: 'Pastas' },
                   { value: 'favoritos', icon: Star, label: 'Favoritos' },
+                  { value: 'concluidos', icon: CheckCircle2, label: 'Concluídos' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
                   { value: 'resumos', icon: FileText, label: 'Estudo' },
                   { value: 'configuracoes', icon: Settings, label: 'Config' },
