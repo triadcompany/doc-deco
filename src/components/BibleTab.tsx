@@ -203,8 +203,9 @@ export function BibleTab() {
                     <h3 className="text-lg font-semibold mb-3">Antigo Testamento</h3>
                     <div className="flex flex-wrap gap-2">
                       {otBooks.map(b => (
-                        <Button key={b.abbrev} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev)}>
-                          {b.name}
+                        <Button key={b.abbrev} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev)} title={b.namePt || b.name}>
+                          {b.namePt ? `${b.namePt}` : b.name}
+                          {b.namePt && <span className="ml-1 text-[10px] text-muted-foreground">({b.name})</span>}
                         </Button>
                       ))}
                     </div>
@@ -213,8 +214,9 @@ export function BibleTab() {
                     <h3 className="text-lg font-semibold mb-3">Novo Testamento</h3>
                     <div className="flex flex-wrap gap-2">
                       {ntBooks.map(b => (
-                        <Button key={b.abbrev} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev)}>
-                          {b.name}
+                        <Button key={b.abbrev} variant="outline" size="sm" onClick={() => handleSelectBook(b.abbrev)} title={b.namePt || b.name}>
+                          {b.namePt ? `${b.namePt}` : b.name}
+                          {b.namePt && <span className="ml-1 text-[10px] text-muted-foreground">({b.name})</span>}
                         </Button>
                       ))}
                     </div>
@@ -255,7 +257,12 @@ export function BibleTab() {
               {/* Book info */}
               {currentBookInfo && (
                 <div className="text-center">
-                  <h3 className="text-xl font-bold">{currentBookInfo.name}</h3>
+                  <h3 className="text-xl font-bold">
+                    {currentBookInfo.namePt || currentBookInfo.name}
+                  </h3>
+                  {currentBookInfo.namePt && (
+                    <p className="text-sm text-muted-foreground/70">{currentBookInfo.name}</p>
+                  )}
                   <p className="text-sm text-muted-foreground">Capítulo {selectedChapter}</p>
                 </div>
               )}
