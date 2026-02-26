@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
@@ -6,6 +6,7 @@ import { PDFViewer } from '@/components/PDFViewer';
 import { UploadDialog } from '@/components/UploadDialog';
 import { EditDocumentDialog } from '@/components/EditDocumentDialog';
 import { DocumentsTab } from '@/components/DocumentsTab';
+import { PDFCard } from '@/components/PDFCard';
 import { SearchTab } from '@/components/SearchTab';
 import { FoldersTab } from '@/components/FoldersTab';
 import { FavoritesTab } from '@/components/FavoritesTab';
@@ -192,30 +193,18 @@ const Index = () => {
                       <FileText className="w-4 h-4 text-primary" />
                       Acessados Recentemente
                     </h2>
-                    <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2">
-                      {recentWithDocs.map(({ doc, currentPage }) => {
-                        const totalPages = doc.pages ?? 0;
-                        const pct = totalPages > 0 ? Math.min((currentPage / totalPages) * 100, 100) : 0;
-                        return (
-                          <div
-                            key={doc.id}
-                            className="glass rounded-xl p-3 min-w-[160px] max-w-[180px] shrink-0 cursor-pointer hover:bg-secondary/30 transition-colors space-y-2"
-                            onClick={() => handleViewDoc(doc)}
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <BookOpen className="w-4 h-4 text-primary" />
-                            </div>
-                            <p className="text-xs font-semibold line-clamp-2 leading-tight">{doc.title}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{doc.author}</p>
-                            {totalPages > 0 && currentPage > 0 && (
-                              <div className="space-y-0.5">
-                                <Progress value={pct} className="h-1" />
-                                <p className="text-[9px] text-muted-foreground">Pág. {currentPage}/{totalPages}</p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {recentWithDocs.map(({ doc }) => (
+                        <PDFCard
+                          key={doc.id}
+                          doc={doc}
+                          viewMode="grid"
+                          onView={handleViewDoc}
+                          onToggleFavorite={toggleFavorite}
+                          onDelete={deleteDocument}
+                          onEdit={setEditingDoc}
+                        />
+                      ))}
                     </div>
                   </div>
                 );
