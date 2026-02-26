@@ -7,6 +7,8 @@ const GETBIBLE_BASE = 'https://api.getbible.net/v2';
 
 // Versions that use getBible API instead of MaatheusGois
 const GETBIBLE_VERSIONS = new Set(['kjv', 'textusreceptus', 'aleppo']);
+// Versions that need a parallel ARC translation
+const NEEDS_TRANSLATION = new Set(['textusreceptus', 'aleppo']);
 
 export interface BibleBook {
   abbrev: string;
@@ -18,6 +20,7 @@ export interface BibleBook {
 export interface BibleVerse {
   number: number;
   text: string;
+  translation?: string;
 }
 
 export interface BibleSearchResult {
@@ -215,7 +218,26 @@ export function useBible() {
         if (!chapterData) {
           setFetchError('Capítulo não encontrado'); setVerses([]); return;
         }
-        setVerses(chapterData.verses.map(v => ({ number: v.verse, text: v.text.trim() })));
+
+        // For Greek/Hebrew, fetch ARC translation in parallel
+        let translationMap: Record<number, string> = {};
+        if (NEEDS_TRANSLATION.has(version)) {
+          try {
+            const arcData = await loadBible('arc');
+            // Map getBible bookNr to ARC book index (1-based bookNr, 0-based array)
+            const arcBook = arcData[bookNr - 1];
+            if (arcBook && chapter - 1 < arcBook.chapters.length) {
+              const arcChapter = arcBook.chapters[chapter - 1];
+              arcChapter.forEach((text, i) => { translationMap[i + 1] = text.trim(); });
+            }
+          } catch { /* translation unavailable */ }
+        }
+
+        setVerses(chapterData.verses.map(v => ({
+          number: v.verse,
+          text: v.text.trim(),
+          ...(translationMap[v.verse] ? { translation: translationMap[v.verse] } : {}),
+        })));
         setCurrentBookInfo({ name: fullBook.name });
         // Update chapter count if needed
         setBooks(prev => prev.map(b => b.abbrev === abbrev ? { ...b, chapters: fullBook.chapters.length } : b));
