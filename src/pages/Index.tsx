@@ -155,31 +155,36 @@ const Index = () => {
 
               {/* Recent documents — last 5 accessed */}
               {(() => {
-                // Use progress data if available, otherwise fall back to most recent documents
-                let recentWithDocs: { doc: PDFDocument; currentPage: number }[] = [];
+                // Pin first 2 favorite documents, then fill with 8 most recently accessed
+                const favDocs = documents.filter(d => d.favorite)
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 2);
+                const favIds = new Set(favDocs.map(d => d.id));
 
+                // Get up to 8 recent (excluding pinned favs)
+                let recentDocs: PDFDocument[] = [];
                 if (progress.length > 0) {
                   const seen = new Set<string>();
-                  const recent5: typeof progress = [];
                   for (const rp of progress) {
-                    if (!seen.has(rp.document_id)) {
-                      seen.add(rp.document_id);
-                      recent5.push(rp);
-                    }
-                    if (recent5.length >= 5) break;
+                    if (favIds.has(rp.document_id) || seen.has(rp.document_id)) continue;
+                    seen.add(rp.document_id);
+                    const doc = documents.find(d => d.id === rp.document_id);
+                    if (doc) recentDocs.push(doc);
+                    if (recentDocs.length >= 8) break;
                   }
-                  recentWithDocs = recent5
-                    .map(rp => ({ doc: documents.find(d => d.id === rp.document_id)!, currentPage: rp.current_page }))
-                    .filter(x => !!x.doc);
+                }
+                // Fallback if no progress
+                if (recentDocs.length === 0) {
+                  recentDocs = [...documents]
+                    .filter(d => !favIds.has(d.id))
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .slice(0, 8);
                 }
 
-                // Fallback: show 5 most recently updated documents
-                if (recentWithDocs.length === 0 && documents.length > 0) {
-                  recentWithDocs = [...documents]
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .slice(0, 5)
-                    .map(doc => ({ doc, currentPage: 0 }));
-                }
+                let recentWithDocs = [
+                  ...favDocs.map(doc => ({ doc, pinned: true })),
+                  ...recentDocs.map(doc => ({ doc, pinned: false })),
+                ];
 
                 if (recentWithDocs.length === 0) return null;
 
