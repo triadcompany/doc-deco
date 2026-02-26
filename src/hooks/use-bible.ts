@@ -267,10 +267,15 @@ export function useBible() {
         setBooks(prev => prev.map(b => b.abbrev === abbrev ? { ...b, chapters: fullBook.chapters.length } : b));
       } else {
         const data = await loadBible(version);
-        const book = data.find(b => b.id === abbrev);
+        let book = data.find(b => b.id === abbrev);
+        // Fallback: try matching by name prefix if ID not found
+        if (!book) {
+          const lower = abbrev.toLowerCase();
+          book = data.find(b => b.id.toLowerCase() === lower || b.name.toLowerCase().startsWith(lower));
+        }
         if (!book) {
           console.error(`Book not found: "${abbrev}" in version "${version}". Available IDs:`, data.map(b => b.id).join(', '));
-          setFetchError('Livro não encontrado'); setVerses([]); return;
+          setFetchError(`Livro "${abbrev}" não encontrado`); setVerses([]); return;
         }
         const chapterIdx = chapter - 1;
         if (chapterIdx < 0 || chapterIdx >= book.chapters.length) {
