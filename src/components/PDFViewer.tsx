@@ -138,7 +138,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     setIsSearching(true);
     const pdf = pdfDocRef.current;
     const results: { page: number; index: number }[] = [];
-    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedTerm = term.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(escapedTerm, 'gi');
 
     for (let i = 1; i <= totalPages; i++) {
@@ -199,8 +199,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
         nodeOffsets.push({ node: tn, start, end: fullText.length });
       }
 
-      const words = activeSearchTerm.split(/\s+/).filter(Boolean);
-      const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+      const pattern = activeSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(pattern, 'gi');
 
       const matches: { start: number; end: number }[] = [];
