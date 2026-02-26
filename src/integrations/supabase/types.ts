@@ -50,6 +50,57 @@ export type Database = {
         }
         Relationships: []
       }
+      bible_cross_references: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          source_book_abbrev: string
+          source_book_name: string
+          source_chapter: number
+          source_verse: number
+          source_version: string
+          target_book_abbrev: string
+          target_book_name: string
+          target_chapter: number
+          target_verse: number
+          target_version: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          source_book_abbrev: string
+          source_book_name: string
+          source_chapter: number
+          source_verse: number
+          source_version: string
+          target_book_abbrev: string
+          target_book_name: string
+          target_chapter: number
+          target_verse: number
+          target_version: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          source_book_abbrev?: string
+          source_book_name?: string
+          source_chapter?: number
+          source_verse?: number
+          source_version?: string
+          target_book_abbrev?: string
+          target_book_name?: string
+          target_chapter?: number
+          target_verse?: number
+          target_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bible_highlights: {
         Row: {
           book_abbrev: string

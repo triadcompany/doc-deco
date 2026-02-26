@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useBible, BIBLE_VERSIONS, HIGHLIGHT_COLORS, BibleVerse } from '@/hooks/use-bible';
+import { useCrossReferences } from '@/hooks/use-cross-references';
+import { ScriptureLinkText } from '@/components/ScriptureLinkText';
+import { CrossRefDialog } from '@/components/CrossRefDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +43,7 @@ import {
   Pencil,
   Highlighter,
   X,
+  Link2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -54,6 +58,8 @@ export function BibleTab() {
     highlights, addHighlight, removeHighlight, getHighlight,
   } = useBible();
 
+  const { crossRefs, addCrossRef, deleteCrossRef, getRefsForVerse } = useCrossReferences();
+
   const [version, setVersion] = useState('arc');
   const [selectedBook, setSelectedBook] = useState('');
   const [selectedChapter, setSelectedChapter] = useState(1);
@@ -62,6 +68,15 @@ export function BibleTab() {
   const [noteText, setNoteText] = useState('');
   const [noteVerse, setNoteVerse] = useState<number | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [crossRefDialogOpen, setCrossRefDialogOpen] = useState(false);
+  const [crossRefVerse, setCrossRefVerse] = useState<number>(1);
+
+  // Navigate to a scripture reference (used by cross-refs and clickable links)
+  const handleNavigateToRef = (bookAbbrev: string, chapter: number, _verse: number) => {
+    setSelectedBook(bookAbbrev);
+    setSelectedChapter(chapter);
+    fetchChapter(version, bookAbbrev, chapter);
+  };
 
   const currentBook = useMemo(() => books.find(b => b.abbrev === selectedBook), [books, selectedBook]);
   const totalChapters = currentBook?.chapters || 0;
@@ -280,6 +295,7 @@ export function BibleTab() {
                       const verseNote = chapterNotes.find(n => n.verse === v.number);
                       const highlight = getHighlight(version, selectedBook, selectedChapter, v.number);
                       const hlColor = highlight ? HIGHLIGHT_COLORS.find(c => c.value === highlight.color) : null;
+                      const verseRefs = getRefsForVerse(version, selectedBook, selectedChapter, v.number);
                       return (
                         <div key={v.number} className="group">
                           <div className={`flex gap-2 py-2 px-3 rounded-lg transition-colors ${hlColor ? hlColor.bg : 'hover:bg-secondary/50'}`}>
@@ -331,18 +347,41 @@ export function BibleTab() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenNote(v.number)} title="Anotar">
                                 <StickyNote className={`w-3.5 h-3.5 ${verseNote ? 'text-primary' : ''}`} />
                               </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setCrossRefVerse(v.number); setCrossRefDialogOpen(true); }} title="Referências cruzadas">
+                                <Link2 className={`w-3.5 h-3.5 ${verseRefs.length > 0 ? 'text-primary' : ''}`} />
+                              </Button>
                             </div>
                           </div>
                           {verseNote && (
                             <div className="ml-9 mb-2 flex items-start gap-2 text-xs bg-accent/50 rounded-lg p-2">
                               <StickyNote className="w-3 h-3 text-primary mt-0.5 shrink-0" />
-                              <p className="flex-1 text-muted-foreground">{verseNote.note}</p>
+                              <div className="flex-1 text-muted-foreground">
+                                <ScriptureLinkText text={verseNote.note} onNavigate={handleNavigateToRef} />
+                              </div>
                               <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleEditNote(verseNote)}>
                                 <Pencil className="w-3 h-3" />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => { deleteNote(verseNote.id); toast.success('Anotação removida'); }}>
                                 <Trash2 className="w-3 h-3" />
                               </Button>
+                            </div>
+                          )}
+                          {verseRefs.length > 0 && (
+                            <div className="ml-9 mb-2 flex flex-wrap items-center gap-1.5 text-xs">
+                              <Link2 className="w-3 h-3 text-primary shrink-0" />
+                              {verseRefs.map(ref => {
+                                const isSource = ref.source_book_abbrev === selectedBook && ref.source_chapter === selectedChapter && ref.source_verse === v.number;
+                                const tName = isSource ? ref.target_book_name : ref.source_book_name;
+                                const tCh = isSource ? ref.target_chapter : ref.source_chapter;
+                                const tV = isSource ? ref.target_verse : ref.source_verse;
+                                const tAbbrev = isSource ? ref.target_book_abbrev : ref.source_book_abbrev;
+                                return (
+                                  <Button key={ref.id} variant="outline" size="sm" className="h-5 px-1.5 text-[10px]"
+                                    onClick={() => handleNavigateToRef(tAbbrev, tCh, tV)}>
+                                    {tName} {tCh}:{tV}
+                                  </Button>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -361,7 +400,7 @@ export function BibleTab() {
                   {chapterNotes.map(n => (
                     <div key={n.id} className="flex items-start gap-2 text-sm bg-secondary/30 rounded-lg p-3">
                       {n.verse && <Badge variant="secondary" className="shrink-0">v.{n.verse}</Badge>}
-                      <p className="flex-1">{n.note}</p>
+                      <div className="flex-1"><ScriptureLinkText text={n.note} onNavigate={handleNavigateToRef} /></div>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditNote(n)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
@@ -462,7 +501,7 @@ export function BibleTab() {
                         <Badge variant="secondary">{n.book_name} {n.chapter}{n.verse ? `:${n.verse}` : ''}</Badge>
                         <span className="text-xs text-muted-foreground">{n.version.toUpperCase()}</span>
                       </div>
-                      <p className="text-sm">{n.note}</p>
+                      <div className="text-sm"><ScriptureLinkText text={n.note} onNavigate={handleNavigateToRef} /></div>
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditNote(n)}>
                       <Pencil className="w-3.5 h-3.5" />
@@ -492,6 +531,21 @@ export function BibleTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cross Reference Dialog */}
+      <CrossRefDialog
+        open={crossRefDialogOpen}
+        onOpenChange={setCrossRefDialogOpen}
+        sourceVersion={version}
+        sourceBookAbbrev={selectedBook}
+        sourceBookName={currentBookInfo?.namePt || currentBookInfo?.name || ''}
+        sourceChapter={selectedChapter}
+        sourceVerse={crossRefVerse}
+        existingRefs={getRefsForVerse(version, selectedBook, selectedChapter, crossRefVerse)}
+        onAdd={addCrossRef}
+        onDelete={deleteCrossRef}
+        onNavigate={handleNavigateToRef}
+      />
     </div>
   );
 }
