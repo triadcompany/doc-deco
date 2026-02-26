@@ -250,19 +250,24 @@ export function useDocuments() {
     const termWords = normalizeText(term).split(/\s+/).filter(Boolean);
     if (termWords.length === 0) return results;
 
-    // Step 2: Fetch content for candidate docs and filter with accent-insensitive matching
+    // Step 2: Fetch content for candidate docs in batches (Supabase limit = 1000)
     const idsToSnippet = results.map((r) => r.id);
-    const { data: contentData, error: contentError } = await supabase
-      .from('documents')
-      .select('id, content')
-      .in('id', idsToSnippet);
-
-    if (contentError || !contentData) return [];
-
     const contentMap = new Map<string, string>();
-    for (const row of contentData as any[]) {
-      if (row.content) contentMap.set(row.id, row.content);
+    const batchSize = 500;
+    for (let i = 0; i < idsToSnippet.length; i += batchSize) {
+      const batch = idsToSnippet.slice(i, i + batchSize);
+      const { data: contentData, error: contentError } = await supabase
+        .from('documents')
+        .select('id, content')
+        .in('id', batch);
+
+      if (contentError || !contentData) continue;
+      for (const row of contentData as any[]) {
+        if (row.content) contentMap.set(row.id, row.content);
+      }
     }
+
+    
 
     const expandedResults: typeof results = [];
 
