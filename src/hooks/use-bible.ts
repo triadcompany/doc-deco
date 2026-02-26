@@ -13,6 +13,7 @@ const NEEDS_TRANSLATION = new Set(['textusreceptus', 'aleppo']);
 export interface BibleBook {
   abbrev: string;
   name: string;
+  namePt?: string;
   chapters: number;
   testament: 'VT' | 'NT';
 }
@@ -89,12 +90,6 @@ interface RawBook {
   chapters: string[][];
 }
 
-interface RawBook {
-  id: string;
-  name: string;
-  chapters: string[][];
-}
-
 export function useBible() {
   const { user } = useAuth();
   const [books, setBooks] = useState<BibleBook[]>([]);
@@ -106,7 +101,7 @@ export function useBible() {
   const [bookmarks, setBookmarks] = useState<BibleBookmark[]>([]);
   const [highlights, setHighlights] = useState<BibleHighlight[]>([]);
   const [notes, setNotes] = useState<BibleNote[]>([]);
-  const [currentBookInfo, setCurrentBookInfo] = useState<{ name: string } | null>(null);
+  const [currentBookInfo, setCurrentBookInfo] = useState<{ name: string; namePt?: string } | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Cache loaded bible data per version
@@ -160,8 +155,22 @@ export function useBible() {
     if (getBibleBookDataCache.current[key]) return getBibleBookDataCache.current[key];
     const url = `${GETBIBLE_BASE}/${version}/${bookNr}.json`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to load book`);
-    const data = await res.json();
+    if (!res.ok) throw new Error(`Failed to load book ${bookNr} for ${version}`);
+    const raw = await res.json();
+    // Safe extraction: ensure chapters is an array with verses arrays
+    const data: GetBibleFullBook = {
+      nr: raw.nr ?? bookNr,
+      name: raw.name ?? `Book ${bookNr}`,
+      chapters: Array.isArray(raw.chapters)
+        ? raw.chapters.map((ch: any) => ({
+            chapter: ch.chapter ?? 0,
+            verses: Array.isArray(ch.verses) ? ch.verses.map((v: any) => ({
+              verse: v.verse ?? 0,
+              text: typeof v.text === 'string' ? v.text : '',
+            })) : [],
+          }))
+        : [],
+    };
     getBibleBookDataCache.current[key] = data;
     return data;
   }, []);
@@ -172,10 +181,21 @@ export function useBible() {
     try {
       if (GETBIBLE_VERSIONS.has(version)) {
         const gbBooks = await loadGetBibleBooks(version);
+
+        // Pre-load ARC for Portuguese book names on Greek/Hebrew
+        let arcNames: Record<number, string> = {};
+        if (NEEDS_TRANSLATION.has(version)) {
+          try {
+            const arcData = await loadBible('arc');
+            arcData.forEach((b, i) => { arcNames[i + 1] = b.name; });
+          } catch { /* no PT names available */ }
+        }
+
         setBooks(gbBooks.map((b) => ({
           abbrev: String(b.nr),
           name: b.name,
-          chapters: 0, // will be resolved when book is loaded
+          namePt: arcNames[b.nr] || undefined,
+          chapters: 0,
           testament: b.nr >= 40 ? 'NT' : 'VT',
         })));
         // Load chapter counts in background
@@ -238,7 +258,9 @@ export function useBible() {
           text: v.text.trim(),
           ...(translationMap[v.verse] ? { translation: translationMap[v.verse] } : {}),
         })));
-        setCurrentBookInfo({ name: fullBook.name });
+        // Include PT name from books state
+        const bookState = books.find(b => b.abbrev === abbrev);
+        setCurrentBookInfo({ name: fullBook.name, namePt: bookState?.namePt });
         // Update chapter count if needed
         setBooks(prev => prev.map(b => b.abbrev === abbrev ? { ...b, chapters: fullBook.chapters.length } : b));
       } else {
