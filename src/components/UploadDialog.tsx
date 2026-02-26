@@ -292,16 +292,6 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
               />
             </div>
 
-            {/* Tags */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Tags</Label>
-              <Input
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="Ex: pregação, estudo bíblico, evangelismo (separe por vírgula)"
-              />
-              <p className="text-xs text-muted-foreground">Separe as tags por vírgula</p>
-            </div>
 
             {/* Translator */}
             <div className="space-y-1.5">
