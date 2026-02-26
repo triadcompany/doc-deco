@@ -69,7 +69,7 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onClick={() => onView(doc)}>
               <Eye className="w-4 h-4 mr-2" /> Visualizar
             </DropdownMenuItem>
@@ -114,7 +114,7 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
                 <MoreVertical className="w-3.5 h-3.5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => onView(doc)}>
                 <Eye className="w-4 h-4 mr-2" /> Visualizar
               </DropdownMenuItem>
