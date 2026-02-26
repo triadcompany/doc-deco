@@ -43,7 +43,7 @@ const Index = () => {
   const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent } = useDocuments();
   const { signOut } = useAuth();
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings();
-  const { goal, progress, currentReadings, completedThisMonth, upsertGoal, startReading, markCompleted, removeReading } = useReadingGoals();
+  const { goal, progress, currentReadings, completedThisMonth, upsertGoal, startReading, markCompleted, removeReading, resetMonthlyProgress } = useReadingGoals();
   const { summaries, loading: summariesLoading, upsertSummary, deleteSummary } = useDocumentSummaries();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
@@ -250,6 +250,7 @@ const Index = () => {
                     completedThisMonth={completedThisMonth}
                     goal={goal}
                     upsertGoal={upsertGoal}
+                    resetMonthlyProgress={resetMonthlyProgress}
                   />
                 </Suspense>
               </div>
