@@ -230,6 +230,8 @@ export function useBible() {
   const fetchChapter = useCallback(async (version: string, abbrev: string, chapter: number) => {
     setLoadingVerses(true);
     setFetchError(null);
+    setCurrentBookInfo(null);
+    setVerses([]);
     try {
       if (GETBIBLE_VERSIONS.has(version)) {
         const bookNr = parseInt(abbrev, 10);
@@ -266,7 +268,10 @@ export function useBible() {
       } else {
         const data = await loadBible(version);
         const book = data.find(b => b.id === abbrev);
-        if (!book) { setFetchError('Livro não encontrado'); setVerses([]); return; }
+        if (!book) {
+          console.error(`Book not found: "${abbrev}" in version "${version}". Available IDs:`, data.map(b => b.id).join(', '));
+          setFetchError('Livro não encontrado'); setVerses([]); return;
+        }
         const chapterIdx = chapter - 1;
         if (chapterIdx < 0 || chapterIdx >= book.chapters.length) {
           setFetchError('Capítulo não encontrado'); setVerses([]); return;
