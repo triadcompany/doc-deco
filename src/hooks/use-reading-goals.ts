@@ -168,6 +168,26 @@ export function useReadingGoals() {
     await fetchProgress();
   };
 
+  const resetMonthlyProgress = async () => {
+    if (!user) return;
+    const completedThisMonthIds = progress
+      .filter((p) => {
+        if (!p.completed || !p.completed_at) return false;
+        const d = new Date(p.completed_at);
+        return d.getMonth() + 1 === currentMonth && d.getFullYear() === currentYear;
+      })
+      .map((p) => p.id);
+
+    for (const id of completedThisMonthIds) {
+      await supabase
+        .from('reading_progress')
+        .update({ completed: false, completed_at: null, is_reading: false } as any)
+        .eq('id', id)
+        .eq('user_id', user.id);
+    }
+    await fetchProgress();
+  };
+
   const completedThisMonth = progress.filter((p) => {
     if (!p.completed || !p.completed_at) return false;
     const d = new Date(p.completed_at);
@@ -187,6 +207,7 @@ export function useReadingGoals() {
     updateProgress,
     markCompleted,
     removeReading,
+    resetMonthlyProgress,
     fetchProgress,
   };
 }

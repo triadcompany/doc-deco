@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ReadingGoal, useReadingGoals } from '@/hooks/use-reading-goals';
 import { PDFDocument } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Target, BookOpen, FileText, Edit2, Check, TrendingUp, Calendar, Flame } from 'lucide-react';
+import { Target, BookOpen, FileText, Edit2, Check, TrendingUp, Calendar, Flame, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MetaTabProps {
@@ -14,6 +15,7 @@ interface MetaTabProps {
   completedThisMonth: number;
   goal: ReadingGoal | null;
   upsertGoal: (monthlyDocs: number, dailyPages: number) => Promise<void>;
+  resetMonthlyProgress: () => Promise<void>;
 }
 
 const MONTH_NAMES = [
@@ -21,7 +23,7 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-export function MetaTab({ documents, completedThisMonth, goal, upsertGoal }: MetaTabProps) {
+export function MetaTab({ documents, completedThisMonth, goal, upsertGoal, resetMonthlyProgress }: MetaTabProps) {
   const [editingMonthly, setEditingMonthly] = useState(false);
   const [editingDaily, setEditingDaily] = useState(false);
   const [monthlyValue, setMonthlyValue] = useState(goal?.monthly_docs_goal ?? 5);
@@ -80,14 +82,37 @@ export function MetaTab({ documents, completedThisMonth, goal, upsertGoal }: Met
                 <Calendar className="w-4 h-4 text-primary" />
                 Meta Mensal
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setEditingMonthly(!editingMonthly)}
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Resetar progresso mensal">
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Resetar progresso mensal?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Isso vai zerar o contador de documentos concluídos neste mês. Os documentos voltarão a aparecer em "Acessados Recentemente".
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={async () => { await resetMonthlyProgress(); toast.success('Progresso mensal resetado!'); }}>
+                        Confirmar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditingMonthly(!editingMonthly)}
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
