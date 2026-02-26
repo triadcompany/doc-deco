@@ -213,19 +213,24 @@ const Index = () => {
                       Acessados Recentemente
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {recentWithDocs.map(({ doc, pinned }) => (
-                        <PDFCard
-                          key={doc.id}
-                          doc={doc}
-                          viewMode="grid"
-                          onView={handleViewDoc}
-                          onToggleFavorite={toggleFavorite}
-                          onDelete={deleteDocument}
-                          onEdit={setEditingDoc}
-                          onTogglePin={togglePin}
-                          isPinned={pinned}
-                        />
-                      ))}
+                      {recentWithDocs.map(({ doc, pinned }) => {
+                        const rp = progress.find(p => p.document_id === doc.id);
+                        return (
+                          <PDFCard
+                            key={doc.id}
+                            doc={doc}
+                            viewMode="grid"
+                            onView={handleViewDoc}
+                            onToggleFavorite={toggleFavorite}
+                            onDelete={deleteDocument}
+                            onEdit={setEditingDoc}
+                            onTogglePin={togglePin}
+                            isPinned={pinned}
+                            onMarkCompleted={markCompleted}
+                            isCompleted={rp?.completed ?? false}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 );

@@ -3,7 +3,7 @@ import { formatFileSize } from '@/lib/mock-data';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, FileText, MoreVertical, Eye, Trash2, Pencil, Pin } from 'lucide-react';
+import { Star, FileText, MoreVertical, Eye, Trash2, Pencil, Pin, CheckCircle2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,8 @@ interface PDFCardProps {
   onEdit?: (doc: PDFDocument) => void;
   onTogglePin?: (id: string) => void;
   isPinned?: boolean;
+  onMarkCompleted?: (id: string) => void;
+  isCompleted?: boolean;
 }
 
 const colors = [
@@ -30,7 +32,7 @@ const colors = [
   'from-rose-500/20 to-red-500/10',
 ];
 
-export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onEdit, onTogglePin, isPinned }: PDFCardProps) {
+export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onEdit, onTogglePin, isPinned, onMarkCompleted, isCompleted }: PDFCardProps) {
   const colorIndex = doc.title.length % colors.length;
 
   if (viewMode === 'list') {
@@ -99,6 +101,19 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
     >
       <div className={`h-36 bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center relative`}>
         <FileText className="w-12 h-12 text-primary/60" />
+        <div className="absolute top-2 left-2 flex items-center gap-1">
+          {onMarkCompleted && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 bg-background/50 backdrop-blur-sm ${isCompleted ? '' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+              onClick={(e) => { e.stopPropagation(); onMarkCompleted(doc.id); }}
+              title={isCompleted ? 'Concluído' : 'Marcar como concluído'}
+            >
+              <CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'text-emerald-500 fill-emerald-500' : 'text-emerald-500'}`} />
+            </Button>
+          )}
+        </div>
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
             variant="ghost"
