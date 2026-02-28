@@ -107,7 +107,7 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState<SearchType>('exact');
   const [selectedAuthor, setSelectedAuthor] = useState('all');
-  const [tagsInput, setTagsInput] = useState('');
+  
   const [selectedTranslator, setSelectedTranslator] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -133,11 +133,9 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
     setSearching(true);
     setCurrentTerm(searchTerm);
     try {
-      const searchTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
       const res = await searchContent(searchTerm, searchType, {
         author: selectedAuthor,
         translator: selectedTranslator,
-        tags: searchTags.length > 0 ? searchTags : undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       });
@@ -254,15 +252,6 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Tags</Label>
-              <Input
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="Ex: pregação, estudo (separe por vírgula)"
-                className="h-10 bg-secondary/50"
-              />
-            </div>
 
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">Data inicial</Label>
