@@ -98,7 +98,7 @@ interface SearchTabProps {
   onDelete: (id: string) => void;
   authorsList?: string[];
   translatorsList?: string[];
-  searchContent: (term: string, searchType: 'exact' | 'proximity', filters?: { author?: string; tags?: string[]; startDate?: string; endDate?: string }) => Promise<(PDFDocument & { snippet?: string })[]>;
+  searchContent: (term: string, searchType: 'exact' | 'proximity', filters?: { author?: string; translator?: string; tags?: string[]; startDate?: string; endDate?: string }) => Promise<(PDFDocument & { snippet?: string })[]>;
 }
 
 type SearchType = 'exact' | 'proximity';
@@ -122,6 +122,12 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
     return Array.from(set).sort();
   })();
 
+  const translators = translatorsList.length > 0 ? translatorsList : (() => {
+    const set = new Set<string>();
+    documents.forEach((d) => { if (d.translator) set.add(d.translator); });
+    return Array.from(set).sort();
+  })();
+
   const handleSearch = async () => {
     setHasSearched(true);
     setSearching(true);
@@ -130,6 +136,7 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
       const searchTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
       const res = await searchContent(searchTerm, searchType, {
         author: selectedAuthor,
+        translator: selectedTranslator,
         tags: searchTags.length > 0 ? searchTags : undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
@@ -238,7 +245,7 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as traduções</SelectItem>
-                  {translatorsList.map((t) => (
+                  {translators.map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}
                     </SelectItem>

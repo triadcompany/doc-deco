@@ -205,7 +205,7 @@ export function useDocuments() {
   const searchContent = async (
     term: string,
     searchType: 'exact' | 'proximity',
-    filters?: { author?: string; tags?: string[]; startDate?: string; endDate?: string }
+    filters?: { author?: string; translator?: string; tags?: string[]; startDate?: string; endDate?: string }
   ): Promise<(PDFDocument & { snippet?: string })[]> => {
     // Step 1: Query only IDs + metadata (no content) for speed
     let query = supabase
@@ -214,6 +214,9 @@ export function useDocuments() {
 
     if (filters?.author && filters.author !== 'all') {
       query = query.eq('author', filters.author);
+    }
+    if (filters?.translator && filters.translator !== 'all') {
+      query = query.eq('translator', filters.translator);
     }
     if (filters?.startDate) {
       query = query.gte('date', filters.startDate);
