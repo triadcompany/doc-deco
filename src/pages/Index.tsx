@@ -346,11 +346,12 @@ const Index = () => {
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
-              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-5 gap-0 p-0">
+              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-6 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'documentos', icon: FolderSearch, label: 'Docs' },
+                  { value: 'pesquisa', icon: Search, label: 'Busca' },
                   { value: 'resumos', icon: FileText, label: 'Estudo' },
                 ].map((tab) => (
                   <TabsTrigger
@@ -366,7 +367,7 @@ const Index = () => {
                   <SheetTrigger asChild>
                     <button
                       className={`flex flex-col items-center gap-0.5 py-2.5 px-1 touch-target ${
-                        ['pastas', 'favoritos', 'concluidos', 'pesquisa', 'configuracoes'].includes(activeTab)
+                        ['pastas', 'favoritos', 'concluidos', 'configuracoes'].includes(activeTab)
                           ? 'text-primary'
                           : 'text-muted-foreground'
                       }`}
@@ -381,7 +382,6 @@ const Index = () => {
                       {[
                         { value: 'pastas', icon: FolderTree, label: 'Pastas' },
                         { value: 'favoritos', icon: Star, label: 'Favoritos' },
-                        { value: 'pesquisa', icon: Search, label: 'Busca' },
                         { value: 'concluidos', icon: CheckCircle2, label: 'Concluídos' },
                         { value: 'configuracoes', icon: Settings, label: 'Config' },
                       ].map((tab) => (
