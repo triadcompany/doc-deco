@@ -37,7 +37,9 @@ import {
   LogOut,
   Target,
   Search,
+  MoreHorizontal,
 } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Index = () => {
   const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent } = useDocuments();
@@ -344,28 +346,63 @@ const Index = () => {
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
-              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-10 gap-0 p-0">
+              <div className="w-full grid grid-cols-5 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'documentos', icon: FolderSearch, label: 'Docs' },
-                  { value: 'pastas', icon: FolderTree, label: 'Pastas' },
-                  { value: 'favoritos', icon: Star, label: 'Favoritos' },
-                  { value: 'concluidos', icon: CheckCircle2, label: 'Concluídos' },
-                  { value: 'pesquisa', icon: Search, label: 'Busca' },
                   { value: 'resumos', icon: FileText, label: 'Estudo' },
-                  { value: 'configuracoes', icon: Settings, label: 'Config' },
                 ].map((tab) => (
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="flex flex-col items-center gap-0.5 py-2 px-0 rounded-none text-muted-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-none text-muted-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none touch-target"
                   >
-                    <tab.icon className="w-4 h-4" />
-                    <span className="text-[9px] leading-tight">{tab.label}</span>
+                    <tab.icon className="w-5 h-5" />
+                    <span className="text-[10px] leading-tight font-medium">{tab.label}</span>
                   </TabsTrigger>
                 ))}
-              </TabsList>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <button
+                      className={`flex flex-col items-center gap-0.5 py-2.5 px-1 touch-target ${
+                        ['pastas', 'favoritos', 'concluidos', 'pesquisa', 'configuracoes'].includes(activeTab)
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                      <span className="text-[10px] leading-tight font-medium">Mais</span>
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8 pt-3">
+                    <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-4" />
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: 'pastas', icon: FolderTree, label: 'Pastas' },
+                        { value: 'favoritos', icon: Star, label: 'Favoritos' },
+                        { value: 'pesquisa', icon: Search, label: 'Busca' },
+                        { value: 'concluidos', icon: CheckCircle2, label: 'Concluídos' },
+                        { value: 'configuracoes', icon: Settings, label: 'Config' },
+                      ].map((tab) => (
+                        <SheetTrigger key={tab.value} asChild>
+                          <button
+                            onClick={() => setActiveTab(tab.value)}
+                            className={`flex flex-col items-center gap-1.5 py-4 rounded-xl transition-colors ${
+                              activeTab === tab.value
+                                ? 'bg-accent text-primary'
+                                : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                            }`}
+                          >
+                            <tab.icon className="w-6 h-6" />
+                            <span className="text-xs font-medium">{tab.label}</span>
+                          </button>
+                        </SheetTrigger>
+                      ))}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
           </Tabs>
         )}
