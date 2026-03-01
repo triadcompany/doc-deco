@@ -586,7 +586,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
                 <Page
                   pageNumber={currentPage}
                   scale={zoom / 100}
-                  width={containerWidth && containerWidth < 700 ? containerWidth / (zoom / 100) : undefined}
+                  width={containerWidth && containerWidth < 700 ? containerWidth : undefined}
                   className="shadow-2xl rounded-lg"
                   renderTextLayer
                   renderAnnotationLayer
