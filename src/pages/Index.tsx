@@ -346,7 +346,7 @@ const Index = () => {
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
-              <div className="w-full grid grid-cols-5 gap-0 p-0">
+              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-5 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
@@ -402,7 +402,7 @@ const Index = () => {
                     </div>
                   </SheetContent>
                 </Sheet>
-              </div>
+              </TabsList>
             </div>
           </Tabs>
         )}
