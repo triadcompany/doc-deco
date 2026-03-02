@@ -410,7 +410,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
     <div className="h-screen flex flex-col bg-background">
       {/* Top bar */}
       <header className="border-b border-border shrink-0 glass mt-[20px] sm:mt-0 md:mt-[20px] xl:mt-0">
-        <div className="h-14 flex items-center justify-between px-2 sm:px-4">
+        <div className="h-14 flex items-center justify-between px-2 sm:px-4 md:pl-[76px] xl:pl-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
