@@ -85,9 +85,6 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
                 <Pin className="w-4 h-4 mr-2" /> {isPinned ? 'Desafixar' : 'Fixar'}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(doc.id)}>
-              <Trash2 className="w-4 h-4 mr-2" /> Excluir
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </Card>
@@ -143,9 +140,6 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
                   <Pin className="w-4 h-4 mr-2" /> {isPinned ? 'Desafixar' : 'Fixar'}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(doc.id)}>
-                <Trash2 className="w-4 h-4 mr-2" /> Excluir
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

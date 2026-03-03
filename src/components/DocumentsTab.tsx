@@ -110,31 +110,6 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
 
   return (
     <div className="space-y-4">
-      {/* Selection bar */}
-      {selectionMode && (
-        <div className="flex items-center gap-3 p-3 bg-accent/50 rounded-lg border border-border">
-          <Checkbox
-            checked={selectedIds.size === filteredDocs.length && filteredDocs.length > 0}
-            onCheckedChange={toggleSelectAll}
-          />
-          <span className="text-sm font-medium flex-1">
-            {selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}
-          </span>
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={selectedIds.size === 0}
-            onClick={() => setConfirmOpen(true)}
-          >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Excluir ({selectedIds.size})
-          </Button>
-          <Button variant="ghost" size="sm" onClick={exitSelectionMode}>
-            <X className="w-4 h-4 mr-1" />
-            Cancelar
-          </Button>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -172,12 +147,6 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
           </SelectContent>
         </Select>
 
-        {!selectionMode && (
-          <Button variant="outline" size="sm" className="h-9" onClick={() => setSelectionMode(true)}>
-            <CheckSquare className="w-4 h-4 mr-1" />
-            Selecionar
-          </Button>
-        )}
 
         <div className="flex border border-border rounded-md">
           <Button
@@ -324,23 +293,6 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
         );
       })()}
 
-      {/* Confirm bulk delete */}
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir documentos</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir {selectedIds.size} documento{selectedIds.size !== 1 ? 's' : ''}? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
