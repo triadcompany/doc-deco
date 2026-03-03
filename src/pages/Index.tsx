@@ -1,28 +1,20 @@
-import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
 import { PDFViewer } from '@/components/PDFViewer';
 import { UploadDialog } from '@/components/UploadDialog';
 import { EditDocumentDialog } from '@/components/EditDocumentDialog';
-import { DocumentsTab } from '@/components/DocumentsTab';
 import { PDFCard } from '@/components/PDFCard';
-import { SearchTab } from '@/components/SearchTab';
-import { FoldersTab } from '@/components/FoldersTab';
-import { FavoritesTab } from '@/components/FavoritesTab';
-import { CompletedTab } from '@/components/CompletedTab';
 import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
 import { Progress } from '@/components/ui/progress';
 import { useDocumentSummaries } from '@/hooks/use-document-summaries';
-
-const SettingsTab = lazy(() => import('@/components/SettingsTab').then(m => ({ default: m.SettingsTab })));
-const MetaTab = lazy(() => import('@/components/MetaTab').then(m => ({ default: m.MetaTab })));
-const BibleTab = lazy(() => import('@/components/BibleTab').then(m => ({ default: m.BibleTab })));
-const SummariesTab = lazy(() => import('@/components/SummariesTab').then(m => ({ default: m.SummariesTab })));
+import { TabContentRenderer, TabContentProps } from '@/components/TabContentRenderer';
+import { SplitViewSelector, TAB_OPTIONS } from '@/components/SplitViewSelector';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
-
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Upload,
@@ -38,8 +30,12 @@ import {
   Target,
   Search,
   MoreHorizontal,
+  PanelLeftClose,
+  Columns2,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { MetaTab } from '@/components/MetaTab';
 
 const Index = () => {
   const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent } = useDocuments();
@@ -52,6 +48,8 @@ const Index = () => {
   const [searchContext, setSearchContext] = useState<SearchContext | null>(null);
   const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
   const [activeTab, setActiveTab] = useState('inicio');
+  const [splitMode, setSplitMode] = useState(false);
+  const [rightTab, setRightTab] = useState('biblia');
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('pinned_docs') || '[]'); } catch { return []; }
   });
@@ -62,9 +60,9 @@ const Index = () => {
       if (prev.includes(id)) {
         next = prev.filter(x => x !== id);
       } else {
-        next = [...prev.slice(0, 1), id].slice(0, 2); // max 2
+        next = [...prev.slice(0, 1), id].slice(0, 2);
         if (prev.length >= 2 && !prev.includes(id)) {
-          next = [prev[0], id]; // replace second
+          next = [prev[0], id];
         }
       }
       localStorage.setItem('pinned_docs', JSON.stringify(next));
@@ -75,10 +73,129 @@ const Index = () => {
   const handleViewDoc = (doc: PDFDocument, ctx?: SearchContext) => {
     setSearchContext(ctx || null);
     setViewingDoc(doc);
-    // Track access for "recently accessed" feature
     startReading(doc.id);
   };
 
+  const tabContentProps: Omit<TabContentProps, 'tabId'> = {
+    documents,
+    onViewDoc: handleViewDoc,
+    onToggleFavorite: toggleFavorite,
+    onDelete: deleteDocument,
+    onEdit: setEditingDoc,
+    authors: authors.map(a => a.name),
+    translators: translators.map(t => t.name),
+    searchContent,
+    summaries,
+    summariesLoading,
+    upsertSummary,
+    deleteSummary,
+    goal,
+    completedThisMonth,
+    upsertGoal,
+    resetMonthlyProgress,
+    progress,
+    settingsAuthors: authors,
+    settingsTranslators: translators,
+    addAuthor,
+    removeAuthor,
+    addTranslator,
+    removeTranslator,
+    renderHomeContent: () => renderHomeContent(),
+  };
+
+  const renderHomeContent = () => (
+    <>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+        {[
+          { label: 'Total de PDFs', value: documents.length, icon: FileText },
+          { label: 'Favoritos', value: documents.filter((d) => d.favorite).length, icon: Star },
+        ].map((stat) => (
+          <div key={stat.label} className="glass rounded-xl p-3 sm:p-4 flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-accent flex items-center justify-center">
+              <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-accent-foreground" />
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent documents */}
+      {(() => {
+        const latestProgressByDoc = new Map<string, typeof progress[number]>();
+        for (const rp of progress) {
+          if (!latestProgressByDoc.has(rp.document_id)) {
+            latestProgressByDoc.set(rp.document_id, rp);
+          }
+        }
+        const completedIds = new Set(
+          Array.from(latestProgressByDoc.values())
+            .filter((p) => p.completed)
+            .map((p) => p.document_id)
+        );
+        const pinIdSet = new Set(pinnedIds);
+        const pinDocs = pinnedIds
+          .map(id => documents.find(d => d.id === id))
+          .filter((d): d is PDFDocument => !!d && !completedIds.has(d.id));
+        const recentDocs = Array.from(latestProgressByDoc.values())
+          .filter((rp) => !rp.completed && !pinIdSet.has(rp.document_id))
+          .map((rp) => documents.find((d) => d.id === rp.document_id))
+          .filter((d): d is PDFDocument => !!d)
+          .slice(0, 8);
+        const recentWithDocs = [
+          ...pinDocs.map(doc => ({ doc, pinned: true })),
+          ...recentDocs.map(doc => ({ doc, pinned: false })),
+        ];
+        if (recentWithDocs.length === 0) return null;
+        return (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-primary" />
+              Acessados Recentemente
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {recentWithDocs.map(({ doc, pinned }) => {
+                const rp = latestProgressByDoc.get(doc.id);
+                return (
+                  <PDFCard
+                    key={doc.id}
+                    doc={doc}
+                    viewMode="grid"
+                    onView={handleViewDoc}
+                    onToggleFavorite={toggleFavorite}
+                    onDelete={deleteDocument}
+                    onEdit={setEditingDoc}
+                    onTogglePin={togglePin}
+                    isPinned={pinned}
+                    onMarkCompleted={markCompleted}
+                    isCompleted={rp?.completed ?? false}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Goals */}
+      <div className="mt-6">
+        <MetaTab
+          documents={documents}
+          completedThisMonth={completedThisMonth}
+          goal={goal}
+          upsertGoal={upsertGoal}
+          resetMonthlyProgress={resetMonthlyProgress}
+        />
+      </div>
+    </>
+  );
+
+  const toggleSplitMode = () => {
+    setSplitMode(prev => !prev);
+  };
 
   return (
     <>
@@ -100,6 +217,22 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Split view toggle - desktop only */}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={splitMode ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={toggleSplitMode}
+                    className="hidden sm:flex h-9 w-9 sm:h-10 sm:w-10"
+                  >
+                    {splitMode ? <PanelLeftClose className="w-4 h-4" /> : <Columns2 className="w-4 h-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{splitMode ? 'Fechar visão dividida' : 'Dividir tela'}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button onClick={() => setUploadOpen(true)} size="sm" className="glow-amber h-9 sm:h-10">
               <Upload className="w-4 h-4" />
               <span className="hidden sm:inline">Upload</span>
@@ -116,233 +249,48 @@ const Index = () => {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
+        ) : splitMode ? (
+          /* ======== SPLIT VIEW MODE ======== */
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <SplitViewSelector value={activeTab} onChange={setActiveTab} side="left" />
+              <span className="text-muted-foreground text-xs">|</span>
+              <SplitViewSelector value={rightTab} onChange={setRightTab} side="right" />
+            </div>
+            <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-180px)] rounded-lg border border-border/50">
+              <ResizablePanel defaultSize={50} minSize={25}>
+                <div className="h-full overflow-y-auto p-4">
+                  <TabContentRenderer tabId={activeTab} {...tabContentProps} />
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={50} minSize={25}>
+                <div className="h-full overflow-y-auto p-4">
+                  <TabContentRenderer tabId={rightTab} {...tabContentProps} />
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
         ) : (
+          /* ======== NORMAL TAB MODE ======== */
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-            {/* Desktop/Tablet tabs - hidden on mobile */}
+            {/* Desktop/Tablet tabs */}
             <div className="hidden sm:block overflow-x-auto scrollbar-none">
               <TabsList className="bg-secondary/50 w-auto">
-                <TabsTrigger value="inicio" className="gap-1.5 text-sm px-3">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Início
-                </TabsTrigger>
-                <TabsTrigger value="biblia" className="gap-1.5 text-sm px-3">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Bíblia
-                </TabsTrigger>
-                <TabsTrigger value="documentos" className="gap-1.5 text-sm px-3">
-                  <FolderSearch className="w-3.5 h-3.5" />
-                  Documentos
-                </TabsTrigger>
-                <TabsTrigger value="pastas" className="gap-1.5 text-sm px-3">
-                  <FolderTree className="w-3.5 h-3.5" />
-                  Pastas
-                </TabsTrigger>
-                <TabsTrigger value="favoritos" className="gap-1.5 text-sm px-3">
-                  <Star className="w-3.5 h-3.5" />
-                  Favoritos
-                </TabsTrigger>
-                <TabsTrigger value="pesquisa" className="gap-1.5 text-sm px-3">
-                  <Search className="w-3.5 h-3.5" />
-                  Pesquisa
-                </TabsTrigger>
-                <TabsTrigger value="concluidos" className="gap-1.5 text-sm px-3">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Concluídos
-                </TabsTrigger>
-                <TabsTrigger value="resumos" className="gap-1.5 text-sm px-3">
-                  <FileText className="w-3.5 h-3.5" />
-                  Estudo
-                </TabsTrigger>
-                <TabsTrigger value="configuracoes" className="gap-1.5 text-sm px-3">
-                  <Settings className="w-3.5 h-3.5" />
-                  Config
-                </TabsTrigger>
+                {TAB_OPTIONS.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5 text-sm px-3">
+                    <tab.icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </div>
 
-            <TabsContent value="inicio">
-              {/* Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-                {[
-                  { label: 'Total de PDFs', value: documents.length, icon: FileText },
-                  { label: 'Favoritos', value: documents.filter((d) => d.favorite).length, icon: Star },
-                ].map((stat) => (
-                  <div key={stat.label} className="glass rounded-xl p-3 sm:p-4 flex items-center gap-3">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-accent flex items-center justify-center">
-                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-accent-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Recent documents — last 5 accessed */}
-              {(() => {
-                // Pinned docs first (up to 2), then most recently accessed (unfinished)
-                const latestProgressByDoc = new Map<string, typeof progress[number]>();
-                for (const rp of progress) {
-                  if (!latestProgressByDoc.has(rp.document_id)) {
-                    latestProgressByDoc.set(rp.document_id, rp);
-                  }
-                }
-
-                const completedIds = new Set(
-                  Array.from(latestProgressByDoc.values())
-                    .filter((p) => p.completed)
-                    .map((p) => p.document_id)
-                );
-
-                const pinIdSet = new Set(pinnedIds);
-                const pinDocs = pinnedIds
-                  .map(id => documents.find(d => d.id === id))
-                  .filter((d): d is PDFDocument => !!d && !completedIds.has(d.id));
-
-                const recentDocs = Array.from(latestProgressByDoc.values())
-                  .filter((rp) => !rp.completed && !pinIdSet.has(rp.document_id))
-                  .map((rp) => documents.find((d) => d.id === rp.document_id))
-                  .filter((d): d is PDFDocument => !!d)
-                  .slice(0, 8);
-
-                const recentWithDocs = [
-                  ...pinDocs.map(doc => ({ doc, pinned: true })),
-                  ...recentDocs.map(doc => ({ doc, pinned: false })),
-                ];
-
-                if (recentWithDocs.length === 0) return null;
-
-                return (
-                  <div className="mb-6">
-                    <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-primary" />
-                      Acessados Recentemente
-                    </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {recentWithDocs.map(({ doc, pinned }) => {
-                        const rp = latestProgressByDoc.get(doc.id);
-                        return (
-                          <PDFCard
-                            key={doc.id}
-                            doc={doc}
-                            viewMode="grid"
-                            onView={handleViewDoc}
-                            onToggleFavorite={toggleFavorite}
-                            onDelete={deleteDocument}
-                            onEdit={setEditingDoc}
-                            onTogglePin={togglePin}
-                            isPinned={pinned}
-                            onMarkCompleted={markCompleted}
-                            isCompleted={rp?.completed ?? false}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
-
-              {/* Goals / Meta section */}
-              <div className="mt-6">
-                <Suspense fallback={<div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
-                  <MetaTab
-                    documents={documents}
-                    completedThisMonth={completedThisMonth}
-                    goal={goal}
-                    upsertGoal={upsertGoal}
-                    resetMonthlyProgress={resetMonthlyProgress}
-                  />
-                </Suspense>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="documentos">
-              <DocumentsTab
-                documents={documents}
-                onView={(doc) => handleViewDoc(doc)}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteDocument}
-                onEdit={setEditingDoc}
-              />
-            </TabsContent>
-
-            <TabsContent value="pastas">
-              <FoldersTab
-                documents={documents}
-                onView={(doc) => handleViewDoc(doc)}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteDocument}
-                onEdit={setEditingDoc}
-              />
-            </TabsContent>
-
-            <TabsContent value="favoritos">
-              <FavoritesTab
-                documents={documents}
-                onView={(doc) => handleViewDoc(doc)}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteDocument}
-                onEdit={setEditingDoc}
-              />
-            </TabsContent>
-
-            <TabsContent value="concluidos">
-              <CompletedTab
-                documents={documents}
-                progress={progress}
-                onView={(doc) => handleViewDoc(doc)}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteDocument}
-                onEdit={setEditingDoc}
-              />
-            </TabsContent>
-
-            <TabsContent value="pesquisa">
-              <SearchTab
-                documents={documents}
-                onView={(doc, ctx) => handleViewDoc(doc, ctx)}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteDocument}
-                authorsList={authors.map((a) => a.name)}
-                translatorsList={translators.map((t) => t.name)}
-                searchContent={searchContent}
-              />
-            </TabsContent>
-
-
-            <TabsContent value="resumos">
-              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
-                <SummariesTab
-                  documents={documents}
-                  summaries={summaries}
-                  loading={summariesLoading}
-                  onUpsert={upsertSummary}
-                  onDelete={deleteSummary}
-                  onViewDoc={(doc) => handleViewDoc(doc)}
-                />
-              </Suspense>
-            </TabsContent>
-
-            <TabsContent value="biblia">
-              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
-                <BibleTab />
-              </Suspense>
-            </TabsContent>
-
-            <TabsContent value="configuracoes">
-              <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
-                <SettingsTab
-                  authors={authors}
-                  translators={translators}
-                  addAuthor={addAuthor}
-                  removeAuthor={removeAuthor}
-                  addTranslator={addTranslator}
-                  removeTranslator={removeTranslator}
-                />
-              </Suspense>
-            </TabsContent>
+            {TAB_OPTIONS.map((tab) => (
+              <TabsContent key={tab.value} value={tab.value}>
+                <TabContentRenderer tabId={tab.value} {...tabContentProps} />
+              </TabsContent>
+            ))}
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
