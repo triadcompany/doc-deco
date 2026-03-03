@@ -223,28 +223,31 @@ export type Database = {
       document_summaries: {
         Row: {
           created_at: string
-          document_id: string
+          document_id: string | null
           document_ids: string[] | null
           id: string
           summary: string
+          title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          document_id: string
+          document_id?: string | null
           document_ids?: string[] | null
           id?: string
           summary: string
+          title?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          document_id?: string
+          document_id?: string | null
           document_ids?: string[] | null
           id?: string
           summary?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }

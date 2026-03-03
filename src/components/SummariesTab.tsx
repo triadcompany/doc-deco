@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PDFDocument } from '@/lib/types';
 import { DocSummary } from '@/hooks/use-document-summaries';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { MindMapEditor } from '@/components/mindmap/MindMapEditor';
@@ -50,7 +51,7 @@ interface SummariesTabProps {
   documents: PDFDocument[];
   summaries: DocSummary[];
   loading: boolean;
-  onUpsert: (documentIds: string[], summary: string) => Promise<void>;
+  onUpsert: (id: string | null, title: string, documentIds: string[], summary: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onViewDoc?: (doc: PDFDocument) => void;
 }
@@ -60,6 +61,7 @@ type StudyMode = 'text' | 'mindmap';
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc }: SummariesTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState<DocSummary | null>(null);
+  const [studyTitle, setStudyTitle] = useState('');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [summaryText, setSummaryText] = useState('');
   const [studyMode, setStudyMode] = useState<StudyMode>('text');
@@ -77,6 +79,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const openNew = () => {
     setEditingSummary(null);
+    setStudyTitle('');
     setSelectedDocIds([]);
     setSummaryText('');
     setStudyMode('text');
@@ -85,6 +88,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const openEdit = (s: DocSummary) => {
     setEditingSummary(s);
+    setStudyTitle(s.title);
     setSelectedDocIds(s.documentIds);
     setSummaryText(s.summary);
     setStudyMode(isMindMap(s.summary) ? 'mindmap' : 'text');
@@ -92,9 +96,9 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   };
 
   const handleSave = async () => {
-    if (selectedDocIds.length === 0 || !summaryText.trim()) return;
+    if (!studyTitle.trim() || !summaryText.trim()) return;
     setSaving(true);
-    await onUpsert(selectedDocIds, summaryText.trim());
+    await onUpsert(editingSummary?.id || null, studyTitle.trim(), selectedDocIds, summaryText.trim());
     setSaving(false);
     setDialogOpen(false);
   };
@@ -116,10 +120,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const getDoc = (docId: string) => documents.find((d) => d.id === docId);
 
-  const getDocsTitleLabel = (docIds: string[]) => {
-    if (docIds.length === 0) return '';
-    if (docIds.length === 1) return getDocTitle(docIds[0]);
-    return `${getDocTitle(docIds[0])} +${docIds.length - 1}`;
+  const getStudyDisplayTitle = (s: DocSummary) => {
+    if (s.title) return s.title;
+    if (s.documentIds.length > 0) return getDocTitle(s.documentIds[0]);
+    return 'Sem título';
   };
 
   if (loading) {
@@ -161,7 +165,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-sm font-medium flex-1 flex items-center gap-1.5 min-w-0">
                       {isMM && <Network className="w-3.5 h-3.5 text-primary shrink-0" />}
-                      <span className="truncate">{getDocsTitleLabel(s.documentIds)}</span>
+                      <span className="truncate">{getStudyDisplayTitle(s)}</span>
                     </CardTitle>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar estudo">
@@ -175,7 +179,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                       </Button>
                     </div>
                   </div>
-                  {s.documentIds.length > 1 && (
+                  {s.documentIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {s.documentIds.map((docId) => (
                         <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[150px] truncate">
@@ -213,24 +217,33 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Document multi-selector */}
+            {/* Title */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Documentos</label>
+              <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
+              <Input
+                value={studyTitle}
+                onChange={(e) => setStudyTitle(e.target.value)}
+                placeholder="Ex: Sonhos e Visões - Resumo"
+              />
+            </div>
+
+            {/* Document multi-selector (optional) */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">
+                Documentos <span className="text-muted-foreground font-normal">(opcional)</span>
+              </label>
               
-              {/* Selected docs badges */}
               {selectedDocIds.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {selectedDocIds.map((docId) => (
                     <Badge key={docId} variant="secondary" className="gap-1 pr-1 text-xs">
                       <span className="truncate max-w-[180px]">{getDocTitle(docId)}</span>
-                      {!editingSummary && (
-                        <button
-                          onClick={() => removeDoc(docId)}
-                          className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => removeDoc(docId)}
+                        className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </Badge>
                   ))}
                 </div>
@@ -243,12 +256,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                     role="combobox"
                     aria-expanded={comboOpen}
                     className="w-full justify-between font-normal"
-                    disabled={!!editingSummary}
                   >
                     <span className="truncate text-muted-foreground">
                       {selectedDocIds.length === 0
-                        ? 'Pesquisar documento...'
-                        : `${selectedDocIds.length} documento${selectedDocIds.length > 1 ? 's' : ''} selecionado${selectedDocIds.length > 1 ? 's' : ''}`}
+                        ? 'Vincular documentos...'
+                        : `${selectedDocIds.length} documento${selectedDocIds.length > 1 ? 's' : ''} vinculado${selectedDocIds.length > 1 ? 's' : ''}`}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -295,12 +307,12 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             <div>
               {studyMode === 'text' ? (
                 <>
-                  <label className="text-sm font-medium mb-1.5 block">Estudo</label>
+                  <label className="text-sm font-medium mb-1.5 block">Conteúdo</label>
                   <RichTextEditor
                     key={editingSummary?.id || 'new'}
                     value={isMindMap(summaryText) ? '' : summaryText}
                     onChange={setSummaryText}
-                    placeholder="Escreva o estudo do documento..."
+                    placeholder="Escreva o conteúdo do estudo..."
                   />
                 </>
               ) : (
@@ -314,7 +326,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={selectedDocIds.length === 0 || !summaryText.trim() || saving}>
+            <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving}>
               {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
               Salvar
             </Button>
@@ -327,9 +339,9 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         <DialogContent className={cn("max-h-[90vh] overflow-y-auto", viewingSummary && isMindMap(viewingSummary.summary) ? "max-w-4xl" : "max-w-2xl")}>
           <DialogHeader>
             <DialogTitle className="text-base">
-              {viewingSummary ? getDocsTitleLabel(viewingSummary.documentIds) : ''}
+              {viewingSummary ? getStudyDisplayTitle(viewingSummary) : ''}
             </DialogTitle>
-            {viewingSummary && viewingSummary.documentIds.length > 1 && (
+            {viewingSummary && viewingSummary.documentIds.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {viewingSummary.documentIds.map((docId) => (
                   <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[200px] truncate">

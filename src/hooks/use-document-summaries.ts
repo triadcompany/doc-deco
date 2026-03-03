@@ -4,7 +4,8 @@ import { useAuth } from '@/hooks/use-auth';
 
 export interface DocSummary {
   id: string;
-  documentId: string;
+  title: string;
+  documentId: string | null;
   documentIds: string[];
   summary: string;
   createdAt: string;
@@ -12,10 +13,16 @@ export interface DocSummary {
 }
 
 function toApp(row: any): DocSummary {
+  const docIds: string[] = row.document_ids?.length
+    ? row.document_ids
+    : row.document_id
+      ? [row.document_id]
+      : [];
   return {
     id: row.id,
-    documentId: row.document_id,
-    documentIds: row.document_ids?.length ? row.document_ids : [row.document_id],
+    title: row.title || '',
+    documentId: row.document_id || null,
+    documentIds: docIds,
     summary: row.summary,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -52,30 +59,36 @@ export function useDocumentSummaries() {
     fetchSummaries();
   }, [fetchSummaries]);
 
-  const upsertSummary = useCallback(async (documentIds: string[], summary: string) => {
-    if (!user?.id || documentIds.length === 0) return;
+  const upsertSummary = useCallback(async (
+    id: string | null,
+    title: string,
+    documentIds: string[],
+    summary: string,
+  ) => {
+    if (!user?.id) return;
 
-    const primaryDocId = documentIds[0];
-    // Find existing by primary doc or any matching doc set
-    const existing = summaries.find((s) =>
-      s.documentId === primaryDocId || 
-      (s.documentIds.length === documentIds.length && s.documentIds.every((id) => documentIds.includes(id)))
-    );
+    const primaryDocId = documentIds.length > 0 ? documentIds[0] : null;
+    const payload: any = {
+      title,
+      summary,
+      document_ids: documentIds,
+      ...(primaryDocId ? { document_id: primaryDocId } : {}),
+    };
 
-    if (existing) {
+    if (id) {
       const { error } = await supabase
         .from('document_summaries')
-        .update({ summary, document_id: primaryDocId, document_ids: documentIds } as any)
-        .eq('id', existing.id);
+        .update(payload)
+        .eq('id', id);
       if (error) console.error('Error updating summary:', error);
     } else {
       const { error } = await supabase
         .from('document_summaries')
-        .insert({ document_id: primaryDocId, document_ids: documentIds, user_id: user.id, summary } as any);
+        .insert({ ...payload, user_id: user.id } as any);
       if (error) console.error('Error inserting summary:', error);
     }
     await fetchSummaries();
-  }, [user?.id, summaries, fetchSummaries]);
+  }, [user?.id, fetchSummaries]);
 
   const deleteSummary = useCallback(async (id: string) => {
     const { error } = await supabase.from('document_summaries').delete().eq('id', id);
