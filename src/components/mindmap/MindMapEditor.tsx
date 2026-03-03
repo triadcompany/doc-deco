@@ -44,6 +44,7 @@ interface Props {
   initialValue?: string;
   onChange?: (json: string) => void;
   fillHeight?: boolean;
+  compact?: boolean;
 }
 
 let idCounter = 1;
@@ -51,7 +52,7 @@ function nextId() {
   return `mm_${Date.now()}_${idCounter++}`;
 }
 
-function MindMapEditorInner({ initialValue, onChange, fillHeight = false }: Props) {
+function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compact = false }: Props) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { fitView, zoomIn } = useReactFlow();
   const [importOpen, setImportOpen] = useState(false);
@@ -317,7 +318,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false }: Prop
   }, [nodes, setNodes]);
 
   return (
-    <div className={cn("relative w-full rounded-xl border border-border overflow-hidden bg-background", fillHeight ? "flex-1 min-h-[300px]" : "h-[520px]")} ref={reactFlowWrapper}>
+    <div className={cn("relative w-full overflow-hidden bg-background", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -339,46 +340,52 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false }: Prop
           showInteractive={false}
           className="!bg-background !border-border !rounded-lg !shadow-lg"
         />
-        <MiniMap
-          nodeColor={(n) => (n.data as MindMapNodeData)?.color || DEFAULT_COLOR}
-          maskColor="hsl(var(--background) / 0.7)"
-          className="!bg-muted !border-border !rounded-lg !shadow-lg"
-          pannable
-          zoomable
-        />
+        {!compact && (
+          <MiniMap
+            nodeColor={(n) => (n.data as MindMapNodeData)?.color || DEFAULT_COLOR}
+            maskColor="hsl(var(--background) / 0.7)"
+            className="!bg-muted !border-border !rounded-lg !shadow-lg"
+            pannable
+            zoomable
+          />
+        )}
       </ReactFlow>
 
       {/* Top toolbar */}
       <TooltipProvider delayDuration={300}>
-        <div className="absolute top-3 left-3 flex gap-1.5 z-10">
+        <div className={cn("absolute top-3 left-3 flex gap-1 z-10", compact && "top-2 left-2")}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="sm" variant="secondary" onClick={handleAddNode} className="gap-1.5 h-8 text-xs shadow-md">
-                <Plus className="w-3.5 h-3.5" /> Nó
+              <Button size="sm" variant="secondary" onClick={handleAddNode} className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
+                <Plus className="w-3.5 h-3.5" />
+                {!compact && "Nó"}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Adicionar nó raiz</TooltipContent>
+            <TooltipContent side="bottom">Adicionar nó (Tab)</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="sm" variant="secondary" onClick={handleAutoLayout} className="gap-1.5 h-8 text-xs shadow-md">
-                <LayoutGrid className="w-3.5 h-3.5" /> Organizar
+              <Button size="sm" variant="secondary" onClick={handleAutoLayout} className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
+                <LayoutGrid className="w-3.5 h-3.5" />
+                {!compact && "Organizar"}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Organizar layout (⌘L)</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)} className="gap-1.5 h-8 text-xs shadow-md">
-                <FileUp className="w-3.5 h-3.5" /> Importar
+              <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)} className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
+                <FileUp className="w-3.5 h-3.5" />
+                {!compact && "Importar"}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Importar de lista de tópicos</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="sm" variant="secondary" onClick={handleExportImage} className="gap-1.5 h-8 text-xs shadow-md">
-                <FileDown className="w-3.5 h-3.5" /> Exportar
+              <Button size="sm" variant="secondary" onClick={handleExportImage} className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
+                <FileDown className="w-3.5 h-3.5" />
+                {!compact && "Exportar"}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Exportar como imagem PNG</TooltipContent>
