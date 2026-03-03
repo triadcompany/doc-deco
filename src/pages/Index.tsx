@@ -100,10 +100,10 @@ const Index = () => {
     removeAuthor,
     addTranslator,
     removeTranslator,
-    renderHomeContent: () => renderHomeContent(),
+    renderHomeContent: (embedded?: boolean) => renderHomeContent(embedded),
   };
 
-  const renderHomeContent = () => (
+  const renderHomeContent = (embedded?: boolean) => (
     <>
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
@@ -156,7 +156,7 @@ const Index = () => {
               <FileText className="w-4 h-4 text-primary" />
               Acessados Recentemente
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className={embedded ? "grid grid-cols-3 gap-3" : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"}>
               {recentWithDocs.map(({ doc, pinned }) => {
                 const rp = latestProgressByDoc.get(doc.id);
                 return (

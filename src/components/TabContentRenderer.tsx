@@ -51,13 +51,13 @@ export interface TabContentProps {
   addTranslator: (name: string) => void;
   removeTranslator: (id: string) => void;
   // Home extras
-  renderHomeContent?: () => React.ReactNode;
+  renderHomeContent?: (embedded?: boolean) => React.ReactNode;
 }
 
 export function TabContentRenderer({ tabId, ...props }: TabContentProps) {
   switch (tabId) {
     case 'inicio':
-      return props.renderHomeContent?.() ?? null;
+      return props.renderHomeContent?.(props.embedded) ?? null;
 
     case 'documentos':
       return (
