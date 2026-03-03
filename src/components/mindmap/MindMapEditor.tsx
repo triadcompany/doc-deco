@@ -130,6 +130,25 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
     };
   }, [setNodes, setEdges, fitView]);
 
+  // Tab key → add child from selected node
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      // Don't intercept if user is typing in an input
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      const selected = nodes.find((n) => n.selected);
+      if (!selected) return;
+
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('mindmap:add-child', { detail: { parentId: selected.id } }));
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nodes]);
+
   const handleAutoLayout = useCallback(() => {
     setNodes((nds) => {
       const laid = autoLayout(nds as MindMapNode[], edges);
