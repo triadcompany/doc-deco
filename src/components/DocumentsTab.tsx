@@ -33,9 +33,10 @@ interface DocumentsTabProps {
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit?: (doc: PDFDocument) => void;
+  embedded?: boolean;
 }
 
-export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, onEdit }: DocumentsTabProps) {
+export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, onEdit, embedded }: DocumentsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
@@ -207,7 +208,7 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
           <p className="text-sm text-muted-foreground/70 mt-1">Tente ajustar os filtros</p>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className={embedded ? "grid grid-cols-3 gap-3" : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"}>
           {filteredDocs.map((doc) => (
             <div key={doc.id} className="relative">
               {selectionMode && (

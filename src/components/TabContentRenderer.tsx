@@ -67,6 +67,7 @@ export function TabContentRenderer({ tabId, ...props }: TabContentProps) {
           onToggleFavorite={props.onToggleFavorite}
           onDelete={props.onDelete}
           onEdit={props.onEdit}
+          embedded={props.embedded}
         />
       );
 
