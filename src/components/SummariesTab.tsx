@@ -265,7 +265,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       </div>
 
       {/* Editor */}
-      <div className={embedded && isCurrentMindMap ? 'flex-1 min-h-0' : ''}>
+      <div className={embedded && isCurrentMindMap ? 'flex-1 min-h-0 flex flex-col' : ''}>
         {studyMode === 'text' ? (
           <>
             <label className="text-sm font-medium mb-1.5 block">Conteúdo</label>
@@ -352,8 +352,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </div>
 
         {/* Form */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
-          <div>
+        <div className={cn("flex-1 min-h-0 space-y-3", isCurrentMindMap ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
+          <div className="shrink-0">
             <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
             <Input
               value={studyTitle}
@@ -361,8 +361,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               placeholder="Ex: Sonhos e Visões - Resumo"
             />
           </div>
-          {renderDocSelector()}
-          {renderEditor()}
+          <div className="shrink-0">{renderDocSelector()}</div>
+          <div className={cn(isCurrentMindMap ? "flex-1 min-h-0 flex flex-col" : "")}>
+            {renderEditor()}
+          </div>
         </div>
       </div>
     );
