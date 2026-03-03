@@ -24,10 +24,11 @@ import {
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-interface PDFViewerProps {
+export interface PDFViewerProps {
   doc: PDFDocument;
   onBack: () => void;
   searchContext?: SearchContext | null;
+  embedded?: boolean;
 }
 
 const highlightColors = [
@@ -38,7 +39,7 @@ const highlightColors = [
   { name: 'Laranja', color: 'hsl(25, 95%, 53%)' },
 ];
 
-export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
+export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFViewerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(doc.pages || 1);
   const getInitialZoom = () => {
@@ -407,7 +408,7 @@ export function PDFViewer({ doc, onBack, searchContext }: PDFViewerProps) {
   const pageAnnotations = annotations.filter((a) => a.page === currentPage);
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className={embedded ? "h-full flex flex-col bg-background" : "h-screen flex flex-col bg-background"}>
       {/* Top bar */}
       <header className="border-b border-border shrink-0 glass mt-[20px] sm:mt-0 md:mt-[20px] xl:mt-0">
         <div className="h-14 flex items-center justify-between px-2 sm:px-4 md:pl-[76px] xl:pl-4">

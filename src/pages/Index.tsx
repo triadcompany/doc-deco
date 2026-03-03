@@ -199,10 +199,10 @@ const Index = () => {
 
   return (
     <>
-      {viewingDoc && (
+      {viewingDoc && !splitMode && (
         <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />
       )}
-    <div className={`min-h-screen bg-background safe-top safe-x pb-20 sm:pb-0 sm:safe-bottom ${viewingDoc ? 'hidden' : ''}`}>
+    <div className={`min-h-screen bg-background safe-top safe-x pb-20 sm:pb-0 sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
@@ -259,8 +259,14 @@ const Index = () => {
             </div>
             <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-180px)] rounded-lg border border-border/50">
               <ResizablePanel defaultSize={50} minSize={25}>
-                <div className="h-full overflow-y-auto p-4">
-                  <TabContentRenderer tabId={activeTab} {...tabContentProps} />
+                <div className="h-full overflow-y-auto">
+                  {viewingDoc ? (
+                    <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded />
+                  ) : (
+                    <div className="p-4">
+                      <TabContentRenderer tabId={activeTab} {...tabContentProps} />
+                    </div>
+                  )}
                 </div>
               </ResizablePanel>
               <ResizableHandle withHandle />
