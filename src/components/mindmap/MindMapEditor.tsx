@@ -82,29 +82,22 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
     const handleAddChild = (e: Event) => {
       const { parentId } = (e as CustomEvent).detail;
       const childId = nextId();
-      setNodes((nds) => [
-        ...nds,
-        {
-          id: childId,
-          type: 'mindMapNode',
-          position: { x: 0, y: 0 },
-          data: { label: 'Novo tópico', color: DEFAULT_COLOR },
-        },
-      ]);
+      setNodes((nds) => {
+        const parent = nds.find((n) => n.id === parentId);
+        const parentPos = parent?.position || { x: 0, y: 0 };
+        // Count existing children to offset vertically
+        const siblingCount = edges.filter((ed) => ed.source === parentId).length;
+        return [
+          ...nds,
+          {
+            id: childId,
+            type: 'mindMapNode',
+            position: { x: parentPos.x + 280, y: parentPos.y + siblingCount * 64 },
+            data: { label: 'Novo tópico', color: DEFAULT_COLOR },
+          },
+        ];
+      });
       setEdges((eds) => [...eds, { id: `e${parentId}-${childId}`, source: parentId, target: childId, type: 'smoothstep' }]);
-      // Auto-layout after adding
-      setTimeout(() => {
-        setNodes((nds) => {
-          setEdges((eds) => {
-            const laid = autoLayout(nds as MindMapNode[], eds);
-            // We need to update nodes, so we return them here
-            setTimeout(() => fitView({ duration: 300 }), 50);
-            // Use a workaround: set nodes from inside
-            return eds;
-          });
-          return nds;
-        });
-      }, 50);
     };
 
     const handleDeleteNode = (e: Event) => {
