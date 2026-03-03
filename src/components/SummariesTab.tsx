@@ -115,19 +115,19 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" />
-          Meus Resumos
+          Meus Estudos
         </h2>
         <Button size="sm" onClick={openNew} className="gap-1.5">
           <Plus className="w-4 h-4" />
-          Novo Resumo
+          Novo Estudo
         </Button>
       </div>
 
       {summaries.length === 0 ? (
         <div className="text-center py-16">
           <FileText className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-muted-foreground">Nenhum resumo criado</p>
-          <p className="text-sm text-muted-foreground/60 mt-1">Crie resumos dos seus documentos para consultar depois</p>
+          <p className="text-muted-foreground">Nenhum estudo criado</p>
+          <p className="text-sm text-muted-foreground/60 mt-1">Crie estudos dos seus documentos para consultar depois</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,13 +146,13 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                           <BookOpen className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar resumo">
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar resumo">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(s.id)} title="Excluir resumo">
+                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar estudo">
+                         <Eye className="w-3.5 h-3.5" />
+                       </Button>
+                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
+                         <Pencil className="w-3.5 h-3.5" />
+                       </Button>
+                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(s.id)} title="Excluir estudo">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -176,7 +176,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingSummary ? 'Editar Resumo' : 'Novo Resumo'}</DialogTitle>
+            <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -222,12 +222,12 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               </Popover>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Resumo</label>
+              <label className="text-sm font-medium mb-1.5 block">Estudo</label>
               <RichTextEditor
                 key={editingSummary?.id || 'new'}
                 value={summaryText}
                 onChange={setSummaryText}
-                placeholder="Escreva o resumo do documento..."
+                placeholder="Escreva o estudo do documento..."
               />
             </div>
           </div>
