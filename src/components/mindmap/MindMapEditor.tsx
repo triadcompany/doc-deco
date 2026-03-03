@@ -167,10 +167,29 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
         return;
       }
 
-      // Enter → edit selected node
+      // Enter → add sibling (child of same parent)
       if (e.key === 'Enter' && selected) {
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent('mindmap:start-edit', { detail: { id: selected.id } }));
+        const parentEdge = edges.find((ed) => ed.target === selected.id);
+        if (parentEdge) {
+          window.dispatchEvent(new CustomEvent('mindmap:add-child', { detail: { parentId: parentEdge.source } }));
+        } else {
+          // Root node: add a new root below
+          const id = nextId();
+          setNodes((nds) => [
+            ...nds.map((n) => ({ ...n, selected: false })),
+            {
+              id,
+              type: 'mindMapNode',
+              position: { x: selected.position.x, y: selected.position.y + 90 },
+              data: { label: '', color: DEFAULT_COLOR },
+              selected: true,
+            },
+          ]);
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('mindmap:start-edit', { detail: { id } }));
+          }, 100);
+        }
         return;
       }
 
