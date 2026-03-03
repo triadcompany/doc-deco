@@ -212,7 +212,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         data-placeholder={placeholder}
         className={cn(
           "overflow-y-auto p-3 text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
-          fillHeight ? "min-h-[200px] flex-1" : "min-h-[200px] max-h-[400px]"
+          fillHeight ? "min-h-[200px] flex-1" : "min-h-[300px] max-h-[50vh]"
         )}
         style={{ wordBreak: 'break-word' }}
       />
