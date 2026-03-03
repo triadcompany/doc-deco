@@ -229,22 +229,27 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
     [setNodes, setEdges, fitView],
   );
 
-  const handleAddRoot = useCallback(() => {
-    const id = nextId();
-    setNodes((nds) => [
-      ...nds.map((n) => ({ ...n, selected: false })),
-      {
-        id,
-        type: 'mindMapNode',
-        position: { x: 0, y: (nds.length + 1) * 90 },
-        data: { label: '', color: DEFAULT_COLOR },
-        selected: true,
-      },
-    ]);
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('mindmap:start-edit', { detail: { id } }));
-    }, 100);
-  }, [setNodes]);
+  const handleAddNode = useCallback(() => {
+    const selected = nodes.find((n) => n.selected);
+    if (selected) {
+      window.dispatchEvent(new CustomEvent('mindmap:add-child', { detail: { parentId: selected.id } }));
+    } else {
+      const id = nextId();
+      setNodes((nds) => [
+        ...nds.map((n) => ({ ...n, selected: false })),
+        {
+          id,
+          type: 'mindMapNode',
+          position: { x: 0, y: (nds.length + 1) * 90 },
+          data: { label: '', color: DEFAULT_COLOR },
+          selected: true,
+        },
+      ]);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('mindmap:start-edit', { detail: { id } }));
+      }, 100);
+    }
+  }, [nodes, setNodes]);
 
   return (
     <div className="relative w-full h-[520px] rounded-xl border border-border overflow-hidden bg-background" ref={reactFlowWrapper}>
@@ -283,7 +288,7 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
         <div className="absolute top-3 left-3 flex gap-1.5 z-10">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="sm" variant="secondary" onClick={handleAddRoot} className="gap-1.5 h-8 text-xs shadow-md">
+              <Button size="sm" variant="secondary" onClick={handleAddNode} className="gap-1.5 h-8 text-xs shadow-md">
                 <Plus className="w-3.5 h-3.5" /> Nó
               </Button>
             </TooltipTrigger>
