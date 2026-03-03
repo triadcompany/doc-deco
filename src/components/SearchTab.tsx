@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { SearchContext } from '@/lib/types';
 import { PDFCard } from '@/components/PDFCard';
 import { Input } from '@/components/ui/input';
@@ -115,6 +115,8 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
   const [results, setResults] = useState<(PDFDocument & { snippet?: string })[]>([]);
   const [searching, setSearching] = useState(false);
   const [currentTerm, setCurrentTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const RESULTS_PER_PAGE = 30;
 
   const authors = authorsList.length > 0 ? authorsList : (() => {
     const set = new Set<string>();
@@ -132,6 +134,7 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
     setHasSearched(true);
     setSearching(true);
     setCurrentTerm(searchTerm);
+    setCurrentPage(1);
     try {
       const res = await searchContent(searchTerm, searchType, {
         author: selectedAuthor,
@@ -281,6 +284,9 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             {results.length} resultado{results.length !== 1 ? 's' : ''} encontrado{results.length !== 1 ? 's' : ''}
+            {results.length > RESULTS_PER_PAGE && (
+              <span> · Página {currentPage} de {Math.ceil(results.length / RESULTS_PER_PAGE)}</span>
+            )}
           </p>
 
           {results.length === 0 ? (
@@ -294,19 +300,55 @@ export function SearchTab({ documents, onView, onToggleFavorite, onDelete, autho
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {results.map((doc, index) => (
-                <SearchResultItem
-                  key={`${doc.id}-${index}`}
-                  doc={doc}
-                  currentTerm={currentTerm}
-                  searchType={searchType}
-                  onView={onView}
-                  onToggleFavorite={onToggleFavorite}
-                  onDelete={onDelete}
-                />
-              ))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {results
+                  .slice((currentPage - 1) * RESULTS_PER_PAGE, currentPage * RESULTS_PER_PAGE)
+                  .map((doc, index) => (
+                    <SearchResultItem
+                      key={`${doc.id}-${index}`}
+                      doc={doc}
+                      currentTerm={currentTerm}
+                      searchType={searchType}
+                      onView={onView}
+                      onToggleFavorite={onToggleFavorite}
+                      onDelete={onDelete}
+                    />
+                  ))}
+              </div>
+
+              {results.length > RESULTS_PER_PAGE && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  {Array.from({ length: Math.ceil(results.length / RESULTS_PER_PAGE) }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-9"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === Math.ceil(results.length / RESULTS_PER_PAGE)}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
