@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { PDFDocument } from '@/lib/types';
 import { DocSummary } from '@/hooks/use-document-summaries';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { MindMapEditor } from '@/components/mindmap/MindMapEditor';
+import { MindMapViewer } from '@/components/mindmap/MindMapViewer';
+import { isMindMap } from '@/components/mindmap/types';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +38,7 @@ import {
   ChevronsUpDown,
   Check,
   Eye,
+  Network,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -49,22 +53,20 @@ interface SummariesTabProps {
   onViewDoc?: (doc: PDFDocument) => void;
 }
 
+type StudyMode = 'text' | 'mindmap';
+
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc }: SummariesTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState<DocSummary | null>(null);
   const [selectedDocId, setSelectedDocId] = useState('');
   const [summaryText, setSummaryText] = useState('');
+  const [studyMode, setStudyMode] = useState<StudyMode>('text');
   const [saving, setSaving] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
   const [viewingSummary, setViewingSummary] = useState<DocSummary | null>(null);
 
   const normalizeForSearch = (text: string) =>
-    text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
   const accentInsensitiveFilter = (value: string, search: string) => {
     if (!search) return 1;
@@ -75,6 +77,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setEditingSummary(null);
     setSelectedDocId('');
     setSummaryText('');
+    setStudyMode('text');
     setDialogOpen(true);
   };
 
@@ -82,6 +85,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setEditingSummary(s);
     setSelectedDocId(s.documentId);
     setSummaryText(s.summary);
+    setStudyMode(isMindMap(s.summary) ? 'mindmap' : 'text');
     setDialogOpen(true);
   };
 
@@ -110,6 +114,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     );
   }
 
+  const isCurrentMindMap = studyMode === 'mindmap';
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -133,11 +139,13 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {summaries.map((s) => {
             const doc = getDoc(s.documentId);
+            const isMM = isMindMap(s.summary);
             return (
               <Card key={s.id} className="group cursor-pointer" onClick={() => setViewingSummary(s)}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm font-medium truncate flex-1">
+                    <CardTitle className="text-sm font-medium truncate flex-1 flex items-center gap-1.5">
+                      {isMM && <Network className="w-3.5 h-3.5 text-primary shrink-0" />}
                       {getDocTitle(s.documentId)}
                     </CardTitle>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -146,13 +154,13 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                           <BookOpen className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar estudo">
-                         <Eye className="w-3.5 h-3.5" />
-                       </Button>
-                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
-                         <Pencil className="w-3.5 h-3.5" />
-                       </Button>
-                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(s.id)} title="Excluir estudo">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar estudo">
+                        <Eye className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(s.id)} title="Excluir estudo">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -162,10 +170,16 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div
-                    className="text-sm line-clamp-6 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-1 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-1 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
-                    dangerouslySetInnerHTML={{ __html: s.summary }}
-                  />
+                  {isMM ? (
+                    <div className="h-32 rounded overflow-hidden pointer-events-none">
+                      <MindMapViewer value={s.summary} className="w-full h-full" />
+                    </div>
+                  ) : (
+                    <div
+                      className="text-sm line-clamp-6 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-1 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-1 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+                      dangerouslySetInnerHTML={{ __html: s.summary }}
+                    />
+                  )}
                 </CardContent>
               </Card>
             );
@@ -173,12 +187,14 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </div>
       )}
 
+      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={cn("max-h-[90vh] overflow-y-auto", isCurrentMindMap ? "max-w-4xl" : "max-w-2xl")}>
           <DialogHeader>
             <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Document selector */}
             <div>
               <label className="text-sm font-medium mb-1.5 block">Documento</label>
               <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -190,9 +206,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                     className="w-full justify-between font-normal"
                     disabled={!!editingSummary}
                   >
-                    <span className="truncate">
-                      {selectedDocTitle || 'Pesquisar documento...'}
-                    </span>
+                    <span className="truncate">{selectedDocTitle || 'Pesquisar documento...'}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -206,10 +220,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                           <CommandItem
                             key={d.id}
                             value={d.title}
-                            onSelect={() => {
-                              setSelectedDocId(d.id);
-                              setComboOpen(false);
-                            }}
+                            onSelect={() => { setSelectedDocId(d.id); setComboOpen(false); }}
                           >
                             <Check className={cn("mr-2 h-4 w-4", selectedDocId === d.id ? "opacity-100" : "opacity-0")} />
                             <span className="truncate">{d.title}</span>
@@ -221,14 +232,41 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Mode toggle */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Estudo</label>
-              <RichTextEditor
-                key={editingSummary?.id || 'new'}
-                value={summaryText}
-                onChange={setSummaryText}
-                placeholder="Escreva o estudo do documento..."
-              />
+              <label className="text-sm font-medium mb-1.5 block">Formato</label>
+              <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="text" className="flex-1 gap-1.5">
+                    <FileText className="w-3.5 h-3.5" /> Texto
+                  </TabsTrigger>
+                  <TabsTrigger value="mindmap" className="flex-1 gap-1.5">
+                    <Network className="w-3.5 h-3.5" /> Mapa Mental
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Editor */}
+            <div>
+              {studyMode === 'text' ? (
+                <>
+                  <label className="text-sm font-medium mb-1.5 block">Estudo</label>
+                  <RichTextEditor
+                    key={editingSummary?.id || 'new'}
+                    value={isMindMap(summaryText) ? '' : summaryText}
+                    onChange={setSummaryText}
+                    placeholder="Escreva o estudo do documento..."
+                  />
+                </>
+              ) : (
+                <MindMapEditor
+                  key={`mm-${editingSummary?.id || 'new'}`}
+                  initialValue={isMindMap(summaryText) ? summaryText : undefined}
+                  onChange={setSummaryText}
+                />
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -243,7 +281,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
       {/* View Summary Dialog */}
       <Dialog open={!!viewingSummary} onOpenChange={(open) => !open && setViewingSummary(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={cn("max-h-[90vh] overflow-y-auto", viewingSummary && isMindMap(viewingSummary.summary) ? "max-w-4xl" : "max-w-2xl")}>
           <DialogHeader>
             <DialogTitle className="text-base">
               {viewingSummary ? getDocTitle(viewingSummary.documentId) : ''}
@@ -255,10 +293,14 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             )}
           </DialogHeader>
           {viewingSummary && (
-            <div
-              className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
-              dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
-            />
+            isMindMap(viewingSummary.summary) ? (
+              <MindMapViewer value={viewingSummary.summary} className="w-full h-[500px] rounded-lg border" interactive />
+            ) : (
+              <div
+                className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+                dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
+              />
+            )
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewingSummary(null)}>Fechar</Button>
