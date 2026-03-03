@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 function normalize(str: string): string {
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s]+/g, ' ').trim();
@@ -44,6 +44,8 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [perPage, setPerPage] = useState<number>(30);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -74,6 +76,8 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
     }
     return docs.sort((a, b) => a.date.localeCompare(b.date));
   }, [documents, searchQuery, selectedYear, selectedAuthor]);
+
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, selectedYear, selectedAuthor]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -195,66 +199,130 @@ export function DocumentsTab({ documents, onView, onToggleFavorite, onDelete, on
         </div>
       </div>
 
-      {/* Results count */}
-      <p className="text-sm text-muted-foreground">
-        {filteredDocs.length} documento{filteredDocs.length !== 1 ? 's' : ''} encontrado{filteredDocs.length !== 1 ? 's' : ''}
-      </p>
+      {/* Results count + per page selector */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {filteredDocs.length} documento{filteredDocs.length !== 1 ? 's' : ''} encontrado{filteredDocs.length !== 1 ? 's' : ''}
+          {filteredDocs.length > perPage && (
+            <span> · Página {currentPage} de {Math.ceil(filteredDocs.length / perPage)}</span>
+          )}
+        </p>
+        <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setCurrentPage(1); }}>
+          <SelectTrigger className="w-24 h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="30">30 / pág</SelectItem>
+            <SelectItem value="50">50 / pág</SelectItem>
+            <SelectItem value="100">100 / pág</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Documents */}
-      {filteredDocs.length === 0 ? (
-        <div className="text-center py-20">
-          <FileText className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-          <p className="text-lg font-medium text-muted-foreground">Nenhum documento encontrado</p>
-          <p className="text-sm text-muted-foreground/70 mt-1">Tente ajustar os filtros</p>
-        </div>
-      ) : viewMode === 'grid' ? (
-        <div className={embedded ? "grid grid-cols-3 gap-3" : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"}>
-          {filteredDocs.map((doc) => (
-            <div key={doc.id} className="relative">
-              {selectionMode && (
-                <div
-                  className="absolute top-2 left-2 z-10"
-                  onClick={(e) => { e.stopPropagation(); toggleSelect(doc.id); }}
+      {(() => {
+        const totalPages = Math.ceil(filteredDocs.length / perPage);
+        const paginatedDocs = filteredDocs.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+        return filteredDocs.length === 0 ? (
+          <div className="text-center py-20">
+            <FileText className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+            <p className="text-lg font-medium text-muted-foreground">Nenhum documento encontrado</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">Tente ajustar os filtros</p>
+          </div>
+        ) : (
+          <>
+            {viewMode === 'grid' ? (
+              <div className={embedded ? "grid grid-cols-3 gap-3" : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"}>
+                {paginatedDocs.map((doc) => (
+                  <div key={doc.id} className="relative">
+                    {selectionMode && (
+                      <div
+                        className="absolute top-2 left-2 z-10"
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(doc.id); }}
+                      >
+                        <Checkbox checked={selectedIds.has(doc.id)} />
+                      </div>
+                    )}
+                    <div className={selectionMode && selectedIds.has(doc.id) ? 'ring-2 ring-primary rounded-xl' : ''}>
+                      <PDFCard
+                        doc={doc}
+                        viewMode="grid"
+                        onView={selectionMode ? () => toggleSelect(doc.id) : onView}
+                        onToggleFavorite={onToggleFavorite}
+                        onDelete={onDelete}
+                        onEdit={onEdit}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {paginatedDocs.map((doc) => (
+                  <div key={doc.id} className="flex items-center gap-2">
+                    {selectionMode && (
+                      <div onClick={(e) => { e.stopPropagation(); toggleSelect(doc.id); }}>
+                        <Checkbox checked={selectedIds.has(doc.id)} />
+                      </div>
+                    )}
+                    <div className={`flex-1 ${selectionMode && selectedIds.has(doc.id) ? 'ring-2 ring-primary rounded-xl' : ''}`}>
+                      <PDFCard
+                        doc={doc}
+                        viewMode="list"
+                        onView={selectionMode ? () => toggleSelect(doc.id) : onView}
+                        onToggleFavorite={onToggleFavorite}
+                        onDelete={onDelete}
+                        onEdit={onEdit}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
                 >
-                  <Checkbox checked={selectedIds.has(doc.id)} />
-                </div>
-              )}
-              <div className={selectionMode && selectedIds.has(doc.id) ? 'ring-2 ring-primary rounded-xl' : ''}>
-                <PDFCard
-                  doc={doc}
-                  viewMode="grid"
-                  onView={selectionMode ? () => toggleSelect(doc.id) : onView}
-                  onToggleFavorite={onToggleFavorite}
-                  onDelete={onDelete}
-                  onEdit={onEdit}
-                />
+                  Anterior
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                  .map((page, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev !== undefined && page - prev > 1;
+                    return (
+                      <span key={page} className="flex items-center gap-1">
+                        {showEllipsis && <span className="text-muted-foreground px-1">…</span>}
+                        <Button
+                          variant={page === currentPage ? 'default' : 'outline'}
+                          size="sm"
+                          className="w-9"
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      </span>
+                    );
+                  })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >
+                  Próxima
+                </Button>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filteredDocs.map((doc) => (
-            <div key={doc.id} className="flex items-center gap-2">
-              {selectionMode && (
-                <div onClick={(e) => { e.stopPropagation(); toggleSelect(doc.id); }}>
-                  <Checkbox checked={selectedIds.has(doc.id)} />
-                </div>
-              )}
-              <div className={`flex-1 ${selectionMode && selectedIds.has(doc.id) ? 'ring-2 ring-primary rounded-xl' : ''}`}>
-                <PDFCard
-                  doc={doc}
-                  viewMode="list"
-                  onView={selectionMode ? () => toggleSelect(doc.id) : onView}
-                  onToggleFavorite={onToggleFavorite}
-                  onDelete={onDelete}
-                  onEdit={onEdit}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </>
+        );
+      })()}
 
       {/* Confirm bulk delete */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
