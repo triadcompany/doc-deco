@@ -42,6 +42,7 @@ import {
   Eye,
   Network,
   X,
+  Search,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -68,7 +69,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [saving, setSaving] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
   const [viewingSummary, setViewingSummary] = useState<DocSummary | null>(null);
-
+  const [searchQuery, setSearchQuery] = useState('');
   const normalizeForSearch = (text: string) =>
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -136,6 +137,20 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const isCurrentMindMap = studyMode === 'mindmap';
 
+  // Filter summaries by search query (title + content)
+  const filteredSummaries = summaries.filter((s) => {
+    if (!searchQuery.trim()) return true;
+    const q = normalizeForSearch(searchQuery);
+    const title = normalizeForSearch(getStudyDisplayTitle(s));
+    if (title.includes(q)) return true;
+    // Strip HTML tags for content search
+    const plainContent = normalizeForSearch(s.summary.replace(/<[^>]*>/g, ''));
+    if (plainContent.includes(q)) return true;
+    // Search in linked document titles
+    const docTitles = s.documentIds.map((id) => normalizeForSearch(getDocTitle(id))).join(' ');
+    return docTitles.includes(q);
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -149,15 +164,34 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </Button>
       </div>
 
+      {/* Search bar */}
+      {summaries.length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Pesquisar por título ou conteúdo..."
+            className="pl-9"
+          />
+        </div>
+      )}
+
       {summaries.length === 0 ? (
         <div className="text-center py-16">
           <FileText className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
           <p className="text-muted-foreground">Nenhum estudo criado</p>
           <p className="text-sm text-muted-foreground/60 mt-1">Crie estudos dos seus documentos para consultar depois</p>
         </div>
+      ) : filteredSummaries.length === 0 ? (
+        <div className="text-center py-12">
+          <Search className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+          <p className="text-muted-foreground">Nenhum estudo encontrado</p>
+          <p className="text-sm text-muted-foreground/60 mt-1">Tente outro termo de pesquisa</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {summaries.map((s) => {
+          {filteredSummaries.map((s) => {
             const isMM = isMindMap(s.summary);
             return (
               <Card key={s.id} className="group cursor-pointer" onClick={() => setViewingSummary(s)}>
