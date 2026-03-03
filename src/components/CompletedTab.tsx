@@ -12,6 +12,7 @@ interface CompletedTabProps {
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit?: (doc: PDFDocument) => void;
+  onUnmarkCompleted?: (id: string) => void;
 }
 
 const MONTH_NAMES = [
@@ -27,7 +28,7 @@ interface GroupedData {
   }[];
 }
 
-export function CompletedTab({ documents, progress, onView, onToggleFavorite, onDelete, onEdit }: CompletedTabProps) {
+export function CompletedTab({ documents, progress, onView, onToggleFavorite, onDelete, onEdit, onUnmarkCompleted }: CompletedTabProps) {
   const [openYears, setOpenYears] = useState<Set<number>>(new Set());
 
   const grouped = useMemo(() => {
@@ -129,6 +130,8 @@ export function CompletedTab({ documents, progress, onView, onToggleFavorite, on
                           onToggleFavorite={onToggleFavorite}
                           onDelete={onDelete}
                           onEdit={onEdit}
+                          onMarkCompleted={onUnmarkCompleted}
+                          isCompleted={true}
                         />
                       ))}
                     </div>

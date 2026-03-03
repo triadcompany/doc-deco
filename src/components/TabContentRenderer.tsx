@@ -43,6 +43,7 @@ export interface TabContentProps {
   upsertGoal: any;
   resetMonthlyProgress: any;
   progress: any[];
+  unmarkCompleted?: (id: string) => Promise<void>;
   // Settings
   settingsAuthors: SettingsEntry[];
   settingsTranslators: SettingsEntry[];
@@ -102,6 +103,7 @@ export function TabContentRenderer({ tabId, ...props }: TabContentProps) {
           onToggleFavorite={props.onToggleFavorite}
           onDelete={props.onDelete}
           onEdit={props.onEdit}
+          onUnmarkCompleted={props.unmarkCompleted}
         />
       );
 

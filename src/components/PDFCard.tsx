@@ -3,7 +3,7 @@ import { formatFileSize } from '@/lib/mock-data';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, FileText, MoreVertical, Eye, Trash2, Pencil, Pin, CheckCircle2 } from 'lucide-react';
+import { Star, FileText, MoreVertical, Eye, Trash2, Pencil, Pin, CheckCircle2, Undo2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +85,11 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
                 <Pin className="w-4 h-4 mr-2" /> {isPinned ? 'Desafixar' : 'Fixar'}
               </DropdownMenuItem>
             )}
+            {onMarkCompleted && isCompleted && (
+              <DropdownMenuItem onClick={() => onMarkCompleted(doc.id)}>
+                <Undo2 className="w-4 h-4 mr-2" /> Remover de Concluídos
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </Card>
@@ -138,6 +143,11 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
               {onTogglePin && (
                 <DropdownMenuItem onClick={() => onTogglePin(doc.id)}>
                   <Pin className="w-4 h-4 mr-2" /> {isPinned ? 'Desafixar' : 'Fixar'}
+                </DropdownMenuItem>
+              )}
+              {onMarkCompleted && isCompleted && (
+                <DropdownMenuItem onClick={() => onMarkCompleted(doc.id)}>
+                  <Undo2 className="w-4 h-4 mr-2" /> Remover de Concluídos
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

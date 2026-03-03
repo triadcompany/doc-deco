@@ -158,6 +158,17 @@ export function useReadingGoals() {
     await fetchProgress();
   };
 
+  const unmarkCompleted = async (documentId: string) => {
+    if (!user) return;
+    await supabase
+      .from('reading_progress')
+      .update({ completed: false, is_reading: false, completed_at: null } as any)
+      .eq('document_id', documentId)
+      .eq('user_id', user.id);
+    await fetchProgress();
+  };
+
+
   const removeReading = async (documentId: string) => {
     if (!user) return;
     await supabase
@@ -206,6 +217,7 @@ export function useReadingGoals() {
     startReading,
     updateProgress,
     markCompleted,
+    unmarkCompleted,
     removeReading,
     resetMonthlyProgress,
     fetchProgress,
