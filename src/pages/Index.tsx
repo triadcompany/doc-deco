@@ -251,15 +251,25 @@ const Index = () => {
           </div>
         ) : splitMode ? (
           /* ======== SPLIT VIEW MODE ======== */
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <SplitViewSelector value={activeTab} onChange={setActiveTab} side="left" />
-              <span className="text-muted-foreground text-xs">|</span>
-              <SplitViewSelector value={rightTab} onChange={setRightTab} side="right" />
-            </div>
-            <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-180px)] rounded-lg border border-border/50">
-              <ResizablePanel defaultSize={50} minSize={25}>
-                <div className="h-full overflow-y-auto">
+          <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-160px)] rounded-xl border border-border/40 bg-card/30 shadow-sm">
+            <ResizablePanel defaultSize={50} minSize={20}>
+              <div className="h-full flex flex-col">
+                {/* Left panel header */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-secondary/30 shrink-0">
+                  <SplitViewSelector value={activeTab} onChange={setActiveTab} side="left" />
+                  {viewingDoc && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setViewingDoc(null); setSearchContext(null); }}
+                      className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1"
+                    >
+                      <PanelLeftClose className="w-3.5 h-3.5" />
+                      Fechar doc
+                    </Button>
+                  )}
+                </div>
+                <div className="flex-1 overflow-y-auto">
                   {viewingDoc ? (
                     <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded />
                   ) : (
@@ -268,15 +278,30 @@ const Index = () => {
                     </div>
                   )}
                 </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={50} minSize={25}>
-                <div className="h-full overflow-y-auto p-4">
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={50} minSize={20}>
+              <div className="h-full flex flex-col">
+                {/* Right panel header */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-secondary/30 shrink-0">
+                  <SplitViewSelector value={rightTab} onChange={setRightTab} side="right" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleSplitMode}
+                    className="h-7 text-xs text-muted-foreground hover:text-destructive gap-1"
+                  >
+                    <PanelLeftClose className="w-3.5 h-3.5" />
+                    Fechar
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
                   <TabContentRenderer tabId={rightTab} {...tabContentProps} />
                 </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </div>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         ) : (
           /* ======== NORMAL TAB MODE ======== */
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
