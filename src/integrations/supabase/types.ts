@@ -224,6 +224,7 @@ export type Database = {
         Row: {
           created_at: string
           document_id: string
+          document_ids: string[] | null
           id: string
           summary: string
           updated_at: string
@@ -232,6 +233,7 @@ export type Database = {
         Insert: {
           created_at?: string
           document_id: string
+          document_ids?: string[] | null
           id?: string
           summary: string
           updated_at?: string
@@ -240,6 +242,7 @@ export type Database = {
         Update: {
           created_at?: string
           document_id?: string
+          document_ids?: string[] | null
           id?: string
           summary?: string
           updated_at?: string
