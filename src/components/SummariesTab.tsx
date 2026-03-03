@@ -43,6 +43,7 @@ import {
   Network,
   X,
   Search,
+  ArrowLeft,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,11 +56,13 @@ interface SummariesTabProps {
   onUpsert: (id: string | null, title: string, documentIds: string[], summary: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onViewDoc?: (doc: PDFDocument) => void;
+  embedded?: boolean;
 }
 
 type StudyMode = 'text' | 'mindmap';
+type InlineView = null | 'create' | 'edit' | 'view';
 
-export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc }: SummariesTabProps) {
+export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState<DocSummary | null>(null);
   const [studyTitle, setStudyTitle] = useState('');
@@ -70,6 +73,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [comboOpen, setComboOpen] = useState(false);
   const [viewingSummary, setViewingSummary] = useState<DocSummary | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [inlineView, setInlineView] = useState<InlineView>(null);
+
   const normalizeForSearch = (text: string) =>
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -78,13 +83,21 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     return normalizeForSearch(value).includes(normalizeForSearch(search)) ? 1 : 0;
   };
 
-  const openNew = () => {
+  const resetForm = () => {
     setEditingSummary(null);
     setStudyTitle('');
     setSelectedDocIds([]);
     setSummaryText('');
     setStudyMode('text');
-    setDialogOpen(true);
+  };
+
+  const openNew = () => {
+    resetForm();
+    if (embedded) {
+      setInlineView('create');
+    } else {
+      setDialogOpen(true);
+    }
   };
 
   const openEdit = (s: DocSummary) => {
@@ -93,7 +106,24 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setSelectedDocIds(s.documentIds);
     setSummaryText(s.summary);
     setStudyMode(isMindMap(s.summary) ? 'mindmap' : 'text');
-    setDialogOpen(true);
+    if (embedded) {
+      setInlineView('edit');
+    } else {
+      setDialogOpen(true);
+    }
+  };
+
+  const openView = (s: DocSummary) => {
+    setViewingSummary(s);
+    if (embedded) {
+      setInlineView('view');
+    }
+  };
+
+  const goBackToList = () => {
+    setInlineView(null);
+    setViewingSummary(null);
+    resetForm();
   };
 
   const handleSave = async () => {
@@ -101,7 +131,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setSaving(true);
     await onUpsert(editingSummary?.id || null, studyTitle.trim(), selectedDocIds, summaryText.trim());
     setSaving(false);
-    setDialogOpen(false);
+    if (embedded) {
+      goBackToList();
+    } else {
+      setDialogOpen(false);
+    }
   };
 
   const toggleDocSelection = (docId: string) => {
@@ -143,14 +177,198 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     const q = normalizeForSearch(searchQuery);
     const title = normalizeForSearch(getStudyDisplayTitle(s));
     if (title.includes(q)) return true;
-    // Strip HTML tags for content search
     const plainContent = normalizeForSearch(s.summary.replace(/<[^>]*>/g, ''));
     if (plainContent.includes(q)) return true;
-    // Search in linked document titles
     const docTitles = s.documentIds.map((id) => normalizeForSearch(getDocTitle(id))).join(' ');
     return docTitles.includes(q);
   });
 
+  // ===== Document selector (shared between inline and dialog) =====
+  const renderDocSelector = () => (
+    <div>
+      <label className="text-sm font-medium mb-1.5 block">
+        Documentos <span className="text-muted-foreground font-normal">(opcional)</span>
+      </label>
+      
+      {selectedDocIds.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selectedDocIds.map((docId) => (
+            <Badge key={docId} variant="secondary" className="gap-1 pr-1 text-xs">
+              <span className="truncate max-w-[180px]">{getDocTitle(docId)}</span>
+              <button
+                onClick={() => removeDoc(docId)}
+                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      <Popover open={comboOpen} onOpenChange={setComboOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={comboOpen}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate text-muted-foreground">
+              {selectedDocIds.length === 0
+                ? 'Vincular documentos...'
+                : `${selectedDocIds.length} documento${selectedDocIds.length > 1 ? 's' : ''} vinculado${selectedDocIds.length > 1 ? 's' : ''}`}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command filter={accentInsensitiveFilter}>
+            <CommandInput placeholder="Pesquisar documento..." />
+            <CommandList>
+              <CommandEmpty>Nenhum documento encontrado.</CommandEmpty>
+              <CommandGroup>
+                {documents.map((d) => (
+                  <CommandItem
+                    key={d.id}
+                    value={d.title}
+                    onSelect={() => toggleDocSelection(d.id)}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", selectedDocIds.includes(d.id) ? "opacity-100" : "opacity-0")} />
+                    <span className="truncate">{d.title}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
+  // ===== Editor area (shared) =====
+  const renderEditor = () => (
+    <>
+      {/* Mode toggle */}
+      <div>
+        <label className="text-sm font-medium mb-1.5 block">Formato</label>
+        <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
+          <TabsList className="w-full">
+            <TabsTrigger value="text" className="flex-1 gap-1.5">
+              <FileText className="w-3.5 h-3.5" /> Texto
+            </TabsTrigger>
+            <TabsTrigger value="mindmap" className="flex-1 gap-1.5">
+              <Network className="w-3.5 h-3.5" /> Mapa Mental
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Editor */}
+      <div className={embedded && isCurrentMindMap ? 'flex-1 min-h-0' : ''}>
+        {studyMode === 'text' ? (
+          <>
+            <label className="text-sm font-medium mb-1.5 block">Conteúdo</label>
+            <RichTextEditor
+              key={editingSummary?.id || 'new'}
+              value={isMindMap(summaryText) ? '' : summaryText}
+              onChange={setSummaryText}
+              placeholder="Escreva o conteúdo do estudo..."
+              fillHeight={embedded}
+            />
+          </>
+        ) : (
+          <MindMapEditor
+            key={`mm-${editingSummary?.id || 'new'}`}
+            initialValue={isMindMap(summaryText) ? summaryText : undefined}
+            onChange={setSummaryText}
+            fillHeight={embedded}
+          />
+        )}
+      </div>
+    </>
+  );
+
+  // ===== INLINE VIEW (for split view / embedded) =====
+  if (embedded && inlineView === 'view' && viewingSummary) {
+    const isMM = isMindMap(viewingSummary.summary);
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-3 shrink-0">
+          <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-8 px-2">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold truncate">{getStudyDisplayTitle(viewingSummary)}</h3>
+            {viewingSummary.documentIds.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                {viewingSummary.documentIds.map((docId) => (
+                  <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[150px] truncate">
+                    {getDocTitle(docId)}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <Button size="sm" variant="outline" onClick={() => { openEdit(viewingSummary); }} className="gap-1 h-8 shrink-0">
+            <Pencil className="w-3.5 h-3.5" />
+            Editar
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {isMM ? (
+            <MindMapViewer value={viewingSummary.summary} className="w-full h-full min-h-[400px] rounded-lg border" interactive />
+          ) : (
+            <div
+              className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+              dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (embedded && (inlineView === 'create' || inlineView === 'edit')) {
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-3 shrink-0">
+          <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-8 px-2">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <h3 className="text-sm font-semibold flex-1">
+            {inlineView === 'edit' ? 'Editar Estudo' : 'Novo Estudo'}
+          </h3>
+          <Button size="sm" onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="gap-1 h-8">
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Salvar
+          </Button>
+        </div>
+
+        {/* Form */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
+            <Input
+              value={studyTitle}
+              onChange={(e) => setStudyTitle(e.target.value)}
+              placeholder="Ex: Sonhos e Visões - Resumo"
+            />
+          </div>
+          {renderDocSelector()}
+          {renderEditor()}
+        </div>
+      </div>
+    );
+  }
+
+  // ===== LIST VIEW (default) =====
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -190,11 +408,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           <p className="text-sm text-muted-foreground/60 mt-1">Tente outro termo de pesquisa</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={cn("grid gap-4", embedded ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
           {filteredSummaries.map((s) => {
             const isMM = isMindMap(s.summary);
             return (
-              <Card key={s.id} className="group cursor-pointer" onClick={() => setViewingSummary(s)}>
+              <Card key={s.id} className="group cursor-pointer" onClick={() => openView(s)}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-sm font-medium flex-1 flex items-center gap-1.5 min-w-0">
@@ -202,7 +420,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                       <span className="truncate">{getStudyDisplayTitle(s)}</span>
                     </CardTitle>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar estudo">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openView(s)} title="Visualizar estudo">
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
@@ -244,171 +462,79 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className={cn("max-h-[90vh] overflow-y-auto", isCurrentMindMap ? "max-w-4xl" : "max-w-2xl")}>
-          <DialogHeader>
-            <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Title */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
-              <Input
-                value={studyTitle}
-                onChange={(e) => setStudyTitle(e.target.value)}
-                placeholder="Ex: Sonhos e Visões - Resumo"
-              />
+      {/* Create/Edit Dialog (non-embedded only) */}
+      {!embedded && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className={cn("max-h-[90vh] overflow-y-auto", isCurrentMindMap ? "max-w-4xl" : "max-w-2xl")}>
+            <DialogHeader>
+              <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
+                <Input
+                  value={studyTitle}
+                  onChange={(e) => setStudyTitle(e.target.value)}
+                  placeholder="Ex: Sonhos e Visões - Resumo"
+                />
+              </div>
+              {renderDocSelector()}
+              {renderEditor()}
             </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving}>
+                {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
-            {/* Document multi-selector (optional) */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">
-                Documentos <span className="text-muted-foreground font-normal">(opcional)</span>
-              </label>
-              
-              {selectedDocIds.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {selectedDocIds.map((docId) => (
-                    <Badge key={docId} variant="secondary" className="gap-1 pr-1 text-xs">
-                      <span className="truncate max-w-[180px]">{getDocTitle(docId)}</span>
-                      <button
-                        onClick={() => removeDoc(docId)}
-                        className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+      {/* View Summary Dialog (non-embedded only) */}
+      {!embedded && (
+        <Dialog open={!!viewingSummary} onOpenChange={(open) => !open && setViewingSummary(null)}>
+          <DialogContent className={cn("max-h-[90vh] overflow-y-auto", viewingSummary && isMindMap(viewingSummary.summary) ? "max-w-4xl" : "max-w-2xl")}>
+            <DialogHeader>
+              <DialogTitle className="text-base">
+                {viewingSummary ? getStudyDisplayTitle(viewingSummary) : ''}
+              </DialogTitle>
+              {viewingSummary && viewingSummary.documentIds.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {viewingSummary.documentIds.map((docId) => (
+                    <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[200px] truncate">
+                      {getDocTitle(docId)}
                     </Badge>
                   ))}
                 </div>
               )}
-
-              <Popover open={comboOpen} onOpenChange={setComboOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={comboOpen}
-                    className="w-full justify-between font-normal"
-                  >
-                    <span className="truncate text-muted-foreground">
-                      {selectedDocIds.length === 0
-                        ? 'Vincular documentos...'
-                        : `${selectedDocIds.length} documento${selectedDocIds.length > 1 ? 's' : ''} vinculado${selectedDocIds.length > 1 ? 's' : ''}`}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command filter={accentInsensitiveFilter}>
-                    <CommandInput placeholder="Pesquisar documento..." />
-                    <CommandList>
-                      <CommandEmpty>Nenhum documento encontrado.</CommandEmpty>
-                      <CommandGroup>
-                        {documents.map((d) => (
-                          <CommandItem
-                            key={d.id}
-                            value={d.title}
-                            onSelect={() => toggleDocSelection(d.id)}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", selectedDocIds.includes(d.id) ? "opacity-100" : "opacity-0")} />
-                            <span className="truncate">{d.title}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Mode toggle */}
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Formato</label>
-              <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
-                <TabsList className="w-full">
-                  <TabsTrigger value="text" className="flex-1 gap-1.5">
-                    <FileText className="w-3.5 h-3.5" /> Texto
-                  </TabsTrigger>
-                  <TabsTrigger value="mindmap" className="flex-1 gap-1.5">
-                    <Network className="w-3.5 h-3.5" /> Mapa Mental
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {/* Editor */}
-            <div>
-              {studyMode === 'text' ? (
-                <>
-                  <label className="text-sm font-medium mb-1.5 block">Conteúdo</label>
-                  <RichTextEditor
-                    key={editingSummary?.id || 'new'}
-                    value={isMindMap(summaryText) ? '' : summaryText}
-                    onChange={setSummaryText}
-                    placeholder="Escreva o conteúdo do estudo..."
-                  />
-                </>
-              ) : (
-                <MindMapEditor
-                  key={`mm-${editingSummary?.id || 'new'}`}
-                  initialValue={isMindMap(summaryText) ? summaryText : undefined}
-                  onChange={setSummaryText}
-                />
+              {viewingSummary && (
+                <p className="text-xs text-muted-foreground">
+                  Atualizado em {format(new Date(viewingSummary.updatedAt), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
+                </p>
               )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Summary Dialog */}
-      <Dialog open={!!viewingSummary} onOpenChange={(open) => !open && setViewingSummary(null)}>
-        <DialogContent className={cn("max-h-[90vh] overflow-y-auto", viewingSummary && isMindMap(viewingSummary.summary) ? "max-w-4xl" : "max-w-2xl")}>
-          <DialogHeader>
-            <DialogTitle className="text-base">
-              {viewingSummary ? getStudyDisplayTitle(viewingSummary) : ''}
-            </DialogTitle>
-            {viewingSummary && viewingSummary.documentIds.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {viewingSummary.documentIds.map((docId) => (
-                  <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[200px] truncate">
-                    {getDocTitle(docId)}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            </DialogHeader>
             {viewingSummary && (
-              <p className="text-xs text-muted-foreground">
-                Atualizado em {format(new Date(viewingSummary.updatedAt), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
-              </p>
+              isMindMap(viewingSummary.summary) ? (
+                <MindMapViewer value={viewingSummary.summary} className="w-full h-[500px] rounded-lg border" interactive />
+              ) : (
+                <div
+                  className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+                  dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
+                />
+              )
             )}
-          </DialogHeader>
-          {viewingSummary && (
-            isMindMap(viewingSummary.summary) ? (
-              <MindMapViewer value={viewingSummary.summary} className="w-full h-[500px] rounded-lg border" interactive />
-            ) : (
-              <div
-                className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
-                dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
-              />
-            )
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingSummary(null)}>Fechar</Button>
-            <Button onClick={() => { if (viewingSummary) { openEdit(viewingSummary); setViewingSummary(null); } }}>
-              <Pencil className="w-4 h-4 mr-1" />
-              Editar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewingSummary(null)}>Fechar</Button>
+              <Button onClick={() => { if (viewingSummary) { openEdit(viewingSummary); setViewingSummary(null); } }}>
+                <Pencil className="w-4 h-4 mr-1" />
+                Editar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

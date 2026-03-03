@@ -22,6 +22,7 @@ const SuspenseFallback = () => (
 
 export interface TabContentProps {
   tabId: string;
+  embedded?: boolean;
   documents: PDFDocument[];
   onViewDoc: (doc: PDFDocument, ctx?: SearchContext) => void;
   onToggleFavorite: (id: string) => void;
@@ -126,6 +127,7 @@ export function TabContentRenderer({ tabId, ...props }: TabContentProps) {
             onUpsert={props.upsertSummary}
             onDelete={props.deleteSummary}
             onViewDoc={props.onViewDoc}
+            embedded={props.embedded}
           />
         </Suspense>
       );
