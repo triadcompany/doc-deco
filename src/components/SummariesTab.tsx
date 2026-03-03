@@ -8,6 +8,7 @@ import { MindMapEditor } from '@/components/mindmap/MindMapEditor';
 import { MindMapViewer } from '@/components/mindmap/MindMapViewer';
 import { isMindMap } from '@/components/mindmap/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,7 @@ import {
   Check,
   Eye,
   Network,
+  X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -48,7 +50,7 @@ interface SummariesTabProps {
   documents: PDFDocument[];
   summaries: DocSummary[];
   loading: boolean;
-  onUpsert: (documentId: string, summary: string) => Promise<void>;
+  onUpsert: (documentIds: string[], summary: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onViewDoc?: (doc: PDFDocument) => void;
 }
@@ -58,7 +60,7 @@ type StudyMode = 'text' | 'mindmap';
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc }: SummariesTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState<DocSummary | null>(null);
-  const [selectedDocId, setSelectedDocId] = useState('');
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [summaryText, setSummaryText] = useState('');
   const [studyMode, setStudyMode] = useState<StudyMode>('text');
   const [saving, setSaving] = useState(false);
@@ -75,7 +77,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const openNew = () => {
     setEditingSummary(null);
-    setSelectedDocId('');
+    setSelectedDocIds([]);
     setSummaryText('');
     setStudyMode('text');
     setDialogOpen(true);
@@ -83,18 +85,28 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const openEdit = (s: DocSummary) => {
     setEditingSummary(s);
-    setSelectedDocId(s.documentId);
+    setSelectedDocIds(s.documentIds);
     setSummaryText(s.summary);
     setStudyMode(isMindMap(s.summary) ? 'mindmap' : 'text');
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!selectedDocId || !summaryText.trim()) return;
+    if (selectedDocIds.length === 0 || !summaryText.trim()) return;
     setSaving(true);
-    await onUpsert(selectedDocId, summaryText.trim());
+    await onUpsert(selectedDocIds, summaryText.trim());
     setSaving(false);
     setDialogOpen(false);
+  };
+
+  const toggleDocSelection = (docId: string) => {
+    setSelectedDocIds((prev) =>
+      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId],
+    );
+  };
+
+  const removeDoc = (docId: string) => {
+    setSelectedDocIds((prev) => prev.filter((id) => id !== docId));
   };
 
   const getDocTitle = (docId: string) => {
@@ -104,7 +116,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const getDoc = (docId: string) => documents.find((d) => d.id === docId);
 
-  const selectedDocTitle = selectedDocId ? getDocTitle(selectedDocId) : '';
+  const getDocsTitleLabel = (docIds: string[]) => {
+    if (docIds.length === 0) return '';
+    if (docIds.length === 1) return getDocTitle(docIds[0]);
+    return `${getDocTitle(docIds[0])} +${docIds.length - 1}`;
+  };
 
   if (loading) {
     return (
@@ -138,22 +154,16 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {summaries.map((s) => {
-            const doc = getDoc(s.documentId);
             const isMM = isMindMap(s.summary);
             return (
               <Card key={s.id} className="group cursor-pointer" onClick={() => setViewingSummary(s)}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm font-medium truncate flex-1 flex items-center gap-1.5">
+                    <CardTitle className="text-sm font-medium flex-1 flex items-center gap-1.5 min-w-0">
                       {isMM && <Network className="w-3.5 h-3.5 text-primary shrink-0" />}
-                      {getDocTitle(s.documentId)}
+                      <span className="truncate">{getDocsTitleLabel(s.documentIds)}</span>
                     </CardTitle>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
-                      {doc && onViewDoc && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onViewDoc(doc)} title="Abrir documento">
-                          <BookOpen className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingSummary(s)} title="Visualizar estudo">
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
@@ -165,6 +175,15 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                       </Button>
                     </div>
                   </div>
+                  {s.documentIds.length > 1 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {s.documentIds.map((docId) => (
+                        <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[150px] truncate">
+                          {getDocTitle(docId)}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-[10px] text-muted-foreground">
                     Atualizado em {format(new Date(s.updatedAt), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
                   </p>
@@ -194,9 +213,29 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Document selector */}
+            {/* Document multi-selector */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Documento</label>
+              <label className="text-sm font-medium mb-1.5 block">Documentos</label>
+              
+              {/* Selected docs badges */}
+              {selectedDocIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {selectedDocIds.map((docId) => (
+                    <Badge key={docId} variant="secondary" className="gap-1 pr-1 text-xs">
+                      <span className="truncate max-w-[180px]">{getDocTitle(docId)}</span>
+                      {!editingSummary && (
+                        <button
+                          onClick={() => removeDoc(docId)}
+                          className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <Popover open={comboOpen} onOpenChange={setComboOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -206,7 +245,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                     className="w-full justify-between font-normal"
                     disabled={!!editingSummary}
                   >
-                    <span className="truncate">{selectedDocTitle || 'Pesquisar documento...'}</span>
+                    <span className="truncate text-muted-foreground">
+                      {selectedDocIds.length === 0
+                        ? 'Pesquisar documento...'
+                        : `${selectedDocIds.length} documento${selectedDocIds.length > 1 ? 's' : ''} selecionado${selectedDocIds.length > 1 ? 's' : ''}`}
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -220,9 +263,9 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                           <CommandItem
                             key={d.id}
                             value={d.title}
-                            onSelect={() => { setSelectedDocId(d.id); setComboOpen(false); }}
+                            onSelect={() => toggleDocSelection(d.id)}
                           >
-                            <Check className={cn("mr-2 h-4 w-4", selectedDocId === d.id ? "opacity-100" : "opacity-0")} />
+                            <Check className={cn("mr-2 h-4 w-4", selectedDocIds.includes(d.id) ? "opacity-100" : "opacity-0")} />
                             <span className="truncate">{d.title}</span>
                           </CommandItem>
                         ))}
@@ -271,7 +314,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={!selectedDocId || !summaryText.trim() || saving}>
+            <Button onClick={handleSave} disabled={selectedDocIds.length === 0 || !summaryText.trim() || saving}>
               {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
               Salvar
             </Button>
@@ -284,8 +327,17 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         <DialogContent className={cn("max-h-[90vh] overflow-y-auto", viewingSummary && isMindMap(viewingSummary.summary) ? "max-w-4xl" : "max-w-2xl")}>
           <DialogHeader>
             <DialogTitle className="text-base">
-              {viewingSummary ? getDocTitle(viewingSummary.documentId) : ''}
+              {viewingSummary ? getDocsTitleLabel(viewingSummary.documentIds) : ''}
             </DialogTitle>
+            {viewingSummary && viewingSummary.documentIds.length > 1 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {viewingSummary.documentIds.map((docId) => (
+                  <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[200px] truncate">
+                    {getDocTitle(docId)}
+                  </Badge>
+                ))}
+              </div>
+            )}
             {viewingSummary && (
               <p className="text-xs text-muted-foreground">
                 Atualizado em {format(new Date(viewingSummary.updatedAt), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
