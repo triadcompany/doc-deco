@@ -1,8 +1,8 @@
 import type { MindMapNode, MindMapEdge } from './types';
 
-const H_GAP = 280;
-const V_GAP = 20;
-const NODE_HEIGHT = 44;
+const H_GAP = 300;
+const V_GAP = 24;
+const NODE_HEIGHT = 48;
 
 interface TreeNode {
   id: string;
@@ -59,7 +59,7 @@ export function autoLayout(nodes: MindMapNode[], edges: MindMapEdge[]): MindMapN
   let yOffset = 0;
   for (const tree of trees) {
     assignPositions(tree, 0, yOffset, positions);
-    yOffset += subtreeHeight(tree) + V_GAP * 2;
+    yOffset += subtreeHeight(tree) + V_GAP * 3;
   }
 
   return nodes.map((n) => ({
