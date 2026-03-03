@@ -273,7 +273,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       </div>
 
       {/* Editor */}
-      <div className={embedded && isCurrentMindMap ? 'flex-1 min-h-0 flex flex-col' : ''}>
+      <div className={cn('flex flex-col', embedded && isCurrentMindMap ? 'flex-1 min-h-0' : 'flex-1 min-h-0')}>
         {studyMode === 'text' ? (
           <>
             <label className="text-sm font-medium mb-1.5 block">Conteúdo</label>
@@ -533,11 +533,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       {/* Create/Edit Dialog (non-embedded only) */}
       {!embedded && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className={cn("max-h-[90vh] overflow-y-auto", isCurrentMindMap ? "max-w-4xl" : "max-w-2xl")}>
+          <DialogContent className={cn("max-h-[90vh] flex flex-col", isCurrentMindMap ? "max-w-4xl" : "max-w-2xl")}>
             <DialogHeader>
               <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 min-h-0 flex flex-col overflow-y-auto">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
                 <Input
