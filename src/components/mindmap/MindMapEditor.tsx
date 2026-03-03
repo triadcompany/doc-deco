@@ -200,6 +200,50 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
         return;
       }
 
+      // Arrow keys → navigate between nodes
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        if (!selected) {
+          if (nodes.length > 0) {
+            setNodes((nds) => nds.map((n, i) => ({ ...n, selected: i === 0 })));
+          }
+          return;
+        }
+
+        if (e.key === 'ArrowRight') {
+          const childEdge = edges.find((ed) => ed.source === selected.id);
+          if (childEdge) {
+            setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === childEdge.target })));
+          }
+        } else if (e.key === 'ArrowLeft') {
+          const parentEdge = edges.find((ed) => ed.target === selected.id);
+          if (parentEdge) {
+            setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === parentEdge.source })));
+          }
+        } else {
+          const parentEdge = edges.find((ed) => ed.target === selected.id);
+          let siblings: string[];
+          if (parentEdge) {
+            siblings = edges.filter((ed) => ed.source === parentEdge.source).map((ed) => ed.target);
+          } else {
+            const targets = new Set(edges.map((ed) => ed.target));
+            siblings = nodes.filter((n) => !targets.has(n.id)).map((n) => n.id);
+          }
+          const siblingNodes = siblings
+            .map((sid) => nodes.find((n) => n.id === sid)!)
+            .filter(Boolean)
+            .sort((a, b) => a.position.y - b.position.y);
+          const currentIdx = siblingNodes.findIndex((n) => n.id === selected.id);
+          const nextIdx = e.key === 'ArrowDown'
+            ? Math.min(currentIdx + 1, siblingNodes.length - 1)
+            : Math.max(currentIdx - 1, 0);
+          if (nextIdx !== currentIdx) {
+            setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === siblingNodes[nextIdx].id })));
+          }
+        }
+        return;
+      }
+
       // L → auto layout
       if (e.key === 'l' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -356,6 +400,7 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Tab</kbd> Adicionar filho</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> Editar nó</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Delete</kbd> Excluir nó</p>
+              <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">←→↑↓</kbd> Navegar entre nós</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">⌘L</kbd> Organizar</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Duplo clique</kbd> Editar texto</p>
             </TooltipContent>
