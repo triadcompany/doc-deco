@@ -274,7 +274,7 @@ const Index = () => {
                     <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded />
                   ) : (
                     <div className="p-4">
-                      <TabContentRenderer tabId={activeTab} {...tabContentProps} />
+                      <TabContentRenderer tabId={activeTab} {...tabContentProps} embedded />
                     </div>
                   )}
                 </div>
@@ -297,7 +297,7 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  <TabContentRenderer tabId={rightTab} {...tabContentProps} />
+                  <TabContentRenderer tabId={rightTab} {...tabContentProps} embedded />
                 </div>
               </div>
             </ResizablePanel>

@@ -14,6 +14,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toPng } from 'html-to-image';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard } from 'lucide-react';
@@ -42,6 +43,7 @@ const defaultEdgeOptions = {
 interface Props {
   initialValue?: string;
   onChange?: (json: string) => void;
+  fillHeight?: boolean;
 }
 
 let idCounter = 1;
@@ -49,7 +51,7 @@ function nextId() {
   return `mm_${Date.now()}_${idCounter++}`;
 }
 
-function MindMapEditorInner({ initialValue, onChange }: Props) {
+function MindMapEditorInner({ initialValue, onChange, fillHeight = false }: Props) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { fitView, zoomIn } = useReactFlow();
   const [importOpen, setImportOpen] = useState(false);
@@ -315,7 +317,7 @@ function MindMapEditorInner({ initialValue, onChange }: Props) {
   }, [nodes, setNodes]);
 
   return (
-    <div className="relative w-full h-[520px] rounded-xl border border-border overflow-hidden bg-background" ref={reactFlowWrapper}>
+    <div className={cn("relative w-full rounded-xl border border-border overflow-hidden bg-background", fillHeight ? "flex-1 min-h-[300px]" : "h-[520px]")} ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

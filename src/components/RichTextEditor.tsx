@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -19,6 +20,7 @@ interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  fillHeight?: boolean;
 }
 
 const fontFamilies = [
@@ -40,7 +42,7 @@ const fontSizes = [
   { label: '48', value: '7' },
 ];
 
-export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, placeholder, fillHeight = false }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
   const savedRangeRef = useRef<Range | null>(null);
@@ -110,7 +112,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
   }, [onChange, restoreSelection, saveSelection]);
 
   return (
-    <div className="border border-input rounded-md overflow-hidden bg-background">
+    <div className={cn("border border-input rounded-md overflow-hidden bg-background", fillHeight && "flex flex-col flex-1 min-h-0")}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 p-1.5 border-b border-input bg-muted/30">
         <Button
@@ -208,7 +210,10 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         onKeyUp={saveSelection}
         onBlur={saveSelection}
         data-placeholder={placeholder}
-        className="min-h-[200px] max-h-[400px] overflow-y-auto p-3 text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed"
+        className={cn(
+          "overflow-y-auto p-3 text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
+          fillHeight ? "min-h-[200px] flex-1" : "min-h-[200px] max-h-[400px]"
+        )}
         style={{ wordBreak: 'break-word' }}
       />
     </div>
