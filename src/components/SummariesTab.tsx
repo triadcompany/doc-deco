@@ -31,6 +31,11 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   FileText,
   Plus,
   Pencil,
@@ -44,6 +49,9 @@ import {
   X,
   Search,
   ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Settings2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -334,8 +342,68 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   }
 
   if (embedded && (inlineView === 'create' || inlineView === 'edit')) {
+    // In mind map mode, use a compact layout that fills the entire panel
+    if (isCurrentMindMap) {
+      return (
+        <div className="flex flex-col h-full mindmap-embedded-active">
+          {/* Compact sticky header */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/40 bg-secondary/30 shrink-0">
+            <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-7 px-1.5 text-xs">
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <Input
+                value={studyTitle}
+                onChange={(e) => setStudyTitle(e.target.value)}
+                placeholder="Nome do estudo..."
+                className="h-7 text-xs border-none bg-transparent shadow-none focus-visible:ring-0 px-1"
+              />
+            </div>
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1 text-muted-foreground">
+                  <Settings2 className="w-3 h-3" />
+                  {selectedDocIds.length > 0 && (
+                    <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{selectedDocIds.length}</Badge>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="absolute top-full left-0 right-0 z-20 bg-popover border-b border-border shadow-lg p-3 space-y-2">
+                {renderDocSelector()}
+              </CollapsibleContent>
+            </Collapsible>
+            <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
+              <TabsList className="h-7">
+                <TabsTrigger value="text" className="h-6 text-[10px] px-2 gap-1">
+                  <FileText className="w-3 h-3" /> Texto
+                </TabsTrigger>
+                <TabsTrigger value="mindmap" className="h-6 text-[10px] px-2 gap-1">
+                  <Network className="w-3 h-3" /> Mapa
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button size="sm" onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="h-7 text-xs px-2.5">
+              {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+              Salvar
+            </Button>
+          </div>
+          {/* Mind map fills remaining space */}
+          <div className="flex-1 min-h-0">
+            <MindMapEditor
+              key={`mm-${editingSummary?.id || 'new'}`}
+              initialValue={isMindMap(summaryText) ? summaryText : undefined}
+              onChange={setSummaryText}
+              fillHeight
+              compact
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Text mode: normal scrollable form
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full p-4">
         {/* Header */}
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-8 px-2">
@@ -352,8 +420,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </div>
 
         {/* Form */}
-        <div className={cn("flex-1 min-h-0 space-y-3", isCurrentMindMap ? "flex flex-col overflow-hidden" : "overflow-y-auto")}>
-          <div className="shrink-0">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+          <div>
             <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
             <Input
               value={studyTitle}
@@ -361,10 +429,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               placeholder="Ex: Sonhos e Visões - Resumo"
             />
           </div>
-          <div className="shrink-0">{renderDocSelector()}</div>
-          <div className={cn(isCurrentMindMap ? "flex-1 min-h-0 flex flex-col" : "")}>
-            {renderEditor()}
-          </div>
+          {renderDocSelector()}
+          {renderEditor()}
         </div>
       </div>
     );
