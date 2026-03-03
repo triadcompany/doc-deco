@@ -1,6 +1,6 @@
 import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Plus, Trash2, Palette } from 'lucide-react';
+import { Plus, Trash2, Palette, GripVertical } from 'lucide-react';
 import { NODE_COLORS, type MindMapNodeData } from './types';
 
 interface Props extends NodeProps {
@@ -10,14 +10,26 @@ interface Props extends NodeProps {
 function MindMapCustomNodeInner({ id, data, selected }: Props) {
   const [editing, setEditing] = useState(false);
   const [showColors, setShowColors] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (editing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
+      autoResize(inputRef.current);
     }
   }, [editing]);
+
+  // Listen for start-edit event (triggered when a new node is created)
+  useEffect(() => {
+    const handleStartEdit = (e: Event) => {
+      if ((e as CustomEvent).detail?.id === id) {
+        setEditing(true);
+      }
+    };
+    window.addEventListener('mindmap:start-edit', handleStartEdit);
+    return () => window.removeEventListener('mindmap:start-edit', handleStartEdit);
+  }, [id]);
 
   const dispatchUpdate = useCallback(
     (newData: Partial<MindMapNodeData>) => {
@@ -26,7 +38,10 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
     [id],
   );
 
-  const handleDoubleClick = () => setEditing(true);
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditing(true);
+  };
 
   const handleBlur = () => {
     setEditing(false);
@@ -35,81 +50,117 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      (e.target as HTMLInputElement).blur();
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      (e.target as HTMLTextAreaElement).blur();
     }
     if (e.key === 'Escape') {
       setEditing(false);
     }
+    e.stopPropagation();
   };
 
-  const textColor = getContrastText(data.color);
+  const autoResize = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
+
+  const bgColor = data.color || '#0d9488';
+  const textColor = getContrastText(bgColor);
+  const borderColor = adjustBrightness(bgColor, -30);
 
   return (
     <div
-      className="relative group rounded-lg shadow-md border border-white/20 min-w-[120px] max-w-[260px] transition-shadow"
-      style={{ backgroundColor: data.color }}
+      className={`
+        relative group rounded-xl min-w-[100px] max-w-[280px] transition-all duration-200
+        ${selected ? 'shadow-lg scale-[1.02]' : 'shadow-md hover:shadow-lg'}
+      `}
+      style={{
+        backgroundColor: bgColor,
+        borderLeft: `4px solid ${borderColor}`,
+      }}
       onDoubleClick={handleDoubleClick}
     >
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !bg-white/60" />
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-white/60" />
+      {/* Handles */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-3 !h-3 !bg-white/80 !border-2 !-left-1.5 hover:!scale-125 transition-transform"
+        style={{ borderColor: borderColor }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-3 !h-3 !bg-white/80 !border-2 !-right-1.5 hover:!scale-125 transition-transform"
+        style={{ borderColor: borderColor }}
+      />
 
-      <div className="px-3 py-2 flex items-center gap-1.5">
+      {/* Content */}
+      <div className="px-3.5 py-2.5 flex items-start gap-2">
         {editing ? (
-          <input
+          <textarea
             ref={inputRef}
             defaultValue={data.label}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="bg-transparent outline-none text-sm w-full font-medium"
+            onInput={(e) => autoResize(e.currentTarget)}
+            className="bg-white/15 backdrop-blur-sm rounded-md outline-none text-sm w-full font-medium resize-none px-1.5 py-0.5 min-h-[24px]"
             style={{ color: textColor }}
+            rows={1}
           />
         ) : (
-          <span className="text-sm font-medium leading-snug break-words" style={{ color: textColor }}>
-            {data.label || 'Sem título'}
+          <span
+            className="text-sm font-medium leading-relaxed break-words select-none"
+            style={{ color: textColor }}
+          >
+            {data.label || 'Duplo clique para editar'}
           </span>
         )}
       </div>
 
-      {/* Action buttons */}
+      {/* Floating actions - appear on hover */}
       <div
-        className="absolute -right-1 top-1/2 -translate-y-1/2 translate-x-full flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        className="absolute -top-2 right-0 translate-x-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow hover:scale-110 transition-transform"
-          title="Adicionar filho"
+          className="w-7 h-7 rounded-full bg-background text-foreground flex items-center justify-center shadow-md border border-border hover:bg-primary hover:text-primary-foreground transition-colors"
+          title="Adicionar filho (Tab)"
           onClick={() => window.dispatchEvent(new CustomEvent('mindmap:add-child', { detail: { parentId: id } }))}
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3.5 h-3.5" />
         </button>
         <button
-          className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center shadow hover:scale-110 transition-transform"
-          title="Cor"
+          className="w-7 h-7 rounded-full bg-background text-foreground flex items-center justify-center shadow-md border border-border hover:bg-accent transition-colors"
+          title="Mudar cor"
           onClick={() => setShowColors(!showColors)}
         >
-          <Palette className="w-3 h-3" />
+          <Palette className="w-3.5 h-3.5" />
         </button>
         <button
-          className="w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow hover:scale-110 transition-transform"
-          title="Excluir"
+          className="w-7 h-7 rounded-full bg-background text-destructive flex items-center justify-center shadow-md border border-border hover:bg-destructive hover:text-destructive-foreground transition-colors"
+          title="Excluir (Delete)"
           onClick={() => window.dispatchEvent(new CustomEvent('mindmap:delete-node', { detail: { id } }))}
         >
-          <Trash2 className="w-3 h-3" />
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Color palette */}
+      {/* Color palette popover */}
       {showColors && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 -bottom-1 translate-y-full bg-popover border border-border rounded-lg p-1.5 flex gap-1 shadow-lg z-20"
+          className="absolute left-1/2 -translate-x-1/2 -bottom-2 translate-y-full bg-popover border border-border rounded-xl p-2 flex gap-1.5 shadow-xl z-20 animate-in fade-in zoom-in-95 duration-150"
           onClick={(e) => e.stopPropagation()}
         >
           {NODE_COLORS.map((c) => (
             <button
               key={c}
-              className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-125"
-              style={{ backgroundColor: c, borderColor: c === data.color ? 'white' : 'transparent' }}
+              className="w-6 h-6 rounded-full border-2 transition-all hover:scale-125 hover:shadow-md"
+              style={{
+                backgroundColor: c,
+                borderColor: c === data.color ? '#fff' : 'transparent',
+                boxShadow: c === data.color ? `0 0 0 2px ${c}` : undefined,
+              }}
               onClick={() => {
                 dispatchUpdate({ color: c });
                 setShowColors(false);
@@ -119,8 +170,12 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
         </div>
       )}
 
+      {/* Selection ring */}
       {selected && (
-        <div className="absolute inset-0 rounded-lg ring-2 ring-primary pointer-events-none" />
+        <div
+          className="absolute inset-[-2px] rounded-xl pointer-events-none border-2 animate-in fade-in duration-150"
+          style={{ borderColor: borderColor }}
+        />
       )}
     </div>
   );
@@ -132,6 +187,13 @@ function getContrastText(hex: string): string {
   const b = parseInt(hex.slice(5, 7), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.55 ? '#1a1a1a' : '#ffffff';
+}
+
+function adjustBrightness(hex: string, amount: number): string {
+  const r = Math.max(0, Math.min(255, parseInt(hex.slice(1, 3), 16) + amount));
+  const g = Math.max(0, Math.min(255, parseInt(hex.slice(3, 5), 16) + amount));
+  const b = Math.max(0, Math.min(255, parseInt(hex.slice(5, 7), 16) + amount));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 export const MindMapCustomNode = memo(MindMapCustomNodeInner);
