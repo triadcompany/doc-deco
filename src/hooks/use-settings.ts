@@ -22,20 +22,47 @@ function saveToStorage(key: string, items: SettingsEntry[]) {
   localStorage.setItem(key, JSON.stringify(items));
 }
 
-export function useSettings() {
-  const [authors, setAuthors] = useState<SettingsEntry[]>(() => loadFromStorage(STORAGE_KEY_AUTHORS));
-  const [translators, setTranslators] = useState<SettingsEntry[]>(() => loadFromStorage(STORAGE_KEY_TRANSLATORS));
+function createEntry(name: string): SettingsEntry {
+  return {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function mergeEntries(existing: SettingsEntry[], names: string[]) {
+  const map = new Map(existing.map((entry) => [entry.name.trim().toLowerCase(), entry]));
+
+  names
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .forEach((name) => {
+      const key = name.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, createEntry(name));
+      }
+    });
+
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}
+
+export function useSettings(seedAuthors: string[] = [], seedTranslators: string[] = []) {
+  const [authors, setAuthors] = useState<SettingsEntry[]>(() => mergeEntries(loadFromStorage(STORAGE_KEY_AUTHORS), seedAuthors));
+  const [translators, setTranslators] = useState<SettingsEntry[]>(() => mergeEntries(loadFromStorage(STORAGE_KEY_TRANSLATORS), seedTranslators));
+
+  useEffect(() => {
+    setAuthors((prev) => mergeEntries(prev, seedAuthors));
+  }, [seedAuthors]);
+
+  useEffect(() => {
+    setTranslators((prev) => mergeEntries(prev, seedTranslators));
+  }, [seedTranslators]);
 
   useEffect(() => saveToStorage(STORAGE_KEY_AUTHORS, authors), [authors]);
   useEffect(() => saveToStorage(STORAGE_KEY_TRANSLATORS, translators), [translators]);
 
   const addAuthor = useCallback((name: string) => {
-    const entry: SettingsEntry = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    setAuthors((prev) => [...prev, entry]);
+    setAuthors((prev) => mergeEntries(prev, [name]));
   }, []);
 
   const removeAuthor = useCallback((id: string) => {
@@ -43,12 +70,7 @@ export function useSettings() {
   }, []);
 
   const addTranslator = useCallback((name: string) => {
-    const entry: SettingsEntry = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    setTranslators((prev) => [...prev, entry]);
+    setTranslators((prev) => mergeEntries(prev, [name]));
   }, []);
 
   const removeTranslator = useCallback((id: string) => {
