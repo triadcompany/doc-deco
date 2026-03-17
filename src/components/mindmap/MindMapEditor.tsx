@@ -51,9 +51,11 @@ function nextId() {
   return `mm_${Date.now()}_${idCounter++}`;
 }
 
-function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compact = false }: Props) {
+function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compact: compactProp = false }: Props) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { fitView, zoomIn } = useReactFlow();
+  const isMobile = useIsMobile();
+  const compact = compactProp || isMobile;
   const [importOpen, setImportOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
