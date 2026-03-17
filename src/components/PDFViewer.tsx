@@ -352,19 +352,40 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   }, [highlightMode, activeColor, currentPage, addAnnotation]);
 
   // Listen for selection end events
+  // Listen for selection end events (mouse + touch)
   useEffect(() => {
     const container = pageContainerRef.current;
     if (!container || !highlightMode) return;
 
-    const onMouseUp = () => setTimeout(handleSelectionEnd, 10);
-    const onTouchEnd = () => setTimeout(handleSelectionEnd, 300);
+    const onMouseUp = () => setTimeout(handleSelectionEnd, 50);
+    
+    // For touch: listen to selectionchange which fires after iOS/Android 
+    // text selection handles are released
+    let touchSelectionTimeout: ReturnType<typeof setTimeout> | null = null;
+    const onSelectionChange = () => {
+      if (touchSelectionTimeout) clearTimeout(touchSelectionTimeout);
+      touchSelectionTimeout = setTimeout(() => {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+          handleSelectionEnd();
+        }
+      }, 600);
+    };
+
+    const onTouchEnd = () => {
+      // Give iOS time to finalize selection
+      setTimeout(handleSelectionEnd, 500);
+    };
 
     container.addEventListener('mouseup', onMouseUp);
     container.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('selectionchange', onSelectionChange);
 
     return () => {
       container.removeEventListener('mouseup', onMouseUp);
       container.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('selectionchange', onSelectionChange);
+      if (touchSelectionTimeout) clearTimeout(touchSelectionTimeout);
     };
   }, [highlightMode, handleSelectionEnd]);
 
@@ -560,66 +581,70 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
 
       {/* Highlight color bar */}
       {highlightMode && (
-        <div className="h-12 border-b border-border flex items-center justify-center gap-3 shrink-0 bg-muted/50">
-          <span className="text-xs text-muted-foreground mr-1">Cor:</span>
-          {highlightColors.map((c) => (
-            <button
-              key={c.name}
-              className={`w-7 h-7 rounded-full border-2 transition-all ${
-                activeColor === c.color
-                  ? 'scale-110 border-foreground shadow-md'
-                  : 'border-transparent hover:scale-105'
-              }`}
-              style={{ backgroundColor: c.color }}
-              onClick={() => setActiveColor(c.color)}
-              title={c.name}
-            />
-          ))}
+        <div className="min-h-[48px] border-b border-border flex items-center justify-center gap-2 sm:gap-3 px-2 shrink-0 bg-muted/50 flex-wrap py-1.5">
+          <span className="text-xs text-muted-foreground">Cor:</span>
+          <div className="flex gap-1.5 sm:gap-2">
+            {highlightColors.map((c) => (
+              <button
+                key={c.name}
+                className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 transition-all ${
+                  activeColor === c.color
+                    ? 'scale-110 border-foreground shadow-md'
+                    : 'border-transparent hover:scale-105'
+                }`}
+                style={{ backgroundColor: c.color }}
+                onClick={() => setActiveColor(c.color)}
+                title={c.name}
+              />
+            ))}
+          </div>
           {pageAnnotations.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="ml-3 text-xs h-7 text-destructive"
+              className="text-xs h-8 sm:h-7 text-destructive px-2"
               onClick={() => clearPageAnnotations(currentPage)}
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Limpar página
+              <span className="hidden sm:inline">Limpar página</span>
+              <span className="sm:hidden">Limpar</span>
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 ml-2"
+            className="h-8 w-8 sm:h-7 sm:w-7"
             onClick={() => setHighlightMode(false)}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </Button>
         </div>
       )}
 
       {/* Eraser mode bar */}
       {eraserMode && (
-        <div className="h-12 border-b border-border flex items-center justify-center gap-3 shrink-0 bg-destructive/5">
+        <div className="min-h-[48px] border-b border-border flex items-center justify-center gap-2 sm:gap-3 px-2 shrink-0 bg-destructive/5 flex-wrap py-1.5">
           <Eraser className="w-4 h-4 text-destructive" />
-          <span className="text-xs text-muted-foreground">Clique em um grifo para apagá-lo</span>
+          <span className="text-xs text-muted-foreground">Toque em um grifo para apagar</span>
           {pageAnnotations.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="ml-3 text-xs h-7 text-destructive"
+              className="text-xs h-8 sm:h-7 text-destructive px-2"
               onClick={() => clearPageAnnotations(currentPage)}
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Limpar página
+              <span className="hidden sm:inline">Limpar página</span>
+              <span className="sm:hidden">Limpar</span>
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 ml-2"
+            className="h-8 w-8 sm:h-7 sm:w-7"
             onClick={() => setEraserMode(false)}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </Button>
         </div>
       )}
@@ -691,11 +716,19 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                           pointerEvents: (eraserMode || highlightMode) ? 'auto' : 'none',
                           cursor: (eraserMode || highlightMode) ? 'pointer' : 'default',
                           transition: 'opacity 0.15s',
+                          touchAction: eraserMode ? 'none' : undefined,
                         }}
                         onMouseEnter={(e) => { if (eraserMode) (e.target as SVGRectElement).style.opacity = '0.3'; }}
                         onMouseLeave={(e) => { if (eraserMode) (e.target as SVGRectElement).style.opacity = '1'; }}
                         onClick={(e) => {
                           if (eraserMode || highlightMode) {
+                            e.stopPropagation();
+                            removeAnnotation(h.id);
+                          }
+                        }}
+                        onTouchEnd={(e) => {
+                          if (eraserMode) {
+                            e.preventDefault();
                             e.stopPropagation();
                             removeAnnotation(h.id);
                           }
