@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard, Paintbrush } from 'lucide-react';
 import { MindMapCustomNode } from './MindMapCustomNode';
 import { TopicImportDialog } from './TopicImportDialog';
-import { autoLayout } from './layout';
+import { autoLayout, reorderSibling } from './layout';
 import {
   DEFAULT_COLOR,
   NODE_COLORS,
