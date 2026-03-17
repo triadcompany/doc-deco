@@ -332,7 +332,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             <MindMapViewer value={viewingSummary.summary} className="w-full h-full min-h-[400px] rounded-lg border" interactive />
           ) : (
             <div
-              className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+              className="max-w-none pr-2 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
               dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
             />
           )}
