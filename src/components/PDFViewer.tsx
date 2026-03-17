@@ -436,10 +436,25 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               variant={highlightMode ? 'default' : 'ghost'}
               size="icon"
               className="h-8 w-8"
-              onClick={() => setHighlightMode(!highlightMode)}
+              onClick={() => {
+                setHighlightMode(!highlightMode);
+                if (!highlightMode) setEraserMode(false);
+              }}
               title="Modo grifo"
             >
               <Highlighter className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant={eraserMode ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setEraserMode(!eraserMode);
+                if (!eraserMode) setHighlightMode(false);
+              }}
+              title="Borracha - clique em um grifo para apagar"
+            >
+              <Eraser className="w-3.5 h-3.5" />
             </Button>
             <Button
               variant={inDocSearch ? 'default' : 'ghost'}
