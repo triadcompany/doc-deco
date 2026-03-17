@@ -124,6 +124,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'rounded',
     edgeStyle: 'bezier',
     bgDots: true,
+    bgColor: '#0a1f0a',
     edgeColor: '#4ade80',
   },
   {
