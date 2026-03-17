@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   ReactFlow,
   useNodesState,
@@ -50,9 +51,11 @@ function nextId() {
   return `mm_${Date.now()}_${idCounter++}`;
 }
 
-function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compact = false }: Props) {
+function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compact: compactProp = false }: Props) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { fitView, zoomIn } = useReactFlow();
+  const isMobile = useIsMobile();
+  const compact = compactProp || isMobile;
   const [importOpen, setImportOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -427,7 +430,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
   }, [setNodes, setEdges, allEdges]);
 
   return (
-    <div className={cn("relative w-full overflow-hidden", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper} style={{ backgroundColor: theme.bgColor }}>
+    <div className={cn("relative w-full overflow-hidden", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[60vh] min-h-[300px] max-h-[700px] rounded-xl border border-border")} ref={reactFlowWrapper} style={{ backgroundColor: theme.bgColor }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

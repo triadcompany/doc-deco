@@ -532,13 +532,18 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
       {/* Create/Edit Dialog (non-embedded only) */}
       {!embedded && (
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className={cn("max-h-[90vh] flex flex-col", isCurrentMindMap ? "max-w-4xl" : "max-w-2xl")}>
-            <DialogHeader>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className={cn(
+            "flex flex-col",
+            isCurrentMindMap
+              ? "max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[95vh] h-[95vh] md:h-[90vh]"
+              : "max-w-2xl max-h-[90vh]"
+          )}>
+            <DialogHeader className="shrink-0">
               <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 flex-1 min-h-0 flex flex-col overflow-y-auto">
-              <div>
+            <div className={cn("flex-1 min-h-0 flex flex-col", isCurrentMindMap ? "gap-2 overflow-hidden" : "space-y-4 overflow-y-auto")}>
+              <div className="shrink-0">
                 <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
                 <Input
                   value={studyTitle}
@@ -546,10 +551,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   placeholder="Ex: Sonhos e Visões - Resumo"
                 />
               </div>
-              {renderDocSelector()}
-              {renderEditor()}
+              <div className="shrink-0">{renderDocSelector()}</div>
+              <div className={cn(isCurrentMindMap ? "flex-1 min-h-0" : "")}>{renderEditor()}</div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="shrink-0">
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
               <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving}>
                 {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
@@ -563,7 +568,12 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       {/* View Summary Dialog (non-embedded only) */}
       {!embedded && (
         <Dialog open={!!viewingSummary} onOpenChange={(open) => !open && setViewingSummary(null)}>
-          <DialogContent className={cn("max-h-[90vh] overflow-y-auto", viewingSummary && isMindMap(viewingSummary.summary) ? "max-w-4xl" : "max-w-2xl")}>
+          <DialogContent className={cn(
+            "max-h-[90vh] overflow-y-auto",
+            viewingSummary && isMindMap(viewingSummary.summary)
+              ? "max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-5xl"
+              : "max-w-2xl"
+          )}>
             <DialogHeader>
               <DialogTitle className="text-base">
                 {viewingSummary ? getStudyDisplayTitle(viewingSummary) : ''}
@@ -585,7 +595,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             </DialogHeader>
             {viewingSummary && (
               isMindMap(viewingSummary.summary) ? (
-                <MindMapViewer value={viewingSummary.summary} className="w-full h-[500px] rounded-lg border" interactive />
+                <MindMapViewer value={viewingSummary.summary} className="w-full h-[60vh] min-h-[300px] rounded-lg border" interactive />
               ) : (
                 <div
                   className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
