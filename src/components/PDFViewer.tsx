@@ -581,7 +581,33 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      {/* Eraser mode bar */}
+      {eraserMode && (
+        <div className="h-12 border-b border-border flex items-center justify-center gap-3 shrink-0 bg-destructive/5">
+          <Eraser className="w-4 h-4 text-destructive" />
+          <span className="text-xs text-muted-foreground">Clique em um grifo para apagá-lo</span>
+          {pageAnnotations.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-3 text-xs h-7 text-destructive"
+              onClick={() => clearPageAnnotations(currentPage)}
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Limpar página
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 ml-2"
+            onClick={() => setEraserMode(false)}
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
+
         <main ref={mainRef} className="flex-1 bg-muted/30 overflow-auto p-4">
           {pdfUrl ? (
             <div className="relative mx-auto w-fit" ref={pageContainerRef}>
