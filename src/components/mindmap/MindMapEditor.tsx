@@ -17,7 +17,7 @@ import { toPng } from 'html-to-image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard, Maximize2 } from 'lucide-react';
+import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard } from 'lucide-react';
 import { MindMapCustomNode } from './MindMapCustomNode';
 import { TopicImportDialog } from './TopicImportDialog';
 import { autoLayout } from './layout';
