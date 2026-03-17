@@ -17,7 +17,7 @@ import { toPng } from 'html-to-image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard, Maximize2 } from 'lucide-react';
+import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard } from 'lucide-react';
 import { MindMapCustomNode } from './MindMapCustomNode';
 import { TopicImportDialog } from './TopicImportDialog';
 import { autoLayout } from './layout';
@@ -329,6 +329,8 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
         fitViewOptions={{ padding: 0.3 }}
+        minZoom={0.1}
+        maxZoom={8}
         deleteKeyCode={null}
         selectionOnDrag
         panOnScroll
@@ -389,15 +391,6 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">Exportar como imagem PNG</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="sm" variant="secondary" onClick={() => fitView({ duration: 400, padding: 0.2 })} className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
-                <Maximize2 className="w-3.5 h-3.5" />
-                {!compact && "Ver tudo"}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Ajustar zoom para ver tudo</TooltipContent>
           </Tooltip>
         </div>
 
