@@ -403,7 +403,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
     // Text mode: normal scrollable form
     return (
-      <div className="flex flex-col h-full p-4">
+      <div className="study-inline-view absolute inset-0 flex flex-col bg-background p-4">
         {/* Header */}
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-8 px-2">
