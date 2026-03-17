@@ -20,6 +20,7 @@ import {
   Trash2,
   Search,
   X,
+  Eraser,
 } from 'lucide-react';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -50,6 +51,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const [zoom, setZoom] = useState(getInitialZoom);
   const [activeColor, setActiveColor] = useState(highlightColors[0].color);
   const [highlightMode, setHighlightMode] = useState(false);
+  const [eraserMode, setEraserMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchPageFound, setSearchPageFound] = useState(false);
   const [inDocSearch, setInDocSearch] = useState(false);
@@ -434,10 +436,25 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               variant={highlightMode ? 'default' : 'ghost'}
               size="icon"
               className="h-8 w-8"
-              onClick={() => setHighlightMode(!highlightMode)}
+              onClick={() => {
+                setHighlightMode(!highlightMode);
+                if (!highlightMode) setEraserMode(false);
+              }}
               title="Modo grifo"
             >
               <Highlighter className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant={eraserMode ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setEraserMode(!eraserMode);
+                if (!eraserMode) setHighlightMode(false);
+              }}
+              title="Borracha - clique em um grifo para apagar"
+            >
+              <Eraser className="w-3.5 h-3.5" />
             </Button>
             <Button
               variant={inDocSearch ? 'default' : 'ghost'}
@@ -564,6 +581,33 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
         </div>
       )}
 
+      {/* Eraser mode bar */}
+      {eraserMode && (
+        <div className="h-12 border-b border-border flex items-center justify-center gap-3 shrink-0 bg-destructive/5">
+          <Eraser className="w-4 h-4 text-destructive" />
+          <span className="text-xs text-muted-foreground">Clique em um grifo para apagá-lo</span>
+          {pageAnnotations.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-3 text-xs h-7 text-destructive"
+              onClick={() => clearPageAnnotations(currentPage)}
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Limpar página
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 ml-2"
+            onClick={() => setEraserMode(false)}
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
         <main ref={mainRef} className="flex-1 bg-muted/30 overflow-auto p-4">
           {pdfUrl ? (
@@ -604,10 +648,10 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 return (
                   <svg
                     key={h.id}
-                    className="pointer-events-none"
+                    className={eraserMode ? 'cursor-pointer' : 'pointer-events-none'}
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
                   >
-                    <title>{highlightMode ? 'Clique para remover grifo' : h.text}</title>
+                    <title>{eraserMode ? 'Clique para apagar este grifo' : highlightMode ? 'Clique para remover grifo' : h.text}</title>
                     {mergedRects.map((r, i) => (
                       <rect
                         key={i}
@@ -617,9 +661,13 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                         height={r.isPercent ? `${r.height}%` : r.height}
                         rx="2"
                         fill={bgColor}
-                        className="pointer-events-auto cursor-pointer"
+                        stroke={eraserMode ? 'hsl(var(--destructive))' : 'none'}
+                        strokeWidth={eraserMode ? '2' : '0'}
+                        strokeDasharray={eraserMode ? '4 2' : 'none'}
+                        className={`pointer-events-auto ${eraserMode ? 'cursor-pointer hover:opacity-50' : highlightMode ? 'cursor-pointer' : ''}`}
+                        style={eraserMode ? { transition: 'opacity 0.15s' } : undefined}
                         onClick={() => {
-                          if (highlightMode) removeAnnotation(h.id);
+                          if (eraserMode || highlightMode) removeAnnotation(h.id);
                         }}
                       />
                     ))}
