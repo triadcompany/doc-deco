@@ -691,7 +691,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               })}
 
               {/* Tap zones for mobile navigation */}
-              {totalPages > 1 && !highlightMode && (
+              {totalPages > 1 && !highlightMode && !eraserMode && (
                 <>
                   <button
                     className="absolute left-0 top-0 w-1/4 h-full cursor-pointer"
