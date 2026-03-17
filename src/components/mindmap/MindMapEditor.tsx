@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard, Paintbrush } from 'lucide-react';
 import { MindMapCustomNode } from './MindMapCustomNode';
 import { TopicImportDialog } from './TopicImportDialog';
-import { autoLayout } from './layout';
+import { autoLayout, reorderSibling } from './layout';
 import {
   DEFAULT_COLOR,
   NODE_COLORS,
@@ -152,13 +152,20 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       );
     };
 
+    const handleReorder = (e: Event) => {
+      const { id, direction } = (e as CustomEvent).detail;
+      setNodes((nds) => reorderSibling(id, direction, nds as MindMapNode[], edges));
+    };
+
     window.addEventListener('mindmap:add-child', handleAddChild);
     window.addEventListener('mindmap:delete-node', handleDeleteNode);
     window.addEventListener('mindmap:update-node', handleUpdateNode);
+    window.addEventListener('mindmap:reorder', handleReorder);
     return () => {
       window.removeEventListener('mindmap:add-child', handleAddChild);
       window.removeEventListener('mindmap:delete-node', handleDeleteNode);
       window.removeEventListener('mindmap:update-node', handleUpdateNode);
+      window.removeEventListener('mindmap:reorder', handleReorder);
     };
   }, [setNodes, setEdges, edges]);
 
@@ -207,6 +214,15 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('mindmap:delete-node', { detail: { id: selected.id } }));
+        return;
+      }
+
+      // Alt+Arrow → reorder sibling
+      if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.altKey && selected) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('mindmap:reorder', { 
+          detail: { id: selected.id, direction: e.key === 'ArrowUp' ? 'up' : 'down' } 
+        }));
         return;
       }
 
@@ -483,6 +499,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Delete</kbd> Excluir nó</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">←→↑↓</kbd> Navegar entre nós</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">⌘L</kbd> Organizar</p>
+              <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Alt+↑↓</kbd> Reordenar</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Duplo clique</kbd> Editar texto</p>
             </TooltipContent>
           </Tooltip>
