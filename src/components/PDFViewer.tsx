@@ -712,11 +712,19 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                           pointerEvents: (eraserMode || highlightMode) ? 'auto' : 'none',
                           cursor: (eraserMode || highlightMode) ? 'pointer' : 'default',
                           transition: 'opacity 0.15s',
+                          touchAction: eraserMode ? 'none' : undefined,
                         }}
                         onMouseEnter={(e) => { if (eraserMode) (e.target as SVGRectElement).style.opacity = '0.3'; }}
                         onMouseLeave={(e) => { if (eraserMode) (e.target as SVGRectElement).style.opacity = '1'; }}
                         onClick={(e) => {
                           if (eraserMode || highlightMode) {
+                            e.stopPropagation();
+                            removeAnnotation(h.id);
+                          }
+                        }}
+                        onTouchEnd={(e) => {
+                          if (eraserMode) {
+                            e.preventDefault();
                             e.stopPropagation();
                             removeAnnotation(h.id);
                           }
