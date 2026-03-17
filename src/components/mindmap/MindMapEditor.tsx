@@ -424,6 +424,41 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
             </TooltipTrigger>
             <TooltipContent side="bottom">Exportar como imagem PNG</TooltipContent>
           </Tooltip>
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="secondary" className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
+                    <Paintbrush className="w-3.5 h-3.5" />
+                    {!compact && "Tema"}
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Alterar tema visual</TooltipContent>
+            </Tooltip>
+            <PopoverContent side="bottom" align="start" className="w-64 p-2">
+              <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Temas</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {MINDMAP_THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTheme(t)}
+                    className={cn(
+                      "flex flex-col items-start gap-1.5 p-2 rounded-lg border transition-all text-left hover:bg-accent",
+                      currentThemeId === t.id ? "border-primary bg-accent" : "border-border"
+                    )}
+                  >
+                    <span className="text-xs font-medium">{t.name}</span>
+                    <div className="flex gap-0.5">
+                      {t.colors.slice(0, 5).map((c, i) => (
+                        <div key={i} className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Keyboard shortcuts hint */}
