@@ -427,7 +427,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               <ZoomOut className="w-3.5 h-3.5" />
             </Button>
             <span className="text-[10px] sm:text-xs text-muted-foreground w-9 sm:w-12 text-center">{zoom}%</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.min(200, z + 10))}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.min(300, z + 10))}>
               <ZoomIn className="w-3.5 h-3.5" />
             </Button>
             <Button
