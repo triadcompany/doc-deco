@@ -99,7 +99,7 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
       />
 
       {/* Content */}
-      <div className={`flex items-start gap-2 ${shape === 'pill' ? 'px-5 py-2.5' : 'px-3.5 py-2.5'}`}>
+      <div className="flex items-start gap-2 px-3.5 py-2.5">
         {editing ? (
           <textarea
             ref={inputRef}
