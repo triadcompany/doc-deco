@@ -390,6 +390,15 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
             </TooltipTrigger>
             <TooltipContent side="bottom">Exportar como imagem PNG</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="sm" variant="secondary" onClick={() => fitView({ duration: 400, padding: 0.2 })} className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
+                <Maximize2 className="w-3.5 h-3.5" />
+                {!compact && "Ver tudo"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Ajustar zoom para ver tudo</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Keyboard shortcuts hint */}
