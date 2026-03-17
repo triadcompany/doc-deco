@@ -178,6 +178,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'outline',
     edgeStyle: 'bezier',
     bgDots: true,
+    bgColor: '#0a0a0a',
     edgeColor: '#a855f7',
   },
 ];
