@@ -146,6 +146,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'rectangle',
     edgeStyle: 'straight',
     bgDots: false,
+    bgColor: '#fafafa',
   },
   {
     id: 'candy',
