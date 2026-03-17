@@ -621,10 +621,10 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 return (
                   <svg
                     key={h.id}
-                    className="pointer-events-none"
+                    className={eraserMode ? 'cursor-pointer' : 'pointer-events-none'}
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
                   >
-                    <title>{highlightMode ? 'Clique para remover grifo' : h.text}</title>
+                    <title>{eraserMode ? 'Clique para apagar este grifo' : highlightMode ? 'Clique para remover grifo' : h.text}</title>
                     {mergedRects.map((r, i) => (
                       <rect
                         key={i}
@@ -634,9 +634,13 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                         height={r.isPercent ? `${r.height}%` : r.height}
                         rx="2"
                         fill={bgColor}
-                        className="pointer-events-auto cursor-pointer"
+                        stroke={eraserMode ? 'hsl(var(--destructive))' : 'none'}
+                        strokeWidth={eraserMode ? '2' : '0'}
+                        strokeDasharray={eraserMode ? '4 2' : 'none'}
+                        className={`pointer-events-auto ${eraserMode ? 'cursor-pointer hover:opacity-50' : highlightMode ? 'cursor-pointer' : ''}`}
+                        style={eraserMode ? { transition: 'opacity 0.15s' } : undefined}
                         onClick={() => {
-                          if (highlightMode) removeAnnotation(h.id);
+                          if (eraserMode || highlightMode) removeAnnotation(h.id);
                         }}
                       />
                     ))}
