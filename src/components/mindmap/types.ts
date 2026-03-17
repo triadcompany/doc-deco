@@ -90,6 +90,7 @@ export interface MindMapTheme {
   nodeShape: NodeShape;
   edgeStyle: EdgeStyle;
   bgDots: boolean;
+  bgColor: string;
   edgeColor?: string;
 }
 
