@@ -56,9 +56,18 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
   const [importOpen, setImportOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
+  const initialParsed = useMemo(() => initialValue ? parseMindMap(initialValue) : null, []);
+  const [currentThemeId, setCurrentThemeId] = useState(() => initialParsed?.theme || 'classic');
+  const theme = getThemeById(currentThemeId);
+
+  const defaultEdgeOptions = useMemo(() => ({
+    type: theme.edgeStyle === 'bezier' ? 'default' : theme.edgeStyle === 'straight' ? 'straight' : 'smoothstep',
+    animated: false,
+    style: { strokeWidth: 2, stroke: theme.edgeColor },
+  }), [theme]);
+
   const initial = useMemo(() => {
-    const parsed = initialValue ? parseMindMap(initialValue) : null;
-    if (parsed) return serialiseToNodes(parsed);
+    if (initialParsed) return serialiseToNodes(initialParsed);
     const rootId = nextId();
     return {
       nodes: [
@@ -66,7 +75,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
           id: rootId,
           type: 'mindMapNode',
           position: { x: 0, y: 0 },
-          data: { label: 'Tema principal', color: DEFAULT_COLOR },
+          data: { label: 'Tema principal', color: theme.rootColor, nodeShape: theme.nodeShape },
         },
       ] as MindMapNode[],
       edges: [] as MindMapEdge[],
@@ -78,7 +87,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
 
   // Emit changes
   useEffect(() => {
-    onChange?.(serialiseFromFlow(nodes as MindMapNode[], edges));
+    onChange?.(serialiseFromFlow(nodes as MindMapNode[], edges, currentThemeId));
   }, [nodes, edges, onChange]);
 
   const onConnect = useCallback(
