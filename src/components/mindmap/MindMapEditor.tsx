@@ -217,6 +217,15 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         return;
       }
 
+      // Alt+Arrow → reorder sibling
+      if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.altKey && selected) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('mindmap:reorder', { 
+          detail: { id: selected.id, direction: e.key === 'ArrowUp' ? 'up' : 'down' } 
+        }));
+        return;
+      }
+
       // Arrow keys → navigate between nodes
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
