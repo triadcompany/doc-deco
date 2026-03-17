@@ -82,13 +82,63 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
     };
   }, []);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
+  const [allNodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
+  const [allEdges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
-  // Emit changes
+  // Compute descendants of collapsed nodes
+  const hiddenIds = useMemo(() => {
+    const hidden = new Set<string>();
+    const childrenMap: Record<string, string[]> = {};
+    for (const e of allEdges) {
+      if (!childrenMap[e.source]) childrenMap[e.source] = [];
+      childrenMap[e.source].push(e.target);
+    }
+    function hideDescendants(parentId: string) {
+      for (const childId of childrenMap[parentId] || []) {
+        hidden.add(childId);
+        hideDescendants(childId);
+      }
+    }
+    for (const id of collapsedIds) {
+      hideDescendants(id);
+    }
+    return hidden;
+  }, [allEdges, collapsedIds]);
+
+  // Compute child counts for each node
+  const childCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of allEdges) {
+      map[e.source] = (map[e.source] || 0) + 1;
+    }
+    return map;
+  }, [allEdges]);
+
+  // Visible nodes with collapse metadata injected
+  const nodes = useMemo(() =>
+    allNodes
+      .filter((n) => !hiddenIds.has(n.id))
+      .map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          collapsed: collapsedIds.has(n.id),
+          childCount: childCountMap[n.id] || 0,
+        },
+      })),
+    [allNodes, hiddenIds, collapsedIds, childCountMap],
+  );
+
+  const edges = useMemo(() =>
+    allEdges.filter((e) => !hiddenIds.has(e.target)),
+    [allEdges, hiddenIds],
+  );
+
+  // Emit changes (use allNodes/allEdges to preserve hidden data)
   useEffect(() => {
-    onChange?.(serialiseFromFlow(nodes as MindMapNode[], edges, currentThemeId));
-  }, [nodes, edges, onChange]);
+    onChange?.(serialiseFromFlow(allNodes as MindMapNode[], allEdges, currentThemeId));
+  }, [allNodes, allEdges, onChange]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -154,20 +204,32 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
 
     const handleReorder = (e: Event) => {
       const { id, direction } = (e as CustomEvent).detail;
-      setNodes((nds) => reorderSibling(id, direction, nds as MindMapNode[], edges));
+      setNodes((nds) => reorderSibling(id, direction, nds as MindMapNode[], allEdges));
+    };
+
+    const handleToggleCollapse = (e: Event) => {
+      const { id } = (e as CustomEvent).detail;
+      setCollapsedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
     };
 
     window.addEventListener('mindmap:add-child', handleAddChild);
     window.addEventListener('mindmap:delete-node', handleDeleteNode);
     window.addEventListener('mindmap:update-node', handleUpdateNode);
     window.addEventListener('mindmap:reorder', handleReorder);
+    window.addEventListener('mindmap:toggle-collapse', handleToggleCollapse);
     return () => {
       window.removeEventListener('mindmap:add-child', handleAddChild);
       window.removeEventListener('mindmap:delete-node', handleDeleteNode);
       window.removeEventListener('mindmap:update-node', handleUpdateNode);
       window.removeEventListener('mindmap:reorder', handleReorder);
+      window.removeEventListener('mindmap:toggle-collapse', handleToggleCollapse);
     };
-  }, [setNodes, setEdges, edges]);
+  }, [setNodes, setEdges, allEdges]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -284,11 +346,11 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
 
   const handleAutoLayout = useCallback(() => {
     setNodes((nds) => {
-      const laid = autoLayout(nds as MindMapNode[], edges);
+      const laid = autoLayout(nds as MindMapNode[], allEdges);
       setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 50);
       return laid;
     });
-  }, [edges, setNodes, fitView]);
+  }, [allEdges, setNodes, fitView]);
 
   const handleExportImage = useCallback(async () => {
     const el = reactFlowWrapper.current?.querySelector('.react-flow__viewport') as HTMLElement;
@@ -343,8 +405,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
   const applyTheme = useCallback((newTheme: MindMapTheme) => {
     setCurrentThemeId(newTheme.id);
     setNodes((nds) => {
-      // Find root nodes (no incoming edges)
-      const targetIds = new Set(edges.map((e) => e.target));
+      const targetIds = new Set(allEdges.map((e) => e.target));
       return nds.map((n, i) => {
         const isRoot = !targetIds.has(n.id);
         const colorIdx = i % newTheme.colors.length;
@@ -363,7 +424,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       type: newTheme.edgeStyle === 'bezier' ? 'default' : newTheme.edgeStyle === 'straight' ? 'straight' : 'smoothstep',
       style: { ...e.style, stroke: newTheme.edgeColor },
     })));
-  }, [setNodes, setEdges, edges]);
+  }, [setNodes, setEdges, allEdges]);
 
   return (
     <div className={cn("relative w-full overflow-hidden", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper} style={{ backgroundColor: theme.bgColor }}>
