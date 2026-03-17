@@ -82,13 +82,63 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
     };
   }, []);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
+  const [allNodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
+  const [allEdges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
-  // Emit changes
+  // Compute descendants of collapsed nodes
+  const hiddenIds = useMemo(() => {
+    const hidden = new Set<string>();
+    const childrenMap: Record<string, string[]> = {};
+    for (const e of allEdges) {
+      if (!childrenMap[e.source]) childrenMap[e.source] = [];
+      childrenMap[e.source].push(e.target);
+    }
+    function hideDescendants(parentId: string) {
+      for (const childId of childrenMap[parentId] || []) {
+        hidden.add(childId);
+        hideDescendants(childId);
+      }
+    }
+    for (const id of collapsedIds) {
+      hideDescendants(id);
+    }
+    return hidden;
+  }, [allEdges, collapsedIds]);
+
+  // Compute child counts for each node
+  const childCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of allEdges) {
+      map[e.source] = (map[e.source] || 0) + 1;
+    }
+    return map;
+  }, [allEdges]);
+
+  // Visible nodes with collapse metadata injected
+  const nodes = useMemo(() =>
+    allNodes
+      .filter((n) => !hiddenIds.has(n.id))
+      .map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          collapsed: collapsedIds.has(n.id),
+          childCount: childCountMap[n.id] || 0,
+        },
+      })),
+    [allNodes, hiddenIds, collapsedIds, childCountMap],
+  );
+
+  const edges = useMemo(() =>
+    allEdges.filter((e) => !hiddenIds.has(e.target)),
+    [allEdges, hiddenIds],
+  );
+
+  // Emit changes (use allNodes/allEdges to preserve hidden data)
   useEffect(() => {
-    onChange?.(serialiseFromFlow(nodes as MindMapNode[], edges, currentThemeId));
-  }, [nodes, edges, onChange]);
+    onChange?.(serialiseFromFlow(allNodes as MindMapNode[], allEdges, currentThemeId));
+  }, [allNodes, allEdges, onChange]);
 
   const onConnect = useCallback(
     (params: Connection) => {
