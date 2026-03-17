@@ -79,7 +79,7 @@ export const NODE_COLORS = [
 export const DEFAULT_COLOR = '#0d9488';
 
 // ===== THEMES =====
-export type NodeShape = 'rounded' | 'pill' | 'rectangle' | 'underline' | 'outline';
+export type NodeShape = 'rounded' | 'rectangle';
 export type EdgeStyle = 'smoothstep' | 'bezier' | 'straight';
 
 export interface MindMapTheme {
