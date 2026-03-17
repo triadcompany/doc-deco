@@ -304,7 +304,7 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                      <div className="flex-1 min-h-0 flex flex-col p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">
+                      <div className="split-panel-content flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">
                         <TabContentRenderer tabId={rightTab} {...tabContentProps} embedded />
                       </div>
                     </div>
