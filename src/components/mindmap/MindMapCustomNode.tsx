@@ -1,16 +1,17 @@
 import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Plus, Trash2, Palette, GripVertical } from 'lucide-react';
-import { NODE_COLORS, type MindMapNodeData } from './types';
+import { Plus, Trash2, Palette } from 'lucide-react';
+import { NODE_COLORS, type MindMapNodeData, type NodeShape } from './types';
 
 interface Props extends NodeProps {
-  data: MindMapNodeData;
+  data: MindMapNodeData & { nodeShape?: NodeShape };
 }
 
 function MindMapCustomNodeInner({ id, data, selected }: Props) {
   const [editing, setEditing] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const shape: NodeShape = data.nodeShape || 'rounded';
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -20,7 +21,6 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
     }
   }, [editing]);
 
-  // Listen for start-edit event (triggered when a new node is created)
   useEffect(() => {
     const handleStartEdit = (e: Event) => {
       if ((e as CustomEvent).detail?.id === id) {
@@ -69,16 +69,31 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
   const textColor = getContrastText(bgColor);
   const borderColor = adjustBrightness(bgColor, -30);
 
+  // Shape-specific styles
+  const shapeClasses = {
+    rounded: 'rounded-xl',
+    pill: 'rounded-full',
+    rectangle: 'rounded-md',
+    underline: 'rounded-none bg-transparent !shadow-none',
+    outline: 'rounded-xl bg-transparent',
+  }[shape];
+
+  const shapeStyle: React.CSSProperties = shape === 'underline'
+    ? { borderBottom: `3px solid ${bgColor}`, borderLeft: 'none' }
+    : shape === 'outline'
+    ? { border: `2px solid ${bgColor}`, backgroundColor: 'transparent', borderLeft: `2px solid ${bgColor}` }
+    : { backgroundColor: bgColor, borderLeft: `4px solid ${borderColor}` };
+
+  const labelColor = shape === 'underline' || shape === 'outline' ? bgColor : textColor;
+
   return (
     <div
       className={`
-        relative group rounded-xl min-w-[100px] max-w-[280px] transition-all duration-200
-        ${selected ? 'shadow-lg scale-[1.02]' : 'shadow-md hover:shadow-lg'}
+        relative group min-w-[100px] max-w-[280px] transition-all duration-200
+        ${shapeClasses}
+        ${selected ? 'shadow-lg scale-[1.02]' : shape === 'underline' ? '' : 'shadow-md hover:shadow-lg'}
       `}
-      style={{
-        backgroundColor: bgColor,
-        borderLeft: `4px solid ${borderColor}`,
-      }}
+      style={shapeStyle}
       onDoubleClick={handleDoubleClick}
     >
       {/* Handles */}
@@ -96,7 +111,7 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
       />
 
       {/* Content */}
-      <div className="px-3.5 py-2.5 flex items-start gap-2">
+      <div className={`flex items-start gap-2 ${shape === 'pill' ? 'px-5 py-2.5' : 'px-3.5 py-2.5'}`}>
         {editing ? (
           <textarea
             ref={inputRef}
@@ -105,20 +120,20 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
             onKeyDown={handleKeyDown}
             onInput={(e) => autoResize(e.currentTarget)}
             className="bg-white/15 backdrop-blur-sm rounded-md outline-none text-sm w-full font-medium resize-none px-1.5 py-0.5 min-h-[24px]"
-            style={{ color: textColor }}
+            style={{ color: labelColor }}
             rows={1}
           />
         ) : (
           <span
             className="text-sm font-medium leading-relaxed break-words select-none"
-            style={{ color: textColor }}
+            style={{ color: labelColor }}
           >
             {data.label || 'Duplo clique para editar'}
           </span>
         )}
       </div>
 
-      {/* Floating actions - appear on hover */}
+      {/* Floating actions */}
       <div
         className="absolute -top-2 right-0 translate-x-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
         onClick={(e) => e.stopPropagation()}
@@ -173,7 +188,7 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
       {/* Selection ring */}
       {selected && (
         <div
-          className="absolute inset-[-2px] rounded-xl pointer-events-none border-2 animate-in fade-in duration-150"
+          className={`absolute inset-[-2px] pointer-events-none border-2 animate-in fade-in duration-150 ${shapeClasses}`}
           style={{ borderColor: borderColor }}
         />
       )}
