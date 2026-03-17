@@ -369,7 +369,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         className="bg-background"
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} className="opacity-30" />
+        {theme.bgDots && <Background variant={BackgroundVariant.Dots} gap={24} size={1} className="opacity-30" />}
         <Controls
           showInteractive={false}
           className="!bg-background !border-border !rounded-lg !shadow-lg"
