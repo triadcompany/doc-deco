@@ -307,43 +307,36 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
     if (!pageEl) return;
     const pageRect = pageEl.getBoundingClientRect();
 
-    // Collect precise rects by iterating text nodes in the selection range
-    // This avoids the issue where getClientRects() returns full-line rects from PDF spans
     const rects: { top: number; left: number; width: number; height: number }[] = [];
     const pw = pageRect.width;
     const ph = pageRect.height;
 
-    const walker = document.createTreeWalker(range.commonAncestorContainer.nodeType === Node.TEXT_NODE ? range.commonAncestorContainer.parentElement! : range.commonAncestorContainer, NodeFilter.SHOW_TEXT);
-    let textNode: Text | null;
-    const textNodes: Text[] = [];
-    while ((textNode = walker.nextNode() as Text | null)) {
-      if (range.intersectsNode(textNode)) textNodes.push(textNode);
+    // Use getClientRects from the range directly - filter out duplicates and
+    // zero-size rects. For partial line selections, deduplicate by checking
+    // if a rect is already substantially covered by another.
+    const clientRects = range.getClientRects();
+    const rawRects: DOMRect[] = [];
+    for (let i = 0; i < clientRects.length; i++) {
+      const r = clientRects[i];
+      if (r.width < 1 || r.height < 1) continue;
+      // Skip duplicate/nearly-identical rects
+      const isDup = rawRects.some(
+        (prev) =>
+          Math.abs(prev.top - r.top) < 2 &&
+          Math.abs(prev.left - r.left) < 2 &&
+          Math.abs(prev.width - r.width) < 2 &&
+          Math.abs(prev.height - r.height) < 2,
+      );
+      if (!isDup) rawRects.push(r);
     }
 
-    for (const tn of textNodes) {
-      const subRange = document.createRange();
-      if (tn === range.startContainer) {
-        subRange.setStart(tn, range.startOffset);
-      } else {
-        subRange.setStart(tn, 0);
-      }
-      if (tn === range.endContainer) {
-        subRange.setEnd(tn, range.endOffset);
-      } else {
-        subRange.setEnd(tn, tn.length);
-      }
-
-      const subRects = subRange.getClientRects();
-      for (let i = 0; i < subRects.length; i++) {
-        const r = subRects[i];
-        if (r.width < 1 || r.height < 1) continue;
-        rects.push({
-          top: ((r.top - pageRect.top) / ph) * 100,
-          left: ((r.left - pageRect.left) / pw) * 100,
-          width: (r.width / pw) * 100,
-          height: (r.height / ph) * 100,
-        });
-      }
+    for (const r of rawRects) {
+      rects.push({
+        top: ((r.top - pageRect.top) / ph) * 100,
+        left: ((r.left - pageRect.left) / pw) * 100,
+        width: (r.width / pw) * 100,
+        height: (r.height / ph) * 100,
+      });
     }
 
     if (rects.length === 0) return;
