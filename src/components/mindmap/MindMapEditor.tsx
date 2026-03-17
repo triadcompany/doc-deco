@@ -192,7 +192,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
               id,
               type: 'mindMapNode',
               position: { x: selected.position.x, y: selected.position.y + 90 },
-              data: { label: '', color: DEFAULT_COLOR },
+              data: { label: '', color: theme.rootColor, nodeShape: theme.nodeShape },
               selected: true,
             },
           ]);
