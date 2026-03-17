@@ -279,7 +279,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
     if (!el) return;
     try {
       const dataUrl = await toPng(el, {
-        backgroundColor: '#0f172a',
+        backgroundColor: theme.bgColor,
         quality: 1,
         pixelRatio: 2,
       });
