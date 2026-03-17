@@ -329,6 +329,8 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
         fitViewOptions={{ padding: 0.3 }}
+        minZoom={0.1}
+        maxZoom={8}
         deleteKeyCode={null}
         selectionOnDrag
         panOnScroll
