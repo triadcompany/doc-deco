@@ -648,10 +648,17 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 return (
                   <svg
                     key={h.id}
-                    className={eraserMode ? 'cursor-pointer' : 'pointer-events-none'}
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      overflow: 'visible',
+                      zIndex: eraserMode ? 60 : undefined,
+                      pointerEvents: eraserMode ? 'auto' : 'none',
+                    }}
                   >
-                    <title>{eraserMode ? 'Clique para apagar este grifo' : highlightMode ? 'Clique para remover grifo' : h.text}</title>
                     {mergedRects.map((r, i) => (
                       <rect
                         key={i}
@@ -660,14 +667,22 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                         width={r.isPercent ? `${r.width}%` : r.width}
                         height={r.isPercent ? `${r.height}%` : r.height}
                         rx="2"
-                        fill={bgColor}
+                        fill={eraserMode ? bgColor.replace('0.4)', '0.6)') : bgColor}
                         stroke={eraserMode ? 'hsl(var(--destructive))' : 'none'}
                         strokeWidth={eraserMode ? '2' : '0'}
                         strokeDasharray={eraserMode ? '4 2' : 'none'}
-                        className={`pointer-events-auto ${eraserMode ? 'cursor-pointer hover:opacity-50' : highlightMode ? 'cursor-pointer' : ''}`}
-                        style={eraserMode ? { transition: 'opacity 0.15s' } : undefined}
-                        onClick={() => {
-                          if (eraserMode || highlightMode) removeAnnotation(h.id);
+                        style={{
+                          pointerEvents: (eraserMode || highlightMode) ? 'auto' : 'none',
+                          cursor: (eraserMode || highlightMode) ? 'pointer' : 'default',
+                          transition: 'opacity 0.15s',
+                        }}
+                        onMouseEnter={(e) => { if (eraserMode) (e.target as SVGRectElement).style.opacity = '0.3'; }}
+                        onMouseLeave={(e) => { if (eraserMode) (e.target as SVGRectElement).style.opacity = '1'; }}
+                        onClick={(e) => {
+                          if (eraserMode || highlightMode) {
+                            e.stopPropagation();
+                            removeAnnotation(h.id);
+                          }
                         }}
                       />
                     ))}
@@ -676,7 +691,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               })}
 
               {/* Tap zones for mobile navigation */}
-              {totalPages > 1 && !highlightMode && (
+              {totalPages > 1 && !highlightMode && !eraserMode && (
                 <>
                   <button
                     className="absolute left-0 top-0 w-1/4 h-full cursor-pointer"
