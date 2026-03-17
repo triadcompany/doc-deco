@@ -17,7 +17,8 @@ import { toPng } from 'html-to-image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { LayoutGrid, FileDown, FileUp, Plus, Undo2, ZoomIn, Keyboard, Paintbrush } from 'lucide-react';
 import { MindMapCustomNode } from './MindMapCustomNode';
 import { TopicImportDialog } from './TopicImportDialog';
 import { autoLayout } from './layout';
@@ -27,18 +28,15 @@ import {
   serialiseFromFlow,
   serialiseToNodes,
   parseMindMap,
+  getThemeById,
+  MINDMAP_THEMES,
   type MindMapNode,
   type MindMapEdge,
   type MindMapNodeData,
+  type MindMapTheme,
 } from './types';
 
 const nodeTypes = { mindMapNode: MindMapCustomNode as any };
-
-const defaultEdgeOptions = {
-  type: 'smoothstep',
-  animated: false,
-  style: { strokeWidth: 2 },
-};
 
 interface Props {
   initialValue?: string;
@@ -58,9 +56,18 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
   const [importOpen, setImportOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
+  const initialParsed = useMemo(() => initialValue ? parseMindMap(initialValue) : null, []);
+  const [currentThemeId, setCurrentThemeId] = useState(() => initialParsed?.theme || 'classic');
+  const theme = getThemeById(currentThemeId);
+
+  const defaultEdgeOptions = useMemo(() => ({
+    type: theme.edgeStyle === 'bezier' ? 'default' : theme.edgeStyle === 'straight' ? 'straight' : 'smoothstep',
+    animated: false,
+    style: { strokeWidth: 2, stroke: theme.edgeColor },
+  }), [theme]);
+
   const initial = useMemo(() => {
-    const parsed = initialValue ? parseMindMap(initialValue) : null;
-    if (parsed) return serialiseToNodes(parsed);
+    if (initialParsed) return serialiseToNodes(initialParsed);
     const rootId = nextId();
     return {
       nodes: [
@@ -68,7 +75,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
           id: rootId,
           type: 'mindMapNode',
           position: { x: 0, y: 0 },
-          data: { label: 'Tema principal', color: DEFAULT_COLOR },
+          data: { label: 'Tema principal', color: theme.rootColor, nodeShape: theme.nodeShape },
         },
       ] as MindMapNode[],
       edges: [] as MindMapEdge[],
@@ -80,14 +87,14 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
 
   // Emit changes
   useEffect(() => {
-    onChange?.(serialiseFromFlow(nodes as MindMapNode[], edges));
+    onChange?.(serialiseFromFlow(nodes as MindMapNode[], edges, currentThemeId));
   }, [nodes, edges, onChange]);
 
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => addEdge({ ...params, ...defaultEdgeOptions }, eds));
     },
-    [setEdges],
+    [setEdges, defaultEdgeOptions],
   );
 
   // Custom event handlers
@@ -98,17 +105,17 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       setNodes((nds) => {
         const parent = nds.find((n) => n.id === parentId);
         const parentPos = parent?.position || { x: 0, y: 0 };
-        const parentColor = (parent?.data as MindMapNodeData)?.color || DEFAULT_COLOR;
+        const parentColor = (parent?.data as MindMapNodeData)?.color || theme.rootColor;
         const siblingCount = edges.filter((ed) => ed.source === parentId).length;
-        // Assign child a color from palette based on sibling index
-        const colorIndex = (NODE_COLORS.indexOf(parentColor) + 1 + siblingCount) % NODE_COLORS.length;
+        const colors = theme.colors;
+        const colorIndex = (colors.indexOf(parentColor) + 1 + siblingCount) % colors.length;
         return [
           ...nds.map((n) => ({ ...n, selected: false })),
           {
             id: childId,
             type: 'mindMapNode',
             position: { x: parentPos.x + 300, y: parentPos.y + siblingCount * 72 },
-            data: { label: '', color: NODE_COLORS[colorIndex] },
+            data: { label: '', color: colors[colorIndex], nodeShape: theme.nodeShape },
             selected: true,
           },
         ];
@@ -185,7 +192,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
               id,
               type: 'mindMapNode',
               position: { x: selected.position.x, y: selected.position.y + 90 },
-              data: { label: '', color: DEFAULT_COLOR },
+              data: { label: '', color: theme.rootColor, nodeShape: theme.nodeShape },
               selected: true,
             },
           ]);
@@ -307,7 +314,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
           id,
           type: 'mindMapNode',
           position: { x: 0, y: (nds.length + 1) * 90 },
-          data: { label: '', color: DEFAULT_COLOR },
+          data: { label: '', color: theme.rootColor, nodeShape: theme.nodeShape },
           selected: true,
         },
       ]);
@@ -315,7 +322,32 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         window.dispatchEvent(new CustomEvent('mindmap:start-edit', { detail: { id } }));
       }, 100);
     }
-  }, [nodes, setNodes]);
+  }, [nodes, setNodes, theme]);
+
+  const applyTheme = useCallback((newTheme: MindMapTheme) => {
+    setCurrentThemeId(newTheme.id);
+    setNodes((nds) => {
+      // Find root nodes (no incoming edges)
+      const targetIds = new Set(edges.map((e) => e.target));
+      return nds.map((n, i) => {
+        const isRoot = !targetIds.has(n.id);
+        const colorIdx = i % newTheme.colors.length;
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            color: isRoot ? newTheme.rootColor : newTheme.colors[colorIdx],
+            nodeShape: newTheme.nodeShape,
+          },
+        };
+      });
+    });
+    setEdges((eds) => eds.map((e) => ({
+      ...e,
+      type: newTheme.edgeStyle === 'bezier' ? 'default' : newTheme.edgeStyle === 'straight' ? 'straight' : 'smoothstep',
+      style: { ...e.style, stroke: newTheme.edgeColor },
+    })));
+  }, [setNodes, setEdges, edges]);
 
   return (
     <div className={cn("relative w-full overflow-hidden bg-background", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper}>
@@ -337,7 +369,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         className="bg-background"
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} className="opacity-30" />
+        {theme.bgDots && <Background variant={BackgroundVariant.Dots} gap={24} size={1} className="opacity-30" />}
         <Controls
           showInteractive={false}
           className="!bg-background !border-border !rounded-lg !shadow-lg"
@@ -392,6 +424,41 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
             </TooltipTrigger>
             <TooltipContent side="bottom">Exportar como imagem PNG</TooltipContent>
           </Tooltip>
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="secondary" className={cn("shadow-md", compact ? "h-7 w-7 p-0" : "gap-1.5 h-8 text-xs")}>
+                    <Paintbrush className="w-3.5 h-3.5" />
+                    {!compact && "Tema"}
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Alterar tema visual</TooltipContent>
+            </Tooltip>
+            <PopoverContent side="bottom" align="start" className="w-64 p-2">
+              <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Temas</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {MINDMAP_THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTheme(t)}
+                    className={cn(
+                      "flex flex-col items-start gap-1.5 p-2 rounded-lg border transition-all text-left hover:bg-accent",
+                      currentThemeId === t.id ? "border-primary bg-accent" : "border-border"
+                    )}
+                  >
+                    <span className="text-xs font-medium">{t.name}</span>
+                    <div className="flex gap-0.5">
+                      {t.colors.slice(0, 5).map((c, i) => (
+                        <div key={i} className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Keyboard shortcuts hint */}
