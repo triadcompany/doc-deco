@@ -139,4 +139,10 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* Ensure PDF text layer allows touch selection in highlight mode */
+  .react-pdf__Page__textContent {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+  }
 }
