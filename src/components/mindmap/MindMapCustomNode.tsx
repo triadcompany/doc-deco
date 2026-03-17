@@ -1,10 +1,10 @@
 import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Plus, Trash2, Palette, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Palette, ChevronUp, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import { NODE_COLORS, type MindMapNodeData, type NodeShape } from './types';
 
 interface Props extends NodeProps {
-  data: MindMapNodeData & { nodeShape?: NodeShape };
+  data: MindMapNodeData & { nodeShape?: NodeShape; collapsed?: boolean; childCount?: number };
 }
 
 function MindMapCustomNodeInner({ id, data, selected }: Props) {
