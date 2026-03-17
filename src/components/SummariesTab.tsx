@@ -532,13 +532,18 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
       {/* Create/Edit Dialog (non-embedded only) */}
       {!embedded && (
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className={cn("max-h-[90vh] flex flex-col", isCurrentMindMap ? "max-w-4xl" : "max-w-2xl")}>
-            <DialogHeader>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className={cn(
+            "flex flex-col",
+            isCurrentMindMap
+              ? "max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[95vh] h-[95vh] md:h-[90vh]"
+              : "max-w-2xl max-h-[90vh]"
+          )}>
+            <DialogHeader className="shrink-0">
               <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 flex-1 min-h-0 flex flex-col overflow-y-auto">
-              <div>
+            <div className={cn("flex-1 min-h-0 flex flex-col", isCurrentMindMap ? "gap-2 overflow-hidden" : "space-y-4 overflow-y-auto")}>
+              <div className="shrink-0">
                 <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
                 <Input
                   value={studyTitle}
@@ -546,10 +551,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   placeholder="Ex: Sonhos e Visões - Resumo"
                 />
               </div>
-              {renderDocSelector()}
-              {renderEditor()}
+              <div className="shrink-0">{renderDocSelector()}</div>
+              <div className={cn(isCurrentMindMap ? "flex-1 min-h-0" : "")}>{renderEditor()}</div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="shrink-0">
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
               <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving}>
                 {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}

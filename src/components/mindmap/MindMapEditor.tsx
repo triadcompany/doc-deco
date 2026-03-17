@@ -427,7 +427,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
   }, [setNodes, setEdges, allEdges]);
 
   return (
-    <div className={cn("relative w-full overflow-hidden", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper} style={{ backgroundColor: theme.bgColor }}>
+    <div className={cn("relative w-full overflow-hidden", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[60vh] min-h-[300px] max-h-[700px] rounded-xl border border-border")} ref={reactFlowWrapper} style={{ backgroundColor: theme.bgColor }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
