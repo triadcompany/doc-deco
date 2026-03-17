@@ -20,6 +20,7 @@ import {
   Trash2,
   Search,
   X,
+  Eraser,
 } from 'lucide-react';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
