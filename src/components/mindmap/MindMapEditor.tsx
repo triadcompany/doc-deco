@@ -448,10 +448,13 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
                       currentThemeId === t.id ? "border-primary bg-accent" : "border-border"
                     )}
                   >
-                    <span className="text-xs font-medium">{t.name}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 rounded border border-border/50" style={{ backgroundColor: t.bgColor }} />
+                      <span className="text-xs font-medium">{t.name}</span>
+                    </div>
                     <div className="flex gap-0.5">
                       {t.colors.slice(0, 5).map((c, i) => (
-                        <div key={i} className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: c }} />
+                        <div key={i} className="w-3 h-3 rounded-full" style={{ backgroundColor: c }} />
                       ))}
                     </div>
                   </button>
