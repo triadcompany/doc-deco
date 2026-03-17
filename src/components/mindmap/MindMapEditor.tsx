@@ -204,18 +204,30 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
 
     const handleReorder = (e: Event) => {
       const { id, direction } = (e as CustomEvent).detail;
-      setNodes((nds) => reorderSibling(id, direction, nds as MindMapNode[], edges));
+      setNodes((nds) => reorderSibling(id, direction, nds as MindMapNode[], allEdges));
+    };
+
+    const handleToggleCollapse = (e: Event) => {
+      const { id } = (e as CustomEvent).detail;
+      setCollapsedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
     };
 
     window.addEventListener('mindmap:add-child', handleAddChild);
     window.addEventListener('mindmap:delete-node', handleDeleteNode);
     window.addEventListener('mindmap:update-node', handleUpdateNode);
     window.addEventListener('mindmap:reorder', handleReorder);
+    window.addEventListener('mindmap:toggle-collapse', handleToggleCollapse);
     return () => {
       window.removeEventListener('mindmap:add-child', handleAddChild);
       window.removeEventListener('mindmap:delete-node', handleDeleteNode);
       window.removeEventListener('mindmap:update-node', handleUpdateNode);
       window.removeEventListener('mindmap:reorder', handleReorder);
+      window.removeEventListener('mindmap:toggle-collapse', handleToggleCollapse);
     };
   }, [setNodes, setEdges, edges]);
 
