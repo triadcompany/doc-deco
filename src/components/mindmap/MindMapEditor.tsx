@@ -405,8 +405,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
   const applyTheme = useCallback((newTheme: MindMapTheme) => {
     setCurrentThemeId(newTheme.id);
     setNodes((nds) => {
-      // Find root nodes (no incoming edges)
-      const targetIds = new Set(edges.map((e) => e.target));
+      const targetIds = new Set(allEdges.map((e) => e.target));
       return nds.map((n, i) => {
         const isRoot = !targetIds.has(n.id);
         const colorIdx = i % newTheme.colors.length;
@@ -425,7 +424,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       type: newTheme.edgeStyle === 'bezier' ? 'default' : newTheme.edgeStyle === 'straight' ? 'straight' : 'smoothstep',
       style: { ...e.style, stroke: newTheme.edgeColor },
     })));
-  }, [setNodes, setEdges, edges]);
+  }, [setNodes, setEdges, allEdges]);
 
   return (
     <div className={cn("relative w-full overflow-hidden", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper} style={{ backgroundColor: theme.bgColor }}>
