@@ -229,7 +229,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       window.removeEventListener('mindmap:reorder', handleReorder);
       window.removeEventListener('mindmap:toggle-collapse', handleToggleCollapse);
     };
-  }, [setNodes, setEdges, edges]);
+  }, [setNodes, setEdges, allEdges]);
 
   // Keyboard shortcuts
   useEffect(() => {
