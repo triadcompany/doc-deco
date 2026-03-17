@@ -322,7 +322,32 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         window.dispatchEvent(new CustomEvent('mindmap:start-edit', { detail: { id } }));
       }, 100);
     }
-  }, [nodes, setNodes]);
+  }, [nodes, setNodes, theme]);
+
+  const applyTheme = useCallback((newTheme: MindMapTheme) => {
+    setCurrentThemeId(newTheme.id);
+    setNodes((nds) => {
+      // Find root nodes (no incoming edges)
+      const targetIds = new Set(edges.map((e) => e.target));
+      return nds.map((n, i) => {
+        const isRoot = !targetIds.has(n.id);
+        const colorIdx = i % newTheme.colors.length;
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            color: isRoot ? newTheme.rootColor : newTheme.colors[colorIdx],
+            nodeShape: newTheme.nodeShape,
+          },
+        };
+      });
+    });
+    setEdges((eds) => eds.map((e) => ({
+      ...e,
+      type: newTheme.edgeStyle === 'bezier' ? 'default' : newTheme.edgeStyle === 'straight' ? 'straight' : 'smoothstep',
+      style: { ...e.style, stroke: newTheme.edgeColor },
+    })));
+  }, [setNodes, setEdges, edges]);
 
   return (
     <div className={cn("relative w-full overflow-hidden bg-background", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper}>
