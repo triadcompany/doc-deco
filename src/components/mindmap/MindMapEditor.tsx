@@ -346,11 +346,11 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
 
   const handleAutoLayout = useCallback(() => {
     setNodes((nds) => {
-      const laid = autoLayout(nds as MindMapNode[], edges);
+      const laid = autoLayout(nds as MindMapNode[], allEdges);
       setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 50);
       return laid;
     });
-  }, [edges, setNodes, fitView]);
+  }, [allEdges, setNodes, fitView]);
 
   const handleExportImage = useCallback(async () => {
     const el = reactFlowWrapper.current?.querySelector('.react-flow__viewport') as HTMLElement;
