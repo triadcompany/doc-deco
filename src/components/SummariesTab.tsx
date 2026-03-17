@@ -568,7 +568,12 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       {/* View Summary Dialog (non-embedded only) */}
       {!embedded && (
         <Dialog open={!!viewingSummary} onOpenChange={(open) => !open && setViewingSummary(null)}>
-          <DialogContent className={cn("max-h-[90vh] overflow-y-auto", viewingSummary && isMindMap(viewingSummary.summary) ? "max-w-4xl" : "max-w-2xl")}>
+          <DialogContent className={cn(
+            "max-h-[90vh] overflow-y-auto",
+            viewingSummary && isMindMap(viewingSummary.summary)
+              ? "max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-5xl"
+              : "max-w-2xl"
+          )}>
             <DialogHeader>
               <DialogTitle className="text-base">
                 {viewingSummary ? getStudyDisplayTitle(viewingSummary) : ''}
