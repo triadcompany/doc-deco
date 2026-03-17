@@ -103,6 +103,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'rounded',
     edgeStyle: 'smoothstep',
     bgDots: true,
+    bgColor: '#1e1e2e',
   },
   {
     id: 'ocean',
