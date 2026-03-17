@@ -94,7 +94,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
     (params: Connection) => {
       setEdges((eds) => addEdge({ ...params, ...defaultEdgeOptions }, eds));
     },
-    [setEdges],
+    [setEdges, defaultEdgeOptions],
   );
 
   // Custom event handlers
