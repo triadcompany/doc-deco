@@ -352,19 +352,40 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   }, [highlightMode, activeColor, currentPage, addAnnotation]);
 
   // Listen for selection end events
+  // Listen for selection end events (mouse + touch)
   useEffect(() => {
     const container = pageContainerRef.current;
     if (!container || !highlightMode) return;
 
-    const onMouseUp = () => setTimeout(handleSelectionEnd, 10);
-    const onTouchEnd = () => setTimeout(handleSelectionEnd, 300);
+    const onMouseUp = () => setTimeout(handleSelectionEnd, 50);
+    
+    // For touch: listen to selectionchange which fires after iOS/Android 
+    // text selection handles are released
+    let touchSelectionTimeout: ReturnType<typeof setTimeout> | null = null;
+    const onSelectionChange = () => {
+      if (touchSelectionTimeout) clearTimeout(touchSelectionTimeout);
+      touchSelectionTimeout = setTimeout(() => {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+          handleSelectionEnd();
+        }
+      }, 600);
+    };
+
+    const onTouchEnd = () => {
+      // Give iOS time to finalize selection
+      setTimeout(handleSelectionEnd, 500);
+    };
 
     container.addEventListener('mouseup', onMouseUp);
     container.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('selectionchange', onSelectionChange);
 
     return () => {
       container.removeEventListener('mouseup', onMouseUp);
       container.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('selectionchange', onSelectionChange);
+      if (touchSelectionTimeout) clearTimeout(touchSelectionTimeout);
     };
   }, [highlightMode, handleSelectionEnd]);
 
