@@ -499,6 +499,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Delete</kbd> Excluir nó</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">←→↑↓</kbd> Navegar entre nós</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">⌘L</kbd> Organizar</p>
+              <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Alt+↑↓</kbd> Reordenar</p>
               <p><kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Duplo clique</kbd> Editar texto</p>
             </TooltipContent>
           </Tooltip>
