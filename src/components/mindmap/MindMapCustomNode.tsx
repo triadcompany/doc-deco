@@ -70,28 +70,16 @@ function MindMapCustomNodeInner({ id, data, selected }: Props) {
   const borderColor = adjustBrightness(bgColor, -30);
 
   // Shape-specific styles
-  const shapeClasses = {
-    rounded: 'rounded-xl',
-    pill: 'rounded-full',
-    rectangle: 'rounded-md',
-    underline: 'rounded-none bg-transparent !shadow-none',
-    outline: 'rounded-xl bg-transparent',
-  }[shape];
-
-  const shapeStyle: React.CSSProperties = shape === 'underline'
-    ? { borderBottom: `3px solid ${bgColor}`, borderLeft: 'none' }
-    : shape === 'outline'
-    ? { border: `2px solid ${bgColor}`, backgroundColor: 'transparent', borderLeft: `2px solid ${bgColor}` }
-    : { backgroundColor: bgColor, borderLeft: `4px solid ${borderColor}` };
-
-  const labelColor = shape === 'underline' || shape === 'outline' ? bgColor : textColor;
+  const shapeClasses = shape === 'rectangle' ? 'rounded-md' : 'rounded-xl';
+  const shapeStyle: React.CSSProperties = { backgroundColor: bgColor, borderLeft: `4px solid ${borderColor}` };
+  const labelColor = textColor;
 
   return (
     <div
       className={`
         relative group min-w-[100px] max-w-[280px] transition-all duration-200
         ${shapeClasses}
-        ${selected ? 'shadow-lg scale-[1.02]' : shape === 'underline' ? '' : 'shadow-md hover:shadow-lg'}
+        ${selected ? 'shadow-lg scale-[1.02]' : 'shadow-md hover:shadow-lg'}
       `}
       style={shapeStyle}
       onDoubleClick={handleDoubleClick}
