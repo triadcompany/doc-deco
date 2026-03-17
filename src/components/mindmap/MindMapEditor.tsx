@@ -105,17 +105,17 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       setNodes((nds) => {
         const parent = nds.find((n) => n.id === parentId);
         const parentPos = parent?.position || { x: 0, y: 0 };
-        const parentColor = (parent?.data as MindMapNodeData)?.color || DEFAULT_COLOR;
+        const parentColor = (parent?.data as MindMapNodeData)?.color || theme.rootColor;
         const siblingCount = edges.filter((ed) => ed.source === parentId).length;
-        // Assign child a color from palette based on sibling index
-        const colorIndex = (NODE_COLORS.indexOf(parentColor) + 1 + siblingCount) % NODE_COLORS.length;
+        const colors = theme.colors;
+        const colorIndex = (colors.indexOf(parentColor) + 1 + siblingCount) % colors.length;
         return [
           ...nds.map((n) => ({ ...n, selected: false })),
           {
             id: childId,
             type: 'mindMapNode',
             position: { x: parentPos.x + 300, y: parentPos.y + siblingCount * 72 },
-            data: { label: '', color: NODE_COLORS[colorIndex] },
+            data: { label: '', color: colors[colorIndex], nodeShape: theme.nodeShape },
             selected: true,
           },
         ];
