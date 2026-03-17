@@ -135,6 +135,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'pill',
     edgeStyle: 'smoothstep',
     bgDots: true,
+    bgColor: '#1a0a00',
     edgeColor: '#fb923c',
   },
   {
