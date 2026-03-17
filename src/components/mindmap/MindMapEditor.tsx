@@ -152,13 +152,20 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
       );
     };
 
+    const handleReorder = (e: Event) => {
+      const { id, direction } = (e as CustomEvent).detail;
+      setNodes((nds) => reorderSibling(id, direction, nds as MindMapNode[], edges));
+    };
+
     window.addEventListener('mindmap:add-child', handleAddChild);
     window.addEventListener('mindmap:delete-node', handleDeleteNode);
     window.addEventListener('mindmap:update-node', handleUpdateNode);
+    window.addEventListener('mindmap:reorder', handleReorder);
     return () => {
       window.removeEventListener('mindmap:add-child', handleAddChild);
       window.removeEventListener('mindmap:delete-node', handleDeleteNode);
       window.removeEventListener('mindmap:update-node', handleUpdateNode);
+      window.removeEventListener('mindmap:reorder', handleReorder);
     };
   }, [setNodes, setEdges, edges]);
 
