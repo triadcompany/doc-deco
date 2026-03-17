@@ -51,6 +51,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const [zoom, setZoom] = useState(getInitialZoom);
   const [activeColor, setActiveColor] = useState(highlightColors[0].color);
   const [highlightMode, setHighlightMode] = useState(false);
+  const [eraserMode, setEraserMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchPageFound, setSearchPageFound] = useState(false);
   const [inDocSearch, setInDocSearch] = useState(false);
