@@ -581,66 +581,70 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
 
       {/* Highlight color bar */}
       {highlightMode && (
-        <div className="h-12 border-b border-border flex items-center justify-center gap-3 shrink-0 bg-muted/50">
-          <span className="text-xs text-muted-foreground mr-1">Cor:</span>
-          {highlightColors.map((c) => (
-            <button
-              key={c.name}
-              className={`w-7 h-7 rounded-full border-2 transition-all ${
-                activeColor === c.color
-                  ? 'scale-110 border-foreground shadow-md'
-                  : 'border-transparent hover:scale-105'
-              }`}
-              style={{ backgroundColor: c.color }}
-              onClick={() => setActiveColor(c.color)}
-              title={c.name}
-            />
-          ))}
+        <div className="min-h-[48px] border-b border-border flex items-center justify-center gap-2 sm:gap-3 px-2 shrink-0 bg-muted/50 flex-wrap py-1.5">
+          <span className="text-xs text-muted-foreground">Cor:</span>
+          <div className="flex gap-1.5 sm:gap-2">
+            {highlightColors.map((c) => (
+              <button
+                key={c.name}
+                className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 transition-all ${
+                  activeColor === c.color
+                    ? 'scale-110 border-foreground shadow-md'
+                    : 'border-transparent hover:scale-105'
+                }`}
+                style={{ backgroundColor: c.color }}
+                onClick={() => setActiveColor(c.color)}
+                title={c.name}
+              />
+            ))}
+          </div>
           {pageAnnotations.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="ml-3 text-xs h-7 text-destructive"
+              className="text-xs h-8 sm:h-7 text-destructive px-2"
               onClick={() => clearPageAnnotations(currentPage)}
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Limpar página
+              <span className="hidden sm:inline">Limpar página</span>
+              <span className="sm:hidden">Limpar</span>
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 ml-2"
+            className="h-8 w-8 sm:h-7 sm:w-7"
             onClick={() => setHighlightMode(false)}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </Button>
         </div>
       )}
 
       {/* Eraser mode bar */}
       {eraserMode && (
-        <div className="h-12 border-b border-border flex items-center justify-center gap-3 shrink-0 bg-destructive/5">
+        <div className="min-h-[48px] border-b border-border flex items-center justify-center gap-2 sm:gap-3 px-2 shrink-0 bg-destructive/5 flex-wrap py-1.5">
           <Eraser className="w-4 h-4 text-destructive" />
-          <span className="text-xs text-muted-foreground">Clique em um grifo para apagá-lo</span>
+          <span className="text-xs text-muted-foreground">Toque em um grifo para apagar</span>
           {pageAnnotations.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="ml-3 text-xs h-7 text-destructive"
+              className="text-xs h-8 sm:h-7 text-destructive px-2"
               onClick={() => clearPageAnnotations(currentPage)}
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Limpar página
+              <span className="hidden sm:inline">Limpar página</span>
+              <span className="sm:hidden">Limpar</span>
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 ml-2"
+            className="h-8 w-8 sm:h-7 sm:w-7"
             onClick={() => setEraserMode(false)}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </Button>
         </div>
       )}
