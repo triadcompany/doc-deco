@@ -279,7 +279,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
     if (!el) return;
     try {
       const dataUrl = await toPng(el, {
-        backgroundColor: '#0f172a',
+        backgroundColor: theme.bgColor,
         quality: 1,
         pixelRatio: 2,
       });
@@ -350,7 +350,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
   }, [setNodes, setEdges, edges]);
 
   return (
-    <div className={cn("relative w-full overflow-hidden bg-background", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper}>
+    <div className={cn("relative w-full overflow-hidden", fillHeight ? "flex-1 min-h-[200px] h-full" : "h-[520px] rounded-xl border border-border")} ref={reactFlowWrapper} style={{ backgroundColor: theme.bgColor }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -366,7 +366,7 @@ function MindMapEditorInner({ initialValue, onChange, fillHeight = false, compac
         deleteKeyCode={null}
         selectionOnDrag
         panOnScroll
-        className="bg-background"
+        style={{ backgroundColor: theme.bgColor }}
         proOptions={{ hideAttribution: true }}
       >
         {theme.bgDots && <Background variant={BackgroundVariant.Dots} gap={24} size={1} className="opacity-30" />}

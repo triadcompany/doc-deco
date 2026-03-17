@@ -90,6 +90,7 @@ export interface MindMapTheme {
   nodeShape: NodeShape;
   edgeStyle: EdgeStyle;
   bgDots: boolean;
+  bgColor: string;
   edgeColor?: string;
 }
 
@@ -102,6 +103,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'rounded',
     edgeStyle: 'smoothstep',
     bgDots: true,
+    bgColor: '#1e1e2e',
   },
   {
     id: 'ocean',
@@ -111,6 +113,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'pill',
     edgeStyle: 'bezier',
     bgDots: true,
+    bgColor: '#0c1929',
     edgeColor: '#38bdf8',
   },
   {
@@ -121,6 +124,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'rounded',
     edgeStyle: 'bezier',
     bgDots: true,
+    bgColor: '#0a1f0a',
     edgeColor: '#4ade80',
   },
   {
@@ -131,6 +135,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'pill',
     edgeStyle: 'smoothstep',
     bgDots: true,
+    bgColor: '#1a0a00',
     edgeColor: '#fb923c',
   },
   {
@@ -141,6 +146,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'rectangle',
     edgeStyle: 'straight',
     bgDots: false,
+    bgColor: '#fafafa',
   },
   {
     id: 'candy',
@@ -150,6 +156,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'pill',
     edgeStyle: 'bezier',
     bgDots: true,
+    bgColor: '#fef3f8',
     edgeColor: '#f9a8d4',
   },
   {
@@ -160,6 +167,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'rectangle',
     edgeStyle: 'smoothstep',
     bgDots: false,
+    bgColor: '#fdf6e3',
     edgeColor: '#d97706',
   },
   {
@@ -170,6 +178,7 @@ export const MINDMAP_THEMES: MindMapTheme[] = [
     nodeShape: 'outline',
     edgeStyle: 'bezier',
     bgDots: true,
+    bgColor: '#0a0a0a',
     edgeColor: '#a855f7',
   },
 ];
