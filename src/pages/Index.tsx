@@ -279,7 +279,7 @@ const Index = () => {
                     <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded />
                   ) : (
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                      <div className="flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">
+                      <div className="flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0 [&:has(.study-inline-view)]:overflow-hidden [&:has(.study-inline-view)]:flex [&:has(.study-inline-view)]:flex-col">
                         <TabContentRenderer tabId={activeTab} {...tabContentProps} embedded />
                       </div>
                     </div>
@@ -304,10 +304,10 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <div className="flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">
-                    <TabContentRenderer tabId={rightTab} {...tabContentProps} embedded />
-                  </div>
-                </div>
+                      <div className="flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0 [&:has(.study-inline-view)]:overflow-hidden [&:has(.study-inline-view)]:flex [&:has(.study-inline-view)]:flex-col">
+                        <TabContentRenderer tabId={rightTab} {...tabContentProps} embedded />
+                      </div>
+                    </div>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>

@@ -301,7 +301,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   if (embedded && inlineView === 'view' && viewingSummary) {
     const isMM = isMindMap(viewingSummary.summary);
     return (
-      <div className="flex flex-col h-full">
+      <div className="study-inline-view flex flex-col h-full min-h-0 flex-1">
         {/* Header */}
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-8 px-2">
@@ -332,7 +332,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             <MindMapViewer value={viewingSummary.summary} className="w-full h-full min-h-[400px] rounded-lg border" interactive />
           ) : (
             <div
-              className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+              className="max-w-none pr-2 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
               dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
             />
           )}
