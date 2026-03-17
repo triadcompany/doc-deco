@@ -301,7 +301,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   if (embedded && inlineView === 'view' && viewingSummary) {
     const isMM = isMindMap(viewingSummary.summary);
     return (
-      <div className="flex flex-col h-full">
+      <div className="study-inline-view flex flex-col h-full min-h-0 flex-1">
         {/* Header */}
         <div className="flex items-center gap-2 mb-3 shrink-0">
           <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-8 px-2">
