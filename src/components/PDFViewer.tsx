@@ -608,6 +608,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
         </div>
       )}
 
+      <div className="flex flex-1 overflow-hidden">
         <main ref={mainRef} className="flex-1 bg-muted/30 overflow-auto p-4">
           {pdfUrl ? (
             <div className="relative mx-auto w-fit" ref={pageContainerRef}>
