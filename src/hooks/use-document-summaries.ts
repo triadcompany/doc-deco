@@ -25,6 +25,7 @@ function toApp(row: any): DocSummary {
     documentId: row.document_id || null,
     documentIds: docIds,
     summary: row.summary,
+    folderId: row.folder_id || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
