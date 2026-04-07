@@ -8,6 +8,7 @@ export interface DocSummary {
   documentId: string | null;
   documentIds: string[];
   summary: string;
+  folderId: string | null;
   createdAt: string;
   updatedAt: string;
 }
