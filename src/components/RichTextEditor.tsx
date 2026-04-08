@@ -403,8 +403,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
             disabled={msgLoading}
           >
             {msgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-            Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphStart}
-            {msgPopup.ref.paragraphEnd ? `-${msgPopup.ref.paragraphEnd}` : ''}
+            Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphs.join(', ')}
           </Button>
         </div>
       )}

@@ -5,14 +5,15 @@
  *   MSG: Desesperos §45-46
  *   MSG: A Fé Vem Pelo Ouvir §3-5 (Crentes da Bíblia) (1954-03-20)
  *   MSG: Desesperos §45
+ *   MSG: Desesperos §10, 28-29
  */
 
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MsgRef {
   docName: string;
-  paragraphStart: number;
-  paragraphEnd?: number;
+  /** All individual paragraph numbers to fetch */
+  paragraphs: number[];
   translator?: string;
   date?: string;
   raw: string;
@@ -26,8 +27,29 @@ export interface MsgMatch {
   paragraphs: { number: number; text: string }[];
 }
 
-// Regex: MSG: name §start(-end) optional (translator) (date)
-const MSG_REGEX = /MSG:\s*(.+?)\s*§(\d+)(?:-(\d+))?(?:\s*\(([^)]+)\))?(?:\s*\(([^)]+)\))?\s*$/i;
+// Regex: MSG: name §<paragraph_spec> optional (translator) (date)
+// paragraph_spec can be: 10 | 10-15 | 10, 28-29 | 10, 15, 20-25
+const MSG_REGEX = /MSG:\s*(.+?)\s*§([\d\s,-]+?)(?:\s*\(([^)]+)\))?(?:\s*\(([^)]+)\))?\s*$/i;
+
+/**
+ * Parse a paragraph spec like "10, 28-29" into an array of numbers [10, 28, 29]
+ */
+function parseParagraphSpec(spec: string): number[] {
+  const nums = new Set<number>();
+  const parts = spec.split(',').map(s => s.trim()).filter(Boolean);
+  for (const part of parts) {
+    const rangeMatch = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      for (let i = start; i <= end; i++) nums.add(i);
+    } else {
+      const n = parseInt(part, 10);
+      if (!isNaN(n)) nums.add(n);
+    }
+  }
+  return Array.from(nums).sort((a, b) => a - b);
+}
 
 /**
  * Detect a MSG: reference near the end of a text string.
@@ -37,17 +59,16 @@ export function detectMsgReference(text: string): MsgRef | null {
   if (!match) return null;
 
   const docName = match[1].trim();
-  const paragraphStart = parseInt(match[2], 10);
-  const paragraphEnd = match[3] ? parseInt(match[3], 10) : undefined;
+  const paragraphs = parseParagraphSpec(match[2]);
+  if (paragraphs.length === 0) return null;
 
   // Determine which optional groups are translator vs date
   let translator: string | undefined;
   let date: string | undefined;
 
-  const opt1 = match[4]?.trim();
-  const opt2 = match[5]?.trim();
+  const opt1 = match[3]?.trim();
+  const opt2 = match[4]?.trim();
 
-  // A date looks like YYYY-MM-DD or DD/MM/YYYY or similar with digits and separators
   const datePattern = /^\d{2,4}[-/]\d{2}[-/]\d{2,4}$/;
 
   for (const opt of [opt1, opt2]) {
@@ -61,8 +82,7 @@ export function detectMsgReference(text: string): MsgRef | null {
 
   return {
     docName,
-    paragraphStart,
-    paragraphEnd,
+    paragraphs,
     translator,
     date,
     raw: match[0],
@@ -78,8 +98,7 @@ export function detectMsgReference(text: string): MsgRef | null {
  */
 function extractParagraphs(
   content: string,
-  start: number,
-  end: number
+  requestedNums: number[]
 ): { number: number; text: string }[] {
   // Find all paragraph boundaries using regex
   // Pattern: paragraph number followed by optional " - " or whitespace, then text
@@ -105,7 +124,7 @@ function extractParagraphs(
   const paragraphMap = new Map<number, string>();
   for (let i = 0; i < boundaries.length; i++) {
     const b = boundaries[i];
-    const nextStart = i + 1 < boundaries.length
+    const _nextStart = i + 1 < boundaries.length
       ? boundaries[i + 1].textStart - (content.substring(boundaries[i + 1].textStart - 20, boundaries[i + 1].textStart).match(/\s{2,}\d{1,4}\s+(?:-\s)?$/)?.[0]?.length ?? 0)
       : content.length;
 
@@ -128,12 +147,12 @@ function extractParagraphs(
     }
   }
 
-  // Extract requested range
+  // Extract requested paragraphs
   const results: { number: number; text: string }[] = [];
-  for (let i = start; i <= end; i++) {
-    const text = paragraphMap.get(i);
+  for (const num of requestedNums) {
+    const text = paragraphMap.get(num);
     if (text) {
-      results.push({ number: i, text });
+      results.push({ number: num, text });
     }
   }
 
@@ -173,14 +192,12 @@ export async function searchMsgDocuments(ref: MsgRef): Promise<MsgMatch[]> {
 
   if (matches.length === 0) return [];
 
-  const end = ref.paragraphEnd ?? ref.paragraphStart;
-
   return matches.map((doc) => ({
     id: doc.id,
     title: doc.title,
     translator: doc.translator || '',
     date: doc.date || '',
-    paragraphs: doc.content ? extractParagraphs(doc.content, ref.paragraphStart, end) : [],
+    paragraphs: doc.content ? extractParagraphs(doc.content, ref.paragraphs) : [],
   }));
 }
 
