@@ -431,8 +431,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         <div
           className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150"
           style={{
-            top: Math.min(scripturePopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 50),
-            left: Math.min(scripturePopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 300),
+            top: Math.min(scripturePopup.top, window.innerHeight - 50),
+            left: Math.min(scripturePopup.left, window.innerWidth - 300),
           }}
         >
           <Button
@@ -455,8 +455,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         <div
           className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150"
           style={{
-            top: Math.min(msgPopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 50),
-            left: Math.min(msgPopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 350),
+            top: Math.min(msgPopup.top, window.innerHeight - 50),
+            left: Math.min(msgPopup.left, window.innerWidth - 350),
           }}
         >
           <Button
@@ -478,8 +478,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         <div
           className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[420px] max-h-[60vh] flex flex-col"
           style={{
-            top: Math.min(msgPopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 400),
-            left: Math.min(msgPopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 440),
+            top: Math.min(msgPopup.top, window.innerHeight - 400),
+            left: Math.min(msgPopup.left, window.innerWidth - 440),
           }}
         >
           <div className="flex items-center justify-between mb-2 px-1">
@@ -529,8 +529,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         <div
           className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3"
           style={{
-            top: Math.min(msgPopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 80),
-            left: Math.min(msgPopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 300),
+            top: Math.min(msgPopup.top, window.innerHeight - 80),
+            left: Math.min(msgPopup.left, window.innerWidth - 300),
           }}
         >
           <p className="text-xs text-muted-foreground">Nenhum documento encontrado para "{msgPopup.ref.docName}"</p>
