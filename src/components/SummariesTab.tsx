@@ -200,16 +200,24 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const isCurrentMindMap = studyMode === 'mindmap';
 
-  // Filter summaries by search query (title + content)
+  // Filter summaries: by folder + search query
+  const isSearching = !!searchQuery.trim();
+  const currentFolderChildren = getChildren(currentFolderId);
+  const folderPath = getFolderPath(currentFolderId);
+
   const filteredSummaries = summaries.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    const q = normalizeForSearch(searchQuery);
-    const title = normalizeForSearch(getStudyDisplayTitle(s));
-    if (title.includes(q)) return true;
-    const plainContent = normalizeForSearch(s.summary.replace(/<[^>]*>/g, ''));
-    if (plainContent.includes(q)) return true;
-    const docTitles = s.documentIds.map((id) => normalizeForSearch(getDocTitle(id))).join(' ');
-    return docTitles.includes(q);
+    // When searching, search across all summaries
+    if (isSearching) {
+      const q = normalizeForSearch(searchQuery);
+      const title = normalizeForSearch(getStudyDisplayTitle(s));
+      if (title.includes(q)) return true;
+      const plainContent = normalizeForSearch(s.summary.replace(/<[^>]*>/g, ''));
+      if (plainContent.includes(q)) return true;
+      const docTitles = s.documentIds.map((id) => normalizeForSearch(getDocTitle(id))).join(' ');
+      return docTitles.includes(q);
+    }
+    // When not searching, filter by current folder
+    return s.folderId === currentFolderId;
   });
 
   // ===== Document selector (shared between inline and dialog) =====
