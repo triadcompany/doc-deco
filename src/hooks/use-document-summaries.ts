@@ -66,6 +66,7 @@ export function useDocumentSummaries() {
     title: string,
     documentIds: string[],
     summary: string,
+    folderId?: string | null,
   ) => {
     if (!user?.id) return;
 
@@ -74,6 +75,7 @@ export function useDocumentSummaries() {
       title,
       summary,
       document_ids: documentIds,
+      folder_id: folderId ?? null,
       ...(primaryDocId ? { document_id: primaryDocId } : {}),
     };
 
