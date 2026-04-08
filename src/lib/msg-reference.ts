@@ -124,7 +124,7 @@ function extractParagraphs(
   const paragraphMap = new Map<number, string>();
   for (let i = 0; i < boundaries.length; i++) {
     const b = boundaries[i];
-    const nextStart = i + 1 < boundaries.length
+    const _nextStart = i + 1 < boundaries.length
       ? boundaries[i + 1].textStart - (content.substring(boundaries[i + 1].textStart - 20, boundaries[i + 1].textStart).match(/\s{2,}\d{1,4}\s+(?:-\s)?$/)?.[0]?.length ?? 0)
       : content.length;
 
