@@ -141,20 +141,37 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     const range = sel.getRangeAt(0);
     if (!editorRef.current.contains(range.commonAncestorContainer)) return null;
 
+    const caretRange = range.cloneRange();
+    caretRange.collapse(true);
+
+    let rect = caretRange.getBoundingClientRect();
+    if (!rect.width && !rect.height) {
+      const marker = document.createElement('span');
+      marker.textContent = '\u200b';
+      marker.style.display = 'inline-block';
+      marker.style.width = '0';
+      marker.style.overflow = 'hidden';
+      caretRange.insertNode(marker);
+      rect = marker.getBoundingClientRect();
+      marker.remove();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
     let textNode = range.startContainer;
     if (textNode.nodeType !== Node.TEXT_NODE) {
       if (textNode.childNodes.length > 0 && range.startOffset > 0) {
         const child = textNode.childNodes[range.startOffset - 1];
         if (child?.nodeType === Node.TEXT_NODE) textNode = child;
         else if (child?.textContent) {
-          return { text: child.textContent, rect: range.getBoundingClientRect() };
+          return { text: child.textContent, rect };
         }
       }
       return null;
     }
 
     const textBefore = (textNode.textContent || '').slice(0, range.startOffset);
-    return { text: textBefore, rect: range.getBoundingClientRect() };
+    return { text: textBefore, rect };
   }, []);
 
   // Detect scripture or MSG references near cursor
@@ -169,10 +186,22 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
 
     const { text, rect } = cursorInfo;
     const containerRect = containerRef.current.getBoundingClientRect();
-    // If near the bottom of the editor, show above; otherwise show below
-    const spaceBelow = containerRect.bottom - rect.bottom;
-    const top = spaceBelow < 50 ? rect.top - 44 : rect.bottom + 4;
-    const left = Math.max(containerRect.left, Math.min(rect.left, containerRect.right - 280));
+    const popupWidth = 320;
+    const popupHeight = 36;
+    const gutter = 8;
+
+    const relativeLeft = rect.left - containerRect.left;
+    const relativeTop = rect.top - containerRect.top;
+    const relativeBottom = rect.bottom - containerRect.top;
+
+    const left = Math.max(
+      gutter,
+      Math.min(relativeLeft + 12, containerRect.width - popupWidth - gutter)
+    );
+
+    const top = relativeTop > popupHeight + gutter
+      ? relativeTop - popupHeight - 6
+      : Math.min(relativeBottom + 6, containerRect.height - popupHeight - gutter);
 
     // Check MSG first (higher priority)
     const snippet = text.slice(-200);
