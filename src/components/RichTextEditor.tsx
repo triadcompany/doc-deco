@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import {
   Select,
   SelectContent,
@@ -503,13 +503,13 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG multiple matches - choose document */}
       {msgPopup && msgMatches && msgMatches.length > 0 && (
         <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[420px] max-h-[320px] flex flex-col"
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[420px] h-[320px] overflow-hidden flex flex-col"
           style={{
             top: Math.min(msgPopup.top + 42, containerRef.current?.clientHeight ? containerRef.current.clientHeight - 328 : msgPopup.top + 42),
             left: Math.min(msgPopup.left, containerRef.current?.clientWidth ? containerRef.current.clientWidth - 428 : msgPopup.left),
           }}
         >
-          <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-center justify-between mb-2 px-1 shrink-0">
             <p className="text-sm font-medium">
               {msgMatches.length} documento{msgMatches.length > 1 ? 's' : ''} encontrado{msgMatches.length > 1 ? 's' : ''}
             </p>
@@ -523,7 +523,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
               ✕
             </Button>
           </div>
-          <ScrollArea className="flex-1 -mx-1 px-1">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1" onWheel={(e) => e.stopPropagation()}>
             <div className="space-y-1">
               {msgMatches.map((m) => (
                 <Button
@@ -547,7 +547,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
                 </Button>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       )}
 
