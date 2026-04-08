@@ -92,8 +92,6 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [renameValue, setRenameValue] = useState('');
   const [movingStudyId, setMovingStudyId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-
-export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState<DocSummary | null>(null);
   const [studyTitle, setStudyTitle] = useState('');
