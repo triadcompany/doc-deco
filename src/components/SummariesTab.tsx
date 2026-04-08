@@ -84,7 +84,7 @@ type StudyMode = 'text' | 'mindmap';
 type InlineView = null | 'create' | 'edit' | 'view';
 
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
-  const { folders, createFolder, renameFolder, deleteFolder, getChildren, getFolderPath } = useStudyFolders();
+  const { folders, createFolder, renameFolder, deleteFolder, reorderFolder, getChildren, getFolderPath } = useStudyFolders();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -568,9 +568,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       {/* Folders */}
       {!isSearching && currentFolderChildren.length > 0 && (
         <div className="grid gap-2">
-          {currentFolderChildren.map((f) => {
+          {currentFolderChildren.map((f, idx) => {
             const subFolderCount = getChildren(f.id).length;
             const studyCount = summaries.filter(s => s.folderId === f.id).length;
+            const isFirst = idx === 0;
+            const isLast = idx === currentFolderChildren.length - 1;
 
             if (renamingFolder === f.id) {
               return (
@@ -603,6 +605,26 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   {subFolderCount > 0 && `${subFolderCount} pasta${subFolderCount > 1 ? 's' : ''} · `}
                   {studyCount} estudo{studyCount !== 1 ? 's' : ''}
                 </span>
+                {currentFolderChildren.length > 1 && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7"
+                      disabled={isFirst}
+                      onClick={() => reorderFolder(f.id, 'up')}
+                      title="Mover para cima"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7"
+                      disabled={isLast}
+                      onClick={() => reorderFolder(f.id, 'down')}
+                      title="Mover para baixo"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
