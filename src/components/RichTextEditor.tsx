@@ -225,8 +225,6 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       const idx = node.textContent?.indexOf(refNorm) ?? -1;
       if (idx !== -1) {
         // Check if this text node is the whole line or part of it
-        const before = node.textContent!.substring(0, idx);
-        const after = node.textContent!.substring(idx + refNorm.length);
         
         // Create a range to replace
         const range = document.createRange();
