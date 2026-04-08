@@ -145,6 +145,7 @@ export interface ScriptureRef {
   bookName: string;
   chapter: number;
   verse: number;
+  verseEnd?: number;
   raw: string;
 }
 
@@ -154,8 +155,8 @@ export interface TextSegment {
   ref?: ScriptureRef;
 }
 
-// Regex to match scripture references like "Jo 3:16", "1Co 13:4", "Gn 1:1"
-const SCRIPTURE_REGEX = /\b((?:[123]\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3})\b/g;
+// Regex to match scripture references like "Jo 3:16", "1Co 13:4-7", "Gn 1:1-3"
+const SCRIPTURE_REGEX = /\b((?:[123]\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?\b/g;
 
 export function parseScriptureReferences(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
@@ -165,11 +166,11 @@ export function parseScriptureReferences(text: string): TextSegment[] {
     const bookRaw = match[1].toLowerCase().replace(/\s+/g, '');
     const chapter = parseInt(match[2], 10);
     const verse = parseInt(match[3], 10);
+    const verseEnd = match[4] ? parseInt(match[4], 10) : undefined;
     const bookInfo = BOOK_MAP[bookRaw];
 
     if (!bookInfo) continue;
 
-    // Add text before this match
     if (match.index! > lastIndex) {
       segments.push({ type: 'text', content: text.slice(lastIndex, match.index!) });
     }
@@ -182,6 +183,7 @@ export function parseScriptureReferences(text: string): TextSegment[] {
         bookName: bookInfo.name,
         chapter,
         verse,
+        verseEnd,
         raw: match[0],
       },
     });
@@ -189,10 +191,31 @@ export function parseScriptureReferences(text: string): TextSegment[] {
     lastIndex = match.index! + match[0].length;
   }
 
-  // Add remaining text
   if (lastIndex < text.length) {
     segments.push({ type: 'text', content: text.slice(lastIndex) });
   }
 
   return segments.length > 0 ? segments : [{ type: 'text', content: text }];
+}
+
+/**
+ * Detect a scripture reference near the end of a text string (for editor auto-detect).
+ * Returns the last match found, if any.
+ */
+export function detectLastScriptureReference(text: string): ScriptureRef | null {
+  let last: ScriptureRef | null = null;
+  for (const match of text.matchAll(SCRIPTURE_REGEX)) {
+    const bookRaw = match[1].toLowerCase().replace(/\s+/g, '');
+    const bookInfo = BOOK_MAP[bookRaw];
+    if (!bookInfo) continue;
+    last = {
+      bookAbbrev: bookInfo.abbrev,
+      bookName: bookInfo.name,
+      chapter: parseInt(match[2], 10),
+      verse: parseInt(match[3], 10),
+      verseEnd: match[4] ? parseInt(match[4], 10) : undefined,
+      raw: match[0],
+    };
+  }
+  return last;
 }
