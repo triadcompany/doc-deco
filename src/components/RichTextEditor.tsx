@@ -168,9 +168,9 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
 
     const { text, rect } = cursorInfo;
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const top = rect.bottom - containerRect.top + 4;
-    const left = Math.max(0, rect.left - containerRect.left);
+    // Store viewport-absolute coordinates for fixed positioning
+    const top = rect.bottom + 4;
+    const left = rect.left;
 
     // Check MSG first (higher priority)
     const snippet = text.slice(-200);
