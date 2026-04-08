@@ -208,26 +208,84 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     debouncedDetect();
   }, [saveSelection, debouncedDetect]);
 
-  // Insert HTML at cursor
-  const insertHtmlAtCursor = useCallback((html: string) => {
+  // Replace the reference text in the editor with the given HTML
+  const replaceReferenceAndInsert = useCallback((referenceText: string, html: string) => {
     if (!editorRef.current) return;
-    editorRef.current.focus();
-    restoreSelection();
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const r = sel.getRangeAt(0);
-      r.collapse(false);
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      const frag = document.createDocumentFragment();
-      while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
-      r.insertNode(frag);
-      r.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(r);
+    const editor = editorRef.current;
+
+    // Find the reference text in the editor's text content and remove it
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    let found = false;
+
+    // Normalize the reference for comparison
+    const refNorm = referenceText.trim();
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const idx = node.textContent?.indexOf(refNorm) ?? -1;
+      if (idx !== -1) {
+        // Check if this text node is the whole line or part of it
+        
+        // Create a range to replace
+        const range = document.createRange();
+        
+        // If the node is essentially just the reference (maybe with whitespace), remove the parent block
+        const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+        const blockText = parentBlock?.textContent?.trim() || '';
+        
+        if (blockText === refNorm || blockText === refNorm + '\n' || blockText === '\n' + refNorm) {
+          // The entire block is just the reference — replace the whole block
+          range.selectNode(parentBlock!);
+        } else {
+          // Only part of the block — remove just the reference text
+          range.setStart(node, idx);
+          range.setEnd(node, idx + refNorm.length);
+        }
+
+        range.deleteContents();
+
+        // Insert HTML at the position
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const frag = document.createDocumentFragment();
+        while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
+        range.insertNode(frag);
+        range.collapse(false);
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        found = true;
+        break;
+      }
     }
+
+    if (!found) {
+      // Fallback: just insert at cursor
+      editor.focus();
+      restoreSelection();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const r = sel.getRangeAt(0);
+        r.collapse(false);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const frag = document.createDocumentFragment();
+        while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
+        r.insertNode(frag);
+        r.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+    }
+
     saveSelection();
-    onChange(editorRef.current.innerHTML);
+    onChange(editor.innerHTML);
   }, [restoreSelection, saveSelection, onChange]);
 
   const insertVerses = useCallback(async () => {
@@ -237,14 +295,14 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     try {
       const { bookName, verses } = await fetchVerses(ref.bookAbbrev, ref.chapter, ref.verse, ref.verseEnd);
       const html = formatVersesAsHtml(bookName, ref.chapter, verses);
-      insertHtmlAtCursor(html);
+      replaceReferenceAndInsert(ref.raw, html);
       setScripturePopup(null);
     } catch (err) {
       console.error('Error fetching verses:', err);
     } finally {
       setInserting(false);
     }
-  }, [scripturePopup, insertHtmlAtCursor]);
+  }, [scripturePopup, replaceReferenceAndInsert]);
 
   // Search MSG documents
   const searchMsg = useCallback(async () => {
@@ -255,10 +313,9 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       if (matches.length === 0) {
         setMsgMatches([]);
       } else if (matches.length === 1) {
-        // Insert directly
         const html = formatMsgAsHtml(matches[0]);
         if (html) {
-          insertHtmlAtCursor(html);
+          replaceReferenceAndInsert(msgPopup.ref.raw, html);
           setMsgPopup(null);
           setMsgMatches(null);
         } else {
@@ -273,16 +330,17 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     } finally {
       setMsgLoading(false);
     }
-  }, [msgPopup, insertHtmlAtCursor]);
+  }, [msgPopup, replaceReferenceAndInsert]);
 
   const insertMsgMatch = useCallback((match: MsgMatch) => {
+    if (!msgPopup) return;
     const html = formatMsgAsHtml(match);
     if (html) {
-      insertHtmlAtCursor(html);
+      replaceReferenceAndInsert(msgPopup.ref.raw, html);
     }
     setMsgPopup(null);
     setMsgMatches(null);
-  }, [insertHtmlAtCursor]);
+  }, [replaceReferenceAndInsert, msgPopup]);
 
   return (
     <div
