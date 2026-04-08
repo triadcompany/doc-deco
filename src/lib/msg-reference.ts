@@ -98,8 +98,7 @@ export function detectMsgReference(text: string): MsgRef | null {
  */
 function extractParagraphs(
   content: string,
-  start: number,
-  end: number
+  requestedNums: number[]
 ): { number: number; text: string }[] {
   // Find all paragraph boundaries using regex
   // Pattern: paragraph number followed by optional " - " or whitespace, then text
@@ -148,12 +147,12 @@ function extractParagraphs(
     }
   }
 
-  // Extract requested range
+  // Extract requested paragraphs
   const results: { number: number; text: string }[] = [];
-  for (let i = start; i <= end; i++) {
-    const text = paragraphMap.get(i);
+  for (const num of requestedNums) {
+    const text = paragraphMap.get(num);
     if (text) {
-      results.push({ number: i, text });
+      results.push({ number: num, text });
     }
   }
 
@@ -193,14 +192,12 @@ export async function searchMsgDocuments(ref: MsgRef): Promise<MsgMatch[]> {
 
   if (matches.length === 0) return [];
 
-  const end = ref.paragraphEnd ?? ref.paragraphStart;
-
   return matches.map((doc) => ({
     id: doc.id,
     title: doc.title,
     translator: doc.translator || '',
     date: doc.date || '',
-    paragraphs: doc.content ? extractParagraphs(doc.content, ref.paragraphStart, end) : [],
+    paragraphs: doc.content ? extractParagraphs(doc.content, ref.paragraphs) : [],
   }));
 }
 
