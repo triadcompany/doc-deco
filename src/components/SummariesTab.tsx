@@ -84,7 +84,7 @@ type StudyMode = 'text' | 'mindmap';
 type InlineView = null | 'create' | 'edit' | 'view';
 
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
-  const { folders, createFolder, renameFolder, deleteFolder, getChildren, getFolderPath } = useStudyFolders();
+  const { folders, createFolder, renameFolder, deleteFolder, reorderFolder, getChildren, getFolderPath } = useStudyFolders();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolder, setShowNewFolder] = useState(false);
