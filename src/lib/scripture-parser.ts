@@ -155,8 +155,9 @@ export interface TextSegment {
   ref?: ScriptureRef;
 }
 
-// Regex to match scripture references like "Jo 3:16", "1Co 13:4-7", "Gn 1:1-3"
-const SCRIPTURE_REGEX = /\b((?:[123]\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?\b/g;
+// Regex to match scripture references like "Jo 3:16", "1Co 13:4-7", "Êxodo 12:11"
+// Using (?:^|[\s,;.!?()]) instead of \b because \b doesn't work with accented chars
+const SCRIPTURE_REGEX = /(?:^|[\s,;.!?()"'])((?:[123]\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?(?=[\s,;.!?()"']|$)/g;
 
 export function parseScriptureReferences(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
