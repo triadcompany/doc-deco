@@ -383,35 +383,35 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       )}
     >
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 p-1.5 border-b border-input bg-muted/30">
-        <Button type="button" variant="ghost" size="icon" className="h-7 w-7"
+      <div className="flex flex-wrap items-center gap-0.5 p-1 sm:p-1.5 border-b border-input bg-muted/30 overflow-x-auto">
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
           onMouseDown={(e) => e.preventDefault()} onClick={() => exec('bold')} title="Negrito">
-          <Bold className="w-3.5 h-3.5" />
+          <Bold className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="h-7 w-7"
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
           onMouseDown={(e) => e.preventDefault()} onClick={() => exec('italic')} title="Itálico">
-          <Italic className="w-3.5 h-3.5" />
+          <Italic className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
 
-        <div className="w-px h-5 bg-border mx-1" />
+        <div className="w-px h-5 bg-border mx-0.5 sm:mx-1 shrink-0" />
 
-        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1"
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('h1')} title="Título 1">
-          <Heading1 className="w-3.5 h-3.5" />
+          <Heading1 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1"
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('h2')} title="Título 2">
-          <Heading2 className="w-3.5 h-3.5" />
+          <Heading2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1"
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('p')} title="Corpo">
-          <Type className="w-3.5 h-3.5" />
+          <Type className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
 
-        <div className="w-px h-5 bg-border mx-1" />
+        <div className="w-px h-5 bg-border mx-0.5 sm:mx-1 shrink-0" />
 
         <Select onValueChange={(v) => exec('fontName', v)}>
-          <SelectTrigger className="h-7 w-[110px] text-xs">
+          <SelectTrigger className="h-8 sm:h-7 w-[90px] sm:w-[110px] text-xs shrink-0">
             <SelectValue placeholder="Fonte" />
           </SelectTrigger>
           <SelectContent>
@@ -424,7 +424,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         </Select>
 
         <Select onValueChange={(v) => exec('fontSize', v)}>
-          <SelectTrigger className="h-7 w-[70px] text-xs">
+          <SelectTrigger className="h-8 sm:h-7 w-[60px] sm:w-[70px] text-xs shrink-0">
             <SelectValue placeholder="Tam." />
           </SelectTrigger>
           <SelectContent>
@@ -441,6 +441,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         contentEditable
         onInput={handleInput}
         onMouseUp={() => { saveSelection(); debouncedDetect(); }}
+        onTouchEnd={() => { saveSelection(); debouncedDetect(); }}
         onKeyUp={handleKeyUp}
         onBlur={() => {
           saveSelection();
@@ -451,10 +452,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         }}
         data-placeholder={placeholder}
         className={cn(
-          "overflow-y-auto p-3 text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
-          fillHeight ? "min-h-[200px] flex-1" : "min-h-[300px] max-h-[50vh]"
+          "overflow-y-auto p-3 sm:p-3 text-sm sm:text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
+          fillHeight ? "min-h-[150px] sm:min-h-[200px] flex-1" : "min-h-[200px] sm:min-h-[300px] max-h-[40vh] sm:max-h-[50vh]"
         )}
-        style={{ wordBreak: 'break-word' }}
+        style={{ wordBreak: 'break-word', WebkitUserSelect: 'text', userSelect: 'text' }}
       />
 
       {/* Scripture insert popup */}
