@@ -168,9 +168,9 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
 
     const { text, rect } = cursorInfo;
-    // Store viewport-absolute coordinates for fixed positioning
-    const top = rect.bottom + 4;
-    const left = rect.left;
+    // Position popup above the cursor line, shifted to the right
+    const top = rect.top - 40;
+    const left = rect.right + 8;
 
     // Check MSG first (higher priority)
     const snippet = text.slice(-200);
