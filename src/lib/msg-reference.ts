@@ -71,56 +71,65 @@ export function detectMsgReference(text: string): MsgRef | null {
 
 /**
  * Extract numbered paragraphs from document content.
- * Paragraphs in WMB documents are numbered like: "45 Text of paragraph..."
+ * Paragraphs in WMB documents use inline numbering like:
+ * "...text.  45   Text of paragraph... 46   Next paragraph..."
+ * or "45 - Text..." format.
+ * Numbers appear after double spaces or at line starts.
  */
 function extractParagraphs(
   content: string,
   start: number,
   end: number
 ): { number: number; text: string }[] {
-  const results: { number: number; text: string }[] = [];
+  // Find all paragraph boundaries using regex
+  // Pattern: paragraph number followed by optional " - " or whitespace, then text
+  // Numbers appear either at start of line, or after 2+ spaces in the middle of text
+  const paraRegex = /(?:^|\s{2,})(\d{1,4})\s{1,}(?:-\s)?/g;
 
-  // Split content into potential paragraphs by finding numbered lines
-  // Pattern: a number at start of line (or after whitespace) followed by text
-  const lines = content.split(/\n/);
-  
-  // Build a map of paragraph number -> text
+  const boundaries: { num: number; textStart: number }[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = paraRegex.exec(content)) !== null) {
+    const num = parseInt(match[1], 10);
+    if (num >= 1 && num <= 9999) {
+      boundaries.push({
+        num,
+        textStart: match.index + match[0].length,
+      });
+    }
+  }
+
+  if (boundaries.length === 0) return [];
+
+  // Build paragraph map: number -> text (from textStart to next boundary)
   const paragraphMap = new Map<number, string>();
-  let currentNum: number | null = null;
-  let currentText = '';
+  for (let i = 0; i < boundaries.length; i++) {
+    const b = boundaries[i];
+    const nextStart = i + 1 < boundaries.length
+      ? boundaries[i + 1].textStart - (content.substring(boundaries[i + 1].textStart - 20, boundaries[i + 1].textStart).match(/\s{2,}\d{1,4}\s+(?:-\s)?$/)?.[0]?.length ?? 0)
+      : content.length;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    // Check if line starts with a paragraph number
-    const numMatch = trimmed.match(/^(\d{1,4})\s+(.+)/);
-    if (numMatch) {
-      const num = parseInt(numMatch[1], 10);
-      // Reasonable paragraph numbers (1-9999)
-      if (num >= 1 && num <= 9999) {
-        // Save previous paragraph
-        if (currentNum !== null) {
-          paragraphMap.set(currentNum, currentText.trim());
-        }
-        currentNum = num;
-        currentText = numMatch[2];
-        continue;
+    // Get text from this boundary to the position just before the next number marker
+    let textEnd = content.length;
+    if (i + 1 < boundaries.length) {
+      // Find where the next boundary's match starts (before the spaces + number)
+      const searchBack = content.lastIndexOf(String(boundaries[i + 1].num), boundaries[i + 1].textStart);
+      if (searchBack > b.textStart) {
+        // Go back to find the double-space before the number
+        let j = searchBack - 1;
+        while (j > b.textStart && content[j] === ' ') j--;
+        textEnd = j + 1;
       }
     }
 
-    // Continuation of current paragraph
-    if (currentNum !== null) {
-      currentText += ' ' + trimmed;
+    const text = content.substring(b.textStart, textEnd).replace(/\s+/g, ' ').trim();
+    if (text) {
+      paragraphMap.set(b.num, text);
     }
   }
 
-  // Save last paragraph
-  if (currentNum !== null) {
-    paragraphMap.set(currentNum, currentText.trim());
-  }
-
   // Extract requested range
+  const results: { number: number; text: string }[] = [];
   for (let i = start; i <= end; i++) {
     const text = paragraphMap.get(i);
     if (text) {
