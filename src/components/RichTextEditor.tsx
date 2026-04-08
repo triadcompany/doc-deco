@@ -18,6 +18,7 @@ import {
   BookOpen,
   Loader2,
   FileText,
+  RemoveFormatting,
 } from 'lucide-react';
 import { detectLastScriptureReference, ScriptureRef } from '@/lib/scripture-parser';
 import { fetchVerses, formatVersesAsHtml } from '@/lib/bible-fetch';
