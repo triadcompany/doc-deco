@@ -469,42 +469,51 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG multiple matches - choose document */}
       {msgPopup && msgMatches && msgMatches.length > 0 && (
         <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-2 max-w-[400px] max-h-[300px] overflow-y-auto"
-          style={{ top: msgPopup.top, left: msgPopup.left }}
+          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[420px] max-h-[60vh] flex flex-col"
+          style={{
+            top: Math.min(msgPopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 400),
+            left: Math.min(msgPopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 440),
+          }}
         >
-          <p className="text-xs text-muted-foreground mb-2 px-1">
-            {msgMatches.length} documento{msgMatches.length > 1 ? 's' : ''} encontrado{msgMatches.length > 1 ? 's' : ''}:
-          </p>
-          {msgMatches.map((m) => (
+          <div className="flex items-center justify-between mb-2 px-1">
+            <p className="text-sm font-medium">
+              {msgMatches.length} documento{msgMatches.length > 1 ? 's' : ''} encontrado{msgMatches.length > 1 ? 's' : ''}
+            </p>
             <Button
-              key={m.id}
               size="sm"
               variant="ghost"
-              className="w-full justify-start h-auto py-2 px-2 text-left gap-2"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => insertMsgMatch(m)}
+              onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
             >
-              <FileText className="w-3.5 h-3.5 shrink-0" />
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-medium truncate">{m.title}</span>
-                <span className="text-[10px] text-muted-foreground">
-                  {[m.translator, m.date].filter(Boolean).join(' — ')}
-                  {m.paragraphs.length > 0
-                    ? ` • ${m.paragraphs.length} §`
-                    : ' • Parágrafos não encontrados'}
-                </span>
-              </div>
+              ✕
             </Button>
-          ))}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="w-full text-xs text-muted-foreground mt-1"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
-          >
-            Cancelar
-          </Button>
+          </div>
+          <ScrollArea className="flex-1 -mx-1 px-1">
+            <div className="space-y-1">
+              {msgMatches.map((m) => (
+                <Button
+                  key={m.id}
+                  size="sm"
+                  variant="ghost"
+                  className="w-full justify-start h-auto py-2.5 px-3 text-left gap-2.5 hover:bg-accent/60"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => insertMsgMatch(m)}
+                >
+                  <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
+                  <div className="flex flex-col min-w-0 gap-0.5">
+                    <span className="text-sm font-medium truncate">{m.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {[m.translator, m.date].filter(Boolean).join(' — ')}
+                      {m.paragraphs.length > 0
+                        ? ` • ${m.paragraphs.length} parágrafo${m.paragraphs.length > 1 ? 's' : ''}`
+                        : ' • Parágrafos não encontrados'}
+                    </span>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       )}
 
