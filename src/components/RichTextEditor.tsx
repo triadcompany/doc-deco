@@ -18,6 +18,7 @@ import {
   BookOpen,
   Loader2,
   FileText,
+  RemoveFormatting,
 } from 'lucide-react';
 import { detectLastScriptureReference, ScriptureRef } from '@/lib/scripture-parser';
 import { fetchVerses, formatVersesAsHtml } from '@/lib/bible-fetch';
@@ -131,6 +132,45 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
+  }, [onChange, restoreSelection, saveSelection]);
+
+  const removeBlockquote = useCallback(() => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    restoreSelection();
+    // Find the blockquote ancestor of the current selection
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== editorRef.current) {
+        if (node.nodeName === 'BLOCKQUOTE') {
+          // Replace blockquote with its children
+          const parent = node.parentNode;
+          if (parent) {
+            const frag = document.createDocumentFragment();
+            while (node.firstChild) frag.appendChild(node.firstChild);
+            // Add a normal paragraph after
+            const p = document.createElement('p');
+            p.innerHTML = '<br/>';
+            frag.appendChild(p);
+            parent.replaceChild(frag, node);
+            // Move cursor to the new paragraph
+            const newSel = window.getSelection();
+            if (newSel) {
+              const r = document.createRange();
+              r.setStart(p, 0);
+              r.collapse(true);
+              newSel.removeAllRanges();
+              newSel.addRange(r);
+            }
+          }
+          break;
+        }
+        node = node.parentNode;
+      }
+    }
+    saveSelection();
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
   }, [onChange, restoreSelection, saveSelection]);
 
   // Get text near cursor for detection
@@ -406,6 +446,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('p')} title="Corpo">
           <Type className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+          onMouseDown={(e) => e.preventDefault()} onClick={removeBlockquote} title="Sair da citação">
+          <RemoveFormatting className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
 
         <div className="w-px h-5 bg-border mx-0.5 sm:mx-1 shrink-0" />
