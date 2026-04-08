@@ -171,6 +171,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
     saveSelection();
     if (editorRef.current) onChange(editorRef.current.innerHTML);
+  }, [onChange, restoreSelection, saveSelection]);
 
   // Get text near cursor for detection
   const getTextNearCursor = useCallback((): { text: string; rect: DOMRect } | null => {
