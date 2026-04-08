@@ -8,6 +8,7 @@ export interface DocSummary {
   documentId: string | null;
   documentIds: string[];
   summary: string;
+  folderId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +25,7 @@ function toApp(row: any): DocSummary {
     documentId: row.document_id || null,
     documentIds: docIds,
     summary: row.summary,
+    folderId: row.folder_id || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -64,6 +66,7 @@ export function useDocumentSummaries() {
     title: string,
     documentIds: string[],
     summary: string,
+    folderId?: string | null,
   ) => {
     if (!user?.id) return;
 
@@ -72,6 +75,7 @@ export function useDocumentSummaries() {
       title,
       summary,
       document_ids: documentIds,
+      folder_id: folderId ?? null,
       ...(primaryDocId ? { document_id: primaryDocId } : {}),
     };
 

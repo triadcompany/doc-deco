@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PDFDocument } from '@/lib/types';
 import { DocSummary } from '@/hooks/use-document-summaries';
+import { useStudyFolders, StudyFolder } from '@/hooks/use-study-folders';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   FileText,
   Plus,
   Pencil,
@@ -52,6 +59,12 @@ import {
   ChevronDown,
   ChevronUp,
   Settings2,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  ChevronRight,
+  MoreHorizontal,
+  FolderInput,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -61,7 +74,7 @@ interface SummariesTabProps {
   documents: PDFDocument[];
   summaries: DocSummary[];
   loading: boolean;
-  onUpsert: (id: string | null, title: string, documentIds: string[], summary: string) => Promise<void>;
+  onUpsert: (id: string | null, title: string, documentIds: string[], summary: string, folderId?: string | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onViewDoc?: (doc: PDFDocument) => void;
   embedded?: boolean;
@@ -71,6 +84,14 @@ type StudyMode = 'text' | 'mindmap';
 type InlineView = null | 'create' | 'edit' | 'view';
 
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
+  const { folders, createFolder, renameFolder, deleteFolder, getChildren, getFolderPath } = useStudyFolders();
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [movingStudyId, setMovingStudyId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSummary, setEditingSummary] = useState<DocSummary | null>(null);
   const [studyTitle, setStudyTitle] = useState('');
@@ -137,7 +158,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const handleSave = async () => {
     if (!studyTitle.trim() || !summaryText.trim()) return;
     setSaving(true);
-    await onUpsert(editingSummary?.id || null, studyTitle.trim(), selectedDocIds, summaryText.trim());
+    await onUpsert(editingSummary?.id || null, studyTitle.trim(), selectedDocIds, summaryText.trim(), editingSummary?.folderId ?? currentFolderId);
     setSaving(false);
     if (embedded) {
       goBackToList();
@@ -179,16 +200,24 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   const isCurrentMindMap = studyMode === 'mindmap';
 
-  // Filter summaries by search query (title + content)
+  // Filter summaries: by folder + search query
+  const isSearching = !!searchQuery.trim();
+  const currentFolderChildren = getChildren(currentFolderId);
+  const folderPath = getFolderPath(currentFolderId);
+
   const filteredSummaries = summaries.filter((s) => {
-    if (!searchQuery.trim()) return true;
-    const q = normalizeForSearch(searchQuery);
-    const title = normalizeForSearch(getStudyDisplayTitle(s));
-    if (title.includes(q)) return true;
-    const plainContent = normalizeForSearch(s.summary.replace(/<[^>]*>/g, ''));
-    if (plainContent.includes(q)) return true;
-    const docTitles = s.documentIds.map((id) => normalizeForSearch(getDocTitle(id))).join(' ');
-    return docTitles.includes(q);
+    // When searching, search across all summaries
+    if (isSearching) {
+      const q = normalizeForSearch(searchQuery);
+      const title = normalizeForSearch(getStudyDisplayTitle(s));
+      if (title.includes(q)) return true;
+      const plainContent = normalizeForSearch(s.summary.replace(/<[^>]*>/g, ''));
+      if (plainContent.includes(q)) return true;
+      const docTitles = s.documentIds.map((id) => normalizeForSearch(getDocTitle(id))).join(' ');
+      return docTitles.includes(q);
+    }
+    // When not searching, filter by current folder
+    return s.folderId === currentFolderId;
   });
 
   // ===== Document selector (shared between inline and dialog) =====
@@ -436,6 +465,28 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     );
   }
 
+  // ===== Helper: handle creating new folder =====
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    await createFolder(newFolderName.trim(), currentFolderId);
+    setNewFolderName('');
+    setShowNewFolder(false);
+  };
+
+  const handleRenameFolder = async (fId: string) => {
+    if (!renameValue.trim()) return;
+    await renameFolder(fId, renameValue.trim());
+    setRenamingFolder(null);
+    setRenameValue('');
+  };
+
+  const handleMoveStudy = async (studyId: string, targetFolderId: string | null) => {
+    const study = summaries.find(s => s.id === studyId);
+    if (!study) return;
+    await onUpsert(study.id, study.title, study.documentIds, study.summary, targetFolderId);
+    setMovingStudyId(null);
+  };
+
   // ===== LIST VIEW (default) =====
   return (
     <div className="space-y-4">
@@ -444,10 +495,16 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           <FileText className="w-5 h-5 text-primary" />
           Meus Estudos
         </h2>
-        <Button size="sm" onClick={openNew} className="gap-1.5">
-          <Plus className="w-4 h-4" />
-          Novo Estudo
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => setShowNewFolder(true)} className="gap-1.5">
+            <FolderPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">Pasta</span>
+          </Button>
+          <Button size="sm" onClick={openNew} className="gap-1.5">
+            <Plus className="w-4 h-4" />
+            Novo Estudo
+          </Button>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -463,19 +520,134 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </div>
       )}
 
-      {summaries.length === 0 ? (
+      {/* Breadcrumb navigation */}
+      {!isSearching && (currentFolderId !== null) && (
+        <div className="flex items-center gap-1 text-sm flex-wrap">
+          <button
+            onClick={() => setCurrentFolderId(null)}
+            className="text-primary hover:underline font-medium"
+          >
+            Raiz
+          </button>
+          {folderPath.map((f) => (
+            <span key={f.id} className="flex items-center gap-1">
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+              <button
+                onClick={() => setCurrentFolderId(f.id)}
+                className={cn(
+                  "hover:underline",
+                  f.id === currentFolderId ? "font-medium text-foreground" : "text-primary"
+                )}
+              >
+                {f.name}
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* New folder input */}
+      {showNewFolder && (
+        <div className="flex items-center gap-2">
+          <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Input
+            autoFocus
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            placeholder="Nome da pasta..."
+            className="flex-1"
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder(); if (e.key === 'Escape') setShowNewFolder(false); }}
+          />
+          <Button size="sm" onClick={handleCreateFolder} disabled={!newFolderName.trim()}>Criar</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setShowNewFolder(false); setNewFolderName(''); }}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Folders */}
+      {!isSearching && currentFolderChildren.length > 0 && (
+        <div className="grid gap-2">
+          {currentFolderChildren.map((f) => {
+            const subFolderCount = getChildren(f.id).length;
+            const studyCount = summaries.filter(s => s.folderId === f.id).length;
+
+            if (renamingFolder === f.id) {
+              return (
+                <div key={f.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border">
+                  <Folder className="w-4 h-4 text-primary shrink-0" />
+                  <Input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    className="flex-1 h-8"
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleRenameFolder(f.id); if (e.key === 'Escape') setRenamingFolder(null); }}
+                  />
+                  <Button size="sm" className="h-7" onClick={() => handleRenameFolder(f.id)}>OK</Button>
+                  <Button size="sm" variant="ghost" className="h-7" onClick={() => setRenamingFolder(null)}>
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={f.id}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer group"
+                onClick={() => setCurrentFolderId(f.id)}
+              >
+                <FolderOpen className="w-5 h-5 text-primary shrink-0" />
+                <span className="font-medium text-sm flex-1 truncate">{f.name}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {subFolderCount > 0 && `${subFolderCount} pasta${subFolderCount > 1 ? 's' : ''} · `}
+                  {studyCount} estudo{studyCount !== 1 ? 's' : ''}
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={() => { setRenamingFolder(f.id); setRenameValue(f.name); }}>
+                      <Pencil className="w-3.5 h-3.5 mr-2" /> Renomear
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => deleteFolder(f.id)}>
+                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Studies */}
+      {summaries.length === 0 && !isSearching && currentFolderId === null ? (
         <div className="text-center py-16">
           <FileText className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
           <p className="text-muted-foreground">Nenhum estudo criado</p>
           <p className="text-sm text-muted-foreground/60 mt-1">Crie estudos dos seus documentos para consultar depois</p>
         </div>
-      ) : filteredSummaries.length === 0 ? (
+      ) : filteredSummaries.length === 0 && currentFolderChildren.length === 0 ? (
         <div className="text-center py-12">
-          <Search className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-muted-foreground">Nenhum estudo encontrado</p>
-          <p className="text-sm text-muted-foreground/60 mt-1">Tente outro termo de pesquisa</p>
+          {isSearching ? (
+            <>
+              <Search className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground">Nenhum estudo encontrado</p>
+              <p className="text-sm text-muted-foreground/60 mt-1">Tente outro termo de pesquisa</p>
+            </>
+          ) : (
+            <>
+              <Folder className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground">Pasta vazia</p>
+              <p className="text-sm text-muted-foreground/60 mt-1">Adicione estudos ou subpastas aqui</p>
+            </>
+          )}
         </div>
-      ) : (
+      ) : filteredSummaries.length > 0 && (
         <div className={cn("grid gap-4", embedded ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
           {filteredSummaries.map((s) => {
             const isMM = isMindMap(s.summary);
@@ -494,9 +666,21 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(s.id)} title="Excluir estudo">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Mais opções">
+                            <MoreHorizontal className="w-3.5 h-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={() => { setMovingStudyId(s.id); setSelectedFolderId(s.folderId); }}>
+                            <FolderInput className="w-3.5 h-3.5 mr-2" /> Mover para pasta
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => onDelete(s.id)}>
+                            <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   {s.documentIds.length > 0 && (
@@ -613,6 +797,45 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Move to folder dialog */}
+      <Dialog open={!!movingStudyId} onOpenChange={(open) => { if (!open) setMovingStudyId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mover para pasta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1 max-h-[300px] overflow-y-auto">
+            <button
+              onClick={() => setSelectedFolderId(null)}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors",
+                selectedFolderId === null ? "bg-primary/10 text-primary" : "hover:bg-secondary"
+              )}
+            >
+              <Folder className="w-4 h-4" />
+              Raiz (sem pasta)
+            </button>
+            {folders.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setSelectedFolderId(f.id)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors",
+                  selectedFolderId === f.id ? "bg-primary/10 text-primary" : "hover:bg-secondary",
+                  f.parentId ? "pl-8" : ""
+                )}
+              >
+                <Folder className="w-4 h-4" />
+                {f.name}
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMovingStudyId(null)}>Cancelar</Button>
+            <Button onClick={() => movingStudyId && handleMoveStudy(movingStudyId, selectedFolderId)}>Mover</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

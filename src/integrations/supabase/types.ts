@@ -225,6 +225,7 @@ export type Database = {
           created_at: string
           document_id: string | null
           document_ids: string[] | null
+          folder_id: string | null
           id: string
           summary: string
           title: string
@@ -235,6 +236,7 @@ export type Database = {
           created_at?: string
           document_id?: string | null
           document_ids?: string[] | null
+          folder_id?: string | null
           id?: string
           summary: string
           title?: string
@@ -245,6 +247,7 @@ export type Database = {
           created_at?: string
           document_id?: string | null
           document_ids?: string[] | null
+          folder_id?: string | null
           id?: string
           summary?: string
           title?: string
@@ -257,6 +260,13 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_summaries_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "study_folders"
             referencedColumns: ["id"]
           },
         ]
@@ -418,6 +428,41 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "study_folders"
             referencedColumns: ["id"]
           },
         ]
