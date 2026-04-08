@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PDFDocument } from '@/lib/types';
 import { DocSummary } from '@/hooks/use-document-summaries';
+import { useStudyFolders, StudyFolder } from '@/hooks/use-study-folders';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   FileText,
   Plus,
   Pencil,
@@ -52,6 +59,12 @@ import {
   ChevronDown,
   ChevronUp,
   Settings2,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  ChevronRight,
+  MoreHorizontal,
+  FolderInput,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
