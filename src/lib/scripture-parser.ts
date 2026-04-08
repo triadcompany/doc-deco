@@ -214,13 +214,14 @@ export function detectLastScriptureReference(text: string): ScriptureRef | null 
     const bookRaw = match[1].toLowerCase().replace(/\s+/g, '');
     const bookInfo = BOOK_MAP[bookRaw];
     if (!bookInfo) continue;
+    const refText = match[0].trimStart();
     last = {
       bookAbbrev: bookInfo.abbrev,
       bookName: bookInfo.name,
       chapter: parseInt(match[2], 10),
       verse: parseInt(match[3], 10),
       verseEnd: match[4] ? parseInt(match[4], 10) : undefined,
-      raw: match[0],
+      raw: refText,
     };
   }
   return last;
