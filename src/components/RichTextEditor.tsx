@@ -295,14 +295,14 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     try {
       const { bookName, verses } = await fetchVerses(ref.bookAbbrev, ref.chapter, ref.verse, ref.verseEnd);
       const html = formatVersesAsHtml(bookName, ref.chapter, verses);
-      insertHtmlAtCursor(html);
+      replaceReferenceAndInsert(ref.raw, html);
       setScripturePopup(null);
     } catch (err) {
       console.error('Error fetching verses:', err);
     } finally {
       setInserting(false);
     }
-  }, [scripturePopup, insertHtmlAtCursor]);
+  }, [scripturePopup, replaceReferenceAndInsert]);
 
   // Search MSG documents
   const searchMsg = useCallback(async () => {
@@ -313,10 +313,9 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       if (matches.length === 0) {
         setMsgMatches([]);
       } else if (matches.length === 1) {
-        // Insert directly
         const html = formatMsgAsHtml(matches[0]);
         if (html) {
-          insertHtmlAtCursor(html);
+          replaceReferenceAndInsert(msgPopup.ref.raw, html);
           setMsgPopup(null);
           setMsgMatches(null);
         } else {
@@ -331,16 +330,17 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     } finally {
       setMsgLoading(false);
     }
-  }, [msgPopup, insertHtmlAtCursor]);
+  }, [msgPopup, replaceReferenceAndInsert]);
 
   const insertMsgMatch = useCallback((match: MsgMatch) => {
+    if (!msgPopup) return;
     const html = formatMsgAsHtml(match);
     if (html) {
-      insertHtmlAtCursor(html);
+      replaceReferenceAndInsert(msgPopup.ref.raw, html);
     }
     setMsgPopup(null);
     setMsgMatches(null);
-  }, [insertHtmlAtCursor]);
+  }, [replaceReferenceAndInsert, msgPopup]);
 
   return (
     <div
