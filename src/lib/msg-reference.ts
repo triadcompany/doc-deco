@@ -218,5 +218,5 @@ export function formatMsgAsHtml(match: MsgMatch): string {
     .map(p => `<span style="color:hsl(var(--muted-foreground));font-size:0.75em;vertical-align:super;margin-right:2px;">${p.number}</span>${p.text}`)
     .join('<br/><br/>');
 
-  return `<blockquote style="border-left:3px solid hsl(var(--accent));padding:8px 12px;margin:8px 0;background:hsl(var(--muted)/0.3);border-radius:4px;font-size:0.9em;"><strong>${header}</strong>${meta ? `<br/><span style="font-size:0.8em;color:hsl(var(--muted-foreground));">${meta}</span>` : ''}<br/><br/>${lines}</blockquote><p><br/></p>`;
+  return `<blockquote style="border-left:3px solid hsl(var(--accent));padding:8px 12px;margin:8px 0;background:hsl(var(--muted)/0.3);border-radius:4px;font-size:0.9em;"><h2 style="margin:0 0 4px 0;font-size:1.15em;font-weight:700;">${header}</h2>${meta ? `<span style="font-size:0.8em;color:hsl(var(--muted-foreground));">${meta}</span><br/><br/>` : ''} ${lines}</blockquote><p><br/></p>`;
 }
