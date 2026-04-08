@@ -447,6 +447,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('p')} title="Corpo">
           <Type className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+          onMouseDown={(e) => e.preventDefault()} onClick={removeBlockquote} title="Sair da citação">
+          <RemoveFormatting className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        </Button>
 
         <div className="w-px h-5 bg-border mx-0.5 sm:mx-1 shrink-0" />
 
