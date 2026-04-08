@@ -797,6 +797,45 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Move to folder dialog */}
+      <Dialog open={!!movingStudyId} onOpenChange={(open) => { if (!open) setMovingStudyId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mover para pasta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1 max-h-[300px] overflow-y-auto">
+            <button
+              onClick={() => setSelectedFolderId(null)}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors",
+                selectedFolderId === null ? "bg-primary/10 text-primary" : "hover:bg-secondary"
+              )}
+            >
+              <Folder className="w-4 h-4" />
+              Raiz (sem pasta)
+            </button>
+            {folders.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setSelectedFolderId(f.id)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors",
+                  selectedFolderId === f.id ? "bg-primary/10 text-primary" : "hover:bg-secondary",
+                  f.parentId ? "pl-8" : ""
+                )}
+              >
+                <Folder className="w-4 h-4" />
+                {f.name}
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMovingStudyId(null)}>Cancelar</Button>
+            <Button onClick={() => movingStudyId && handleMoveStudy(movingStudyId, selectedFolderId)}>Mover</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
