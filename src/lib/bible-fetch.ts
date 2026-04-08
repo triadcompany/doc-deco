@@ -14,6 +14,31 @@ interface RawBook {
 // Simple in-memory cache
 const cache: Record<string, RawBook[]> = {};
 
+// Map from app abbreviations to JSON IDs (where they differ)
+const ABBREV_TO_JSON_ID: Record<string, string> = {
+  'jz': 'jud',
+  '1rs': '1kgs', '2rs': '2kgs',
+  '1cr': '1ch', '2cr': '2ch',
+  'ed': 'ezr',
+  'jo_at': 'job',
+  'sl': 'ps',
+  'pv': 'prv',
+  'ct': 'so',
+  'os': 'ho',
+  'mq': 'mi',
+  'hc': 'hk',
+  'sf': 'zp',
+  'ag': 'hg',
+  'mc': 'mk',
+  'lc': 'lk',
+  'at': 'act',
+  'ef': 'eph',
+  'fp': 'ph',
+  'fm': 'phm',
+  'tg': 'jm',
+  'ap': 're',
+};
+
 async function loadBible(version: string): Promise<RawBook[]> {
   if (cache[version]) return cache[version];
   const res = await fetch(`${GITHUB_BASE}/${version}.json`);
@@ -30,11 +55,6 @@ export interface FetchedVerse {
 
 /**
  * Fetch verses for a scripture reference.
- * @param bookAbbrev - The book abbreviation (e.g. 'gn', 'jo', 'rm')
- * @param chapter - Chapter number (1-based)
- * @param verseStart - Starting verse (1-based)
- * @param verseEnd - Ending verse (inclusive), defaults to verseStart
- * @param version - Bible version, defaults to 'arc'
  */
 export async function fetchVerses(
   bookAbbrev: string,
@@ -45,11 +65,12 @@ export async function fetchVerses(
 ): Promise<{ bookName: string; verses: FetchedVerse[] }> {
   const data = await loadBible(version);
   
-  // Find book by id
-  let book = data.find(b => b.id === bookAbbrev);
+  // Map app abbreviation to JSON id
+  const jsonId = ABBREV_TO_JSON_ID[bookAbbrev] || bookAbbrev;
+  
+  let book = data.find(b => b.id === jsonId);
   if (!book) {
-    // Try lowercase match
-    const lower = bookAbbrev.toLowerCase();
+    const lower = jsonId.toLowerCase();
     book = data.find(b => b.id.toLowerCase() === lower);
   }
   if (!book) throw new Error(`Livro "${bookAbbrev}" não encontrado`);
