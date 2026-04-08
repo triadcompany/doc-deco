@@ -429,8 +429,11 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* Scripture insert popup */}
       {scripturePopup && (
         <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{ top: scripturePopup.top, left: scripturePopup.left }}
+          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{
+            top: Math.min(scripturePopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 50),
+            left: Math.min(scripturePopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 300),
+          }}
         >
           <Button
             size="sm"
@@ -450,8 +453,11 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG insert popup */}
       {msgPopup && !msgMatches && (
         <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{ top: msgPopup.top, left: msgPopup.left }}
+          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{
+            top: Math.min(msgPopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 50),
+            left: Math.min(msgPopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 350),
+          }}
         >
           <Button
             size="sm"
