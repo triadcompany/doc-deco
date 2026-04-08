@@ -74,7 +74,7 @@ interface SummariesTabProps {
   documents: PDFDocument[];
   summaries: DocSummary[];
   loading: boolean;
-  onUpsert: (id: string | null, title: string, documentIds: string[], summary: string) => Promise<void>;
+  onUpsert: (id: string | null, title: string, documentIds: string[], summary: string, folderId?: string | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onViewDoc?: (doc: PDFDocument) => void;
   embedded?: boolean;
@@ -82,6 +82,16 @@ interface SummariesTabProps {
 
 type StudyMode = 'text' | 'mindmap';
 type InlineView = null | 'create' | 'edit' | 'view';
+
+export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
+  const { folders, createFolder, renameFolder, deleteFolder, getChildren, getFolderPath } = useStudyFolders();
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [movingStudyId, setMovingStudyId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
