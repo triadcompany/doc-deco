@@ -5,14 +5,15 @@
  *   MSG: Desesperos §45-46
  *   MSG: A Fé Vem Pelo Ouvir §3-5 (Crentes da Bíblia) (1954-03-20)
  *   MSG: Desesperos §45
+ *   MSG: Desesperos §10, 28-29
  */
 
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MsgRef {
   docName: string;
-  paragraphStart: number;
-  paragraphEnd?: number;
+  /** All individual paragraph numbers to fetch */
+  paragraphs: number[];
   translator?: string;
   date?: string;
   raw: string;
@@ -26,8 +27,29 @@ export interface MsgMatch {
   paragraphs: { number: number; text: string }[];
 }
 
-// Regex: MSG: name §start(-end) optional (translator) (date)
-const MSG_REGEX = /MSG:\s*(.+?)\s*§(\d+)(?:-(\d+))?(?:\s*\(([^)]+)\))?(?:\s*\(([^)]+)\))?\s*$/i;
+// Regex: MSG: name §<paragraph_spec> optional (translator) (date)
+// paragraph_spec can be: 10 | 10-15 | 10, 28-29 | 10, 15, 20-25
+const MSG_REGEX = /MSG:\s*(.+?)\s*§([\d\s,\-]+?)(?:\s*\(([^)]+)\))?(?:\s*\(([^)]+)\))?\s*$/i;
+
+/**
+ * Parse a paragraph spec like "10, 28-29" into an array of numbers [10, 28, 29]
+ */
+function parseParagraphSpec(spec: string): number[] {
+  const nums = new Set<number>();
+  const parts = spec.split(',').map(s => s.trim()).filter(Boolean);
+  for (const part of parts) {
+    const rangeMatch = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      for (let i = start; i <= end; i++) nums.add(i);
+    } else {
+      const n = parseInt(part, 10);
+      if (!isNaN(n)) nums.add(n);
+    }
+  }
+  return Array.from(nums).sort((a, b) => a - b);
+}
 
 /**
  * Detect a MSG: reference near the end of a text string.
@@ -37,17 +59,16 @@ export function detectMsgReference(text: string): MsgRef | null {
   if (!match) return null;
 
   const docName = match[1].trim();
-  const paragraphStart = parseInt(match[2], 10);
-  const paragraphEnd = match[3] ? parseInt(match[3], 10) : undefined;
+  const paragraphs = parseParagraphSpec(match[2]);
+  if (paragraphs.length === 0) return null;
 
   // Determine which optional groups are translator vs date
   let translator: string | undefined;
   let date: string | undefined;
 
-  const opt1 = match[4]?.trim();
-  const opt2 = match[5]?.trim();
+  const opt1 = match[3]?.trim();
+  const opt2 = match[4]?.trim();
 
-  // A date looks like YYYY-MM-DD or DD/MM/YYYY or similar with digits and separators
   const datePattern = /^\d{2,4}[-/]\d{2}[-/]\d{2,4}$/;
 
   for (const opt of [opt1, opt2]) {
@@ -61,8 +82,7 @@ export function detectMsgReference(text: string): MsgRef | null {
 
   return {
     docName,
-    paragraphStart,
-    paragraphEnd,
+    paragraphs,
     translator,
     date,
     raw: match[0],
