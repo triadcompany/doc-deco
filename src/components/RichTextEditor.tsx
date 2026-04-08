@@ -527,8 +527,11 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG no matches */}
       {msgPopup && msgMatches && msgMatches.length === 0 && (
         <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3"
-          style={{ top: msgPopup.top, left: msgPopup.left }}
+          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3"
+          style={{
+            top: Math.min(msgPopup.top + (containerRef.current?.getBoundingClientRect().top ?? 0), window.innerHeight - 80),
+            left: Math.min(msgPopup.left + (containerRef.current?.getBoundingClientRect().left ?? 0), window.innerWidth - 300),
+          }}
         >
           <p className="text-xs text-muted-foreground">Nenhum documento encontrado para "{msgPopup.ref.docName}"</p>
           <Button
