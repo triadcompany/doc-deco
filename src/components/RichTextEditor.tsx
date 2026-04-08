@@ -168,9 +168,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
 
     const { text, rect } = cursorInfo;
-    // Position popup above the cursor line, shifted to the right
-    const top = rect.top - 40;
-    const left = rect.right + 8;
+    // Position popup just below the current line, aligned to the left of the text
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const top = Math.min(rect.bottom + 4, containerRect.bottom - 40);
+    const left = Math.max(containerRect.left + 8, Math.min(rect.left, containerRect.right - 250));
 
     // Check MSG first (higher priority)
     const snippet = text.slice(-200);
