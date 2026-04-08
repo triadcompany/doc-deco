@@ -172,24 +172,29 @@ export function parseScriptureReferences(text: string): TextSegment[] {
 
     if (!bookInfo) continue;
 
-    if (match.index! > lastIndex) {
-      segments.push({ type: 'text', content: text.slice(lastIndex, match.index!) });
+    // The full match may include a leading delimiter; calculate the actual reference start
+    const fullMatch = match[0];
+    const refText = fullMatch.trimStart();
+    const refStart = match.index! + (fullMatch.length - refText.length);
+
+    if (refStart > lastIndex) {
+      segments.push({ type: 'text', content: text.slice(lastIndex, refStart) });
     }
 
     segments.push({
       type: 'reference',
-      content: match[0],
+      content: refText,
       ref: {
         bookAbbrev: bookInfo.abbrev,
         bookName: bookInfo.name,
         chapter,
         verse,
         verseEnd,
-        raw: match[0],
+        raw: refText,
       },
     });
 
-    lastIndex = match.index! + match[0].length;
+    lastIndex = match.index! + fullMatch.length;
   }
 
   if (lastIndex < text.length) {
