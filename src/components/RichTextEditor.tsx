@@ -460,23 +460,22 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* Scripture insert popup */}
       {scripturePopup && (
         <div
-          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{
-            top: Math.min(scripturePopup.top, window.innerHeight - 50),
-            left: Math.min(scripturePopup.left, window.innerWidth - 300),
-          }}
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{ top: scripturePopup.top, left: scripturePopup.left }}
         >
           <Button
             size="sm"
             variant="secondary"
-            className="h-8 gap-1.5 text-xs shadow-md border border-border"
+            className="h-8 gap-1.5 text-xs shadow-md border border-border max-w-[320px]"
             onMouseDown={(e) => e.preventDefault()}
             onClick={insertVerses}
             disabled={inserting}
           >
-            {inserting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
-            Inserir {scripturePopup.ref.bookName} {scripturePopup.ref.chapter}:{scripturePopup.ref.verse}
-            {scripturePopup.ref.verseEnd ? `-${scripturePopup.ref.verseEnd}` : ''}
+            {inserting ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <BookOpen className="w-3.5 h-3.5 shrink-0" />}
+            <span className="truncate">
+              Inserir {scripturePopup.ref.bookName} {scripturePopup.ref.chapter}:{scripturePopup.ref.verse}
+              {scripturePopup.ref.verseEnd ? `-${scripturePopup.ref.verseEnd}` : ''}
+            </span>
           </Button>
         </div>
       )}
@@ -484,22 +483,19 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG insert popup */}
       {msgPopup && !msgMatches && (
         <div
-          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{
-            top: Math.min(msgPopup.top, window.innerHeight - 50),
-            left: Math.min(msgPopup.left, window.innerWidth - 350),
-          }}
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{ top: msgPopup.top, left: msgPopup.left }}
         >
           <Button
             size="sm"
             variant="secondary"
-            className="h-8 gap-1.5 text-xs shadow-md border border-border"
+            className="h-8 gap-1.5 text-xs shadow-md border border-border max-w-[320px]"
             onMouseDown={(e) => e.preventDefault()}
             onClick={searchMsg}
             disabled={msgLoading}
           >
-            {msgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-            Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphs.join(', ')}
+            {msgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <FileText className="w-3.5 h-3.5 shrink-0" />}
+            <span className="truncate">Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphs.join(', ')}</span>
           </Button>
         </div>
       )}
@@ -507,10 +503,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG multiple matches - choose document */}
       {msgPopup && msgMatches && msgMatches.length > 0 && (
         <div
-          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[420px] max-h-[60vh] flex flex-col"
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[420px] max-h-[320px] flex flex-col"
           style={{
-            top: Math.min(msgPopup.top, window.innerHeight - 400),
-            left: Math.min(msgPopup.left, window.innerWidth - 440),
+            top: Math.min(msgPopup.top + 42, containerRef.current?.clientHeight ? containerRef.current.clientHeight - 328 : msgPopup.top + 42),
+            left: Math.min(msgPopup.left, containerRef.current?.clientWidth ? containerRef.current.clientWidth - 428 : msgPopup.left),
           }}
         >
           <div className="flex items-center justify-between mb-2 px-1">
@@ -558,10 +554,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG no matches */}
       {msgPopup && msgMatches && msgMatches.length === 0 && (
         <div
-          className="fixed z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3"
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3"
           style={{
-            top: Math.min(msgPopup.top, window.innerHeight - 80),
-            left: Math.min(msgPopup.left, window.innerWidth - 300),
+            top: Math.min(msgPopup.top + 42, containerRef.current?.clientHeight ? containerRef.current.clientHeight - 88 : msgPopup.top + 42),
+            left: Math.min(msgPopup.left, containerRef.current?.clientWidth ? containerRef.current.clientWidth - 308 : msgPopup.left),
           }}
         >
           <p className="text-xs text-muted-foreground">Nenhum documento encontrado para "{msgPopup.ref.docName}"</p>
