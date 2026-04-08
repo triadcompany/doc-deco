@@ -155,8 +155,9 @@ export interface TextSegment {
   ref?: ScriptureRef;
 }
 
-// Regex to match scripture references like "Jo 3:16", "1Co 13:4-7", "Gn 1:1-3"
-const SCRIPTURE_REGEX = /\b((?:[123]\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?\b/g;
+// Regex to match scripture references like "Jo 3:16", "1Co 13:4-7", "Êxodo 12:11"
+// Using (?:^|[\s,;.!?()]) instead of \b because \b doesn't work with accented chars
+const SCRIPTURE_REGEX = /(?:^|[\s,;.!?()"'])((?:[123]\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?(?=[\s,;.!?()"']|$)/g;
 
 export function parseScriptureReferences(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
@@ -171,24 +172,29 @@ export function parseScriptureReferences(text: string): TextSegment[] {
 
     if (!bookInfo) continue;
 
-    if (match.index! > lastIndex) {
-      segments.push({ type: 'text', content: text.slice(lastIndex, match.index!) });
+    // The full match may include a leading delimiter; calculate the actual reference start
+    const fullMatch = match[0];
+    const refText = fullMatch.trimStart();
+    const refStart = match.index! + (fullMatch.length - refText.length);
+
+    if (refStart > lastIndex) {
+      segments.push({ type: 'text', content: text.slice(lastIndex, refStart) });
     }
 
     segments.push({
       type: 'reference',
-      content: match[0],
+      content: refText,
       ref: {
         bookAbbrev: bookInfo.abbrev,
         bookName: bookInfo.name,
         chapter,
         verse,
         verseEnd,
-        raw: match[0],
+        raw: refText,
       },
     });
 
-    lastIndex = match.index! + match[0].length;
+    lastIndex = match.index! + fullMatch.length;
   }
 
   if (lastIndex < text.length) {
@@ -208,13 +214,14 @@ export function detectLastScriptureReference(text: string): ScriptureRef | null 
     const bookRaw = match[1].toLowerCase().replace(/\s+/g, '');
     const bookInfo = BOOK_MAP[bookRaw];
     if (!bookInfo) continue;
+    const refText = match[0].trimStart();
     last = {
       bookAbbrev: bookInfo.abbrev,
       bookName: bookInfo.name,
       chapter: parseInt(match[2], 10),
       verse: parseInt(match[3], 10),
       verseEnd: match[4] ? parseInt(match[4], 10) : undefined,
-      raw: match[0],
+      raw: refText,
     };
   }
   return last;
