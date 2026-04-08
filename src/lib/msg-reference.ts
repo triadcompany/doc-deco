@@ -29,7 +29,7 @@ export interface MsgMatch {
 
 // Regex: MSG: name §<paragraph_spec> optional (translator) (date)
 // paragraph_spec can be: 10 | 10-15 | 10, 28-29 | 10, 15, 20-25
-const MSG_REGEX = /MSG:\s*(.+?)\s*§([\d\s,\-]+?)(?:\s*\(([^)]+)\))?(?:\s*\(([^)]+)\))?\s*$/i;
+const MSG_REGEX = /MSG:\s*(.+?)\s*§([\d\s,-]+?)(?:\s*\(([^)]+)\))?(?:\s*\(([^)]+)\))?\s*$/i;
 
 /**
  * Parse a paragraph spec like "10, 28-29" into an array of numbers [10, 28, 29]
