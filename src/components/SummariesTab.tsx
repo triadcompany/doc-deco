@@ -742,27 +742,28 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           <DialogContent className={cn(
             "flex flex-col",
             isCurrentMindMap
-              ? "max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[95vh] h-[95vh] md:h-[90vh]"
-              : "max-w-2xl max-h-[90vh]"
+              ? "max-w-[98vw] sm:max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] h-[98vh] sm:h-[95vh] md:h-[90vh]"
+              : "max-w-[98vw] sm:max-w-2xl max-h-[98vh] sm:max-h-[90vh] h-[98vh] sm:h-auto"
           )}>
             <DialogHeader className="shrink-0">
-              <DialogTitle>{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
+              <DialogTitle className="text-base sm:text-lg">{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
-            <div className={cn("flex-1 min-h-0 flex flex-col", isCurrentMindMap ? "gap-2 overflow-hidden" : "space-y-4 overflow-y-auto")}>
+            <div className={cn("flex-1 min-h-0 flex flex-col", isCurrentMindMap ? "gap-2 overflow-hidden" : "space-y-3 sm:space-y-4 overflow-y-auto")}>
               <div className="shrink-0">
-                <label className="text-sm font-medium mb-1.5 block">Nome do Estudo</label>
+                <label className="text-sm font-medium mb-1 sm:mb-1.5 block">Nome do Estudo</label>
                 <Input
                   value={studyTitle}
                   onChange={(e) => setStudyTitle(e.target.value)}
                   placeholder="Ex: Sonhos e Visões - Resumo"
+                  className="h-10 sm:h-9"
                 />
               </div>
               <div className="shrink-0">{renderDocSelector()}</div>
-              <div className={cn(isCurrentMindMap ? "flex-1 min-h-0" : "")}>{renderEditor()}</div>
+              <div className={cn(isCurrentMindMap ? "flex-1 min-h-0" : "flex-1 min-h-0")}>{renderEditor()}</div>
             </div>
-            <DialogFooter className="shrink-0">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving}>
+            <DialogFooter className="shrink-0 flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1 sm:flex-initial h-10 sm:h-9">Cancelar</Button>
+              <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="flex-1 sm:flex-initial h-10 sm:h-9">
                 {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                 Salvar
               </Button>
