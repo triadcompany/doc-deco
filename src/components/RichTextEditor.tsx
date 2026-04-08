@@ -16,9 +16,11 @@ import {
   Type,
   BookOpen,
   Loader2,
+  FileText,
 } from 'lucide-react';
 import { detectLastScriptureReference, ScriptureRef } from '@/lib/scripture-parser';
 import { fetchVerses, formatVersesAsHtml } from '@/lib/bible-fetch';
+import { detectMsgReference, searchMsgDocuments, formatMsgAsHtml, MsgRef, MsgMatch } from '@/lib/msg-reference';
 
 interface RichTextEditorProps {
   value: string;
@@ -53,11 +55,22 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
   const savedRangeRef = useRef<Range | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Scripture popup
   const [scripturePopup, setScripturePopup] = useState<{
     ref: ScriptureRef;
     top: number;
     left: number;
   } | null>(null);
+
+  // MSG popup
+  const [msgPopup, setMsgPopup] = useState<{
+    ref: MsgRef;
+    top: number;
+    left: number;
+  } | null>(null);
+  const [msgMatches, setMsgMatches] = useState<MsgMatch[] | null>(null);
+  const [msgLoading, setMsgLoading] = useState(false);
+
   const [inserting, setInserting] = useState(false);
 
   const saveSelection = useCallback(() => {
@@ -119,119 +132,157 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
   }, [onChange, restoreSelection, saveSelection]);
 
-  // Detect scripture references near cursor
-  const detectScripture = useCallback(() => {
-    if (!editorRef.current || !containerRef.current) return;
-
+  // Get text near cursor for detection
+  const getTextNearCursor = useCallback((): { text: string; rect: DOMRect } | null => {
+    if (!editorRef.current || !containerRef.current) return null;
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) { setScripturePopup(null); return; }
-
+    if (!sel || sel.rangeCount === 0) return null;
     const range = sel.getRangeAt(0);
-    if (!editorRef.current.contains(range.commonAncestorContainer)) {
-      setScripturePopup(null);
-      return;
-    }
+    if (!editorRef.current.contains(range.commonAncestorContainer)) return null;
 
-    // Get text content of the current text node or nearby text
     let textNode = range.startContainer;
     if (textNode.nodeType !== Node.TEXT_NODE) {
-      // Try to find a text node child
       if (textNode.childNodes.length > 0 && range.startOffset > 0) {
         const child = textNode.childNodes[range.startOffset - 1];
         if (child?.nodeType === Node.TEXT_NODE) textNode = child;
         else if (child?.textContent) {
-          const ref = detectLastScriptureReference(child.textContent);
-          if (ref) {
-            const rect = range.getBoundingClientRect();
-            const containerRect = containerRef.current.getBoundingClientRect();
-            setScripturePopup({
-              ref,
-              top: rect.bottom - containerRect.top + 4,
-              left: rect.left - containerRect.left,
-            });
-            return;
-          }
+          return { text: child.textContent, rect: range.getBoundingClientRect() };
         }
       }
-      setScripturePopup(null);
-      return;
+      return null;
     }
 
     const textBefore = (textNode.textContent || '').slice(0, range.startOffset);
-    // Check the last ~80 chars for a reference
-    const snippet = textBefore.slice(-80);
-    const ref = detectLastScriptureReference(snippet);
+    return { text: textBefore, rect: range.getBoundingClientRect() };
+  }, []);
 
+  // Detect scripture or MSG references near cursor
+  const detectReferences = useCallback(() => {
+    const cursorInfo = getTextNearCursor();
+    if (!cursorInfo || !containerRef.current) {
+      setScripturePopup(null);
+      setMsgPopup(null);
+      setMsgMatches(null);
+      return;
+    }
+
+    const { text, rect } = cursorInfo;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const top = rect.bottom - containerRect.top + 4;
+    const left = Math.max(0, rect.left - containerRect.left);
+
+    // Check MSG first (higher priority)
+    const snippet = text.slice(-200);
+    const msgRef = detectMsgReference(snippet);
+    if (msgRef) {
+      setScripturePopup(null);
+      setMsgPopup({ ref: msgRef, top, left });
+      return;
+    }
+
+    // Then check scripture
+    const scriptSnippet = text.slice(-80);
+    const ref = detectLastScriptureReference(scriptSnippet);
     if (ref) {
-      const rect = range.getBoundingClientRect();
-      const containerRect = containerRef.current.getBoundingClientRect();
-      setScripturePopup({
-        ref,
-        top: rect.bottom - containerRect.top + 4,
-        left: Math.max(0, rect.left - containerRect.left),
-      });
+      setMsgPopup(null);
+      setMsgMatches(null);
+      setScripturePopup({ ref, top, left });
     } else {
       setScripturePopup(null);
+      setMsgPopup(null);
+      setMsgMatches(null);
     }
-  }, []);
+  }, [getTextNearCursor]);
 
   const debouncedDetect = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(detectScripture, 500);
-  }, [detectScripture]);
+    debounceRef.current = setTimeout(detectReferences, 500);
+  }, [detectReferences]);
 
-  // Cleanup debounce
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
-  const handleKeyUp = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyUp = useCallback((_e: React.KeyboardEvent) => {
     saveSelection();
     debouncedDetect();
   }, [saveSelection, debouncedDetect]);
 
+  // Insert HTML at cursor
+  const insertHtmlAtCursor = useCallback((html: string) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    restoreSelection();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const r = sel.getRangeAt(0);
+      r.collapse(false);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
+      r.insertNode(frag);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    saveSelection();
+    onChange(editorRef.current.innerHTML);
+  }, [restoreSelection, saveSelection, onChange]);
+
   const insertVerses = useCallback(async () => {
-    if (!scripturePopup || !editorRef.current) return;
+    if (!scripturePopup) return;
     const { ref } = scripturePopup;
     setInserting(true);
     try {
-      const { bookName, verses } = await fetchVerses(
-        ref.bookAbbrev,
-        ref.chapter,
-        ref.verse,
-        ref.verseEnd
-      );
+      const { bookName, verses } = await fetchVerses(ref.bookAbbrev, ref.chapter, ref.verse, ref.verseEnd);
       const html = formatVersesAsHtml(bookName, ref.chapter, verses);
-
-      editorRef.current.focus();
-      restoreSelection();
-
-      // Move cursor to end of current line, then insert
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const r = sel.getRangeAt(0);
-        r.collapse(false);
-        // Insert after the current block
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const frag = document.createDocumentFragment();
-        while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
-        r.insertNode(frag);
-        // Move cursor after inserted content
-        r.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(r);
-      }
-
-      saveSelection();
-      onChange(editorRef.current.innerHTML);
+      insertHtmlAtCursor(html);
       setScripturePopup(null);
     } catch (err) {
       console.error('Error fetching verses:', err);
     } finally {
       setInserting(false);
     }
-  }, [scripturePopup, restoreSelection, saveSelection, onChange]);
+  }, [scripturePopup, insertHtmlAtCursor]);
+
+  // Search MSG documents
+  const searchMsg = useCallback(async () => {
+    if (!msgPopup) return;
+    setMsgLoading(true);
+    try {
+      const matches = await searchMsgDocuments(msgPopup.ref);
+      if (matches.length === 0) {
+        setMsgMatches([]);
+      } else if (matches.length === 1) {
+        // Insert directly
+        const html = formatMsgAsHtml(matches[0]);
+        if (html) {
+          insertHtmlAtCursor(html);
+          setMsgPopup(null);
+          setMsgMatches(null);
+        } else {
+          setMsgMatches(matches);
+        }
+      } else {
+        setMsgMatches(matches);
+      }
+    } catch (err) {
+      console.error('Error searching MSG:', err);
+      setMsgMatches([]);
+    } finally {
+      setMsgLoading(false);
+    }
+  }, [msgPopup, insertHtmlAtCursor]);
+
+  const insertMsgMatch = useCallback((match: MsgMatch) => {
+    const html = formatMsgAsHtml(match);
+    if (html) {
+      insertHtmlAtCursor(html);
+    }
+    setMsgPopup(null);
+    setMsgMatches(null);
+  }, [insertHtmlAtCursor]);
 
   return (
     <div
@@ -301,7 +352,13 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         onInput={handleInput}
         onMouseUp={() => { saveSelection(); debouncedDetect(); }}
         onKeyUp={handleKeyUp}
-        onBlur={() => { saveSelection(); setTimeout(() => setScripturePopup(null), 200); }}
+        onBlur={() => {
+          saveSelection();
+          setTimeout(() => {
+            setScripturePopup(null);
+            if (!msgMatches) setMsgPopup(null);
+          }, 200);
+        }}
         data-placeholder={placeholder}
         className={cn(
           "overflow-y-auto p-3 text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
@@ -314,10 +371,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {scripturePopup && (
         <div
           className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{
-            top: scripturePopup.top,
-            left: scripturePopup.left,
-          }}
+          style={{ top: scripturePopup.top, left: scripturePopup.left }}
         >
           <Button
             size="sm"
@@ -327,13 +381,91 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
             onClick={insertVerses}
             disabled={inserting}
           >
-            {inserting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <BookOpen className="w-3.5 h-3.5" />
-            )}
+            {inserting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
             Inserir {scripturePopup.ref.bookName} {scripturePopup.ref.chapter}:{scripturePopup.ref.verse}
             {scripturePopup.ref.verseEnd ? `-${scripturePopup.ref.verseEnd}` : ''}
+          </Button>
+        </div>
+      )}
+
+      {/* MSG insert popup */}
+      {msgPopup && !msgMatches && (
+        <div
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{ top: msgPopup.top, left: msgPopup.left }}
+        >
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8 gap-1.5 text-xs shadow-md border border-border"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={searchMsg}
+            disabled={msgLoading}
+          >
+            {msgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+            Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphStart}
+            {msgPopup.ref.paragraphEnd ? `-${msgPopup.ref.paragraphEnd}` : ''}
+          </Button>
+        </div>
+      )}
+
+      {/* MSG multiple matches - choose document */}
+      {msgPopup && msgMatches && msgMatches.length > 0 && (
+        <div
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-2 max-w-[400px] max-h-[300px] overflow-y-auto"
+          style={{ top: msgPopup.top, left: msgPopup.left }}
+        >
+          <p className="text-xs text-muted-foreground mb-2 px-1">
+            {msgMatches.length} documento{msgMatches.length > 1 ? 's' : ''} encontrado{msgMatches.length > 1 ? 's' : ''}:
+          </p>
+          {msgMatches.map((m) => (
+            <Button
+              key={m.id}
+              size="sm"
+              variant="ghost"
+              className="w-full justify-start h-auto py-2 px-2 text-left gap-2"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => insertMsgMatch(m)}
+            >
+              <FileText className="w-3.5 h-3.5 shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-medium truncate">{m.title}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {[m.translator, m.date].filter(Boolean).join(' — ')}
+                  {m.paragraphs.length > 0
+                    ? ` • ${m.paragraphs.length} §`
+                    : ' • Parágrafos não encontrados'}
+                </span>
+              </div>
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-full text-xs text-muted-foreground mt-1"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
+          >
+            Cancelar
+          </Button>
+        </div>
+      )}
+
+      {/* MSG no matches */}
+      {msgPopup && msgMatches && msgMatches.length === 0 && (
+        <div
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3"
+          style={{ top: msgPopup.top, left: msgPopup.left }}
+        >
+          <p className="text-xs text-muted-foreground">Nenhum documento encontrado para "{msgPopup.ref.docName}"</p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-full text-xs mt-1"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
+          >
+            Fechar
           </Button>
         </div>
       )}
