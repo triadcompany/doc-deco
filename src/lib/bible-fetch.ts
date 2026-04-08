@@ -84,5 +84,5 @@ export function formatVersesAsHtml(
     .map(v => `<span style="color:hsl(var(--muted-foreground));font-size:0.75em;vertical-align:super;margin-right:2px;">${v.number}</span>${v.text}`)
     .join('<br/>');
 
-  return `<blockquote style="border-left:3px solid hsl(var(--primary));padding:8px 12px;margin:8px 0;background:hsl(var(--muted)/0.3);border-radius:4px;font-size:0.9em;"><strong>${bookName} ${chapter}:${verses[0]?.number}${verses.length > 1 ? '-' + verses[verses.length - 1]?.number : ''}</strong><br/>${lines}</blockquote><p><br/></p>`;
+  return `<blockquote style="border-left:3px solid hsl(var(--primary));padding:8px 12px;margin:8px 0;background:hsl(var(--muted)/0.3);border-radius:4px;font-size:0.9em;"><h2 style="margin:0 0 4px 0;font-size:1.15em;font-weight:700;">${bookName} ${chapter}:${verses[0]?.number}${verses.length > 1 ? '-' + verses[verses.length - 1]?.number : ''}</h2>${lines}</blockquote><p><br/></p>`;
 }
