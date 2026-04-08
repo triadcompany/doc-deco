@@ -158,7 +158,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const handleSave = async () => {
     if (!studyTitle.trim() || !summaryText.trim()) return;
     setSaving(true);
-    await onUpsert(editingSummary?.id || null, studyTitle.trim(), selectedDocIds, summaryText.trim());
+    await onUpsert(editingSummary?.id || null, studyTitle.trim(), selectedDocIds, summaryText.trim(), editingSummary?.folderId ?? currentFolderId);
     setSaving(false);
     if (embedded) {
       goBackToList();
