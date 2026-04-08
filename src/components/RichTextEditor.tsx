@@ -134,6 +134,44 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
   }, [onChange, restoreSelection, saveSelection]);
 
+  const removeBlockquote = useCallback(() => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    restoreSelection();
+    // Find the blockquote ancestor of the current selection
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== editorRef.current) {
+        if (node.nodeName === 'BLOCKQUOTE') {
+          // Replace blockquote with its children
+          const parent = node.parentNode;
+          if (parent) {
+            const frag = document.createDocumentFragment();
+            while (node.firstChild) frag.appendChild(node.firstChild);
+            // Add a normal paragraph after
+            const p = document.createElement('p');
+            p.innerHTML = '<br/>';
+            frag.appendChild(p);
+            parent.replaceChild(frag, node);
+            // Move cursor to the new paragraph
+            const newSel = window.getSelection();
+            if (newSel) {
+              const r = document.createRange();
+              r.setStart(p, 0);
+              r.collapse(true);
+              newSel.removeAllRanges();
+              newSel.addRange(r);
+            }
+          }
+          break;
+        }
+        node = node.parentNode;
+      }
+    }
+    saveSelection();
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+
   // Get text near cursor for detection
   const getTextNearCursor = useCallback((): { text: string; rect: DOMRect } | null => {
     if (!editorRef.current || !containerRef.current) return null;
