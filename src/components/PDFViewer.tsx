@@ -267,6 +267,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
           const frag = document.createDocumentFragment();
           if (before) frag.appendChild(document.createTextNode(before));
           const mark = document.createElement('mark');
+          mark.setAttribute('data-search-mark', 'true');
           mark.style.background = 'hsl(48, 96%, 53%, 0.6)';
           mark.style.color = 'inherit';
           mark.style.borderRadius = '2px';
