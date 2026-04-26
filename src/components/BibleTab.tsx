@@ -324,32 +324,34 @@ export function BibleTab() {
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {/* Navigation — compact on mobile */}
-              <div className="glass rounded-xl p-2.5 md:p-4 flex flex-wrap items-center gap-2 justify-between">
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs md:text-sm" onClick={() => setSelectedBook('')}>
-                  <Book className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Livros</span>
-                </Button>
-                <div className="flex items-center gap-1.5">
-                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={selectedChapter <= 1} onClick={() => handleChangeChapter(selectedChapter - 1)}>
-                    <ChevronLeft className="w-4 h-4" />
+              {/* Navigation — sticky on mobile for easy chapter jump */}
+              <div className="sticky top-14 z-30 -mx-4 px-4 sm:static sm:mx-0 sm:px-0 bg-background/95 backdrop-blur sm:bg-transparent sm:backdrop-blur-none py-2 sm:py-0">
+                <div className="glass rounded-xl p-2 md:p-4 flex items-center gap-1.5 sm:gap-2 justify-between">
+                  <Button variant="ghost" size="sm" className="h-10 sm:h-9 px-2 sm:px-3 text-xs md:text-sm gap-1 shrink-0" onClick={() => setSelectedBook('')}>
+                    <Book className="w-4 h-4" /> <span className="hidden xs:inline sm:inline">Livros</span>
                   </Button>
-                  <Select value={String(selectedChapter)} onValueChange={v => handleChangeChapter(Number(v))}>
-                    <SelectTrigger className="w-[100px] sm:w-[140px] h-8 text-xs sm:text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: totalChapters }, (_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>Cap. {i + 1}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={selectedChapter >= totalChapters} onClick={() => handleChangeChapter(selectedChapter + 1)}>
-                    <ChevronRight className="w-4 h-4" />
+                  <div className="flex items-center gap-1.5 flex-1 justify-center max-w-[260px]">
+                    <Button variant="outline" size="icon" className="h-10 w-10 sm:h-9 sm:w-9 shrink-0 touch-target" disabled={selectedChapter <= 1} onClick={() => handleChangeChapter(selectedChapter - 1)}>
+                      <ChevronLeft className="w-5 h-5 sm:w-4 sm:h-4" />
+                    </Button>
+                    <Select value={String(selectedChapter)} onValueChange={v => handleChangeChapter(Number(v))}>
+                      <SelectTrigger className="flex-1 sm:w-[140px] h-10 sm:h-9 text-sm font-medium">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: totalChapters }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>Cap. {i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="icon" className="h-10 w-10 sm:h-9 sm:w-9 shrink-0 touch-target" disabled={selectedChapter >= totalChapters} onClick={() => handleChangeChapter(selectedChapter + 1)}>
+                      <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
+                    </Button>
+                  </div>
+                  <Button variant="outline" size="sm" className="h-10 sm:h-9 px-2 sm:px-3 text-xs md:text-sm gap-1 shrink-0" onClick={() => handleOpenNote(null)}>
+                    <StickyNote className="w-4 h-4" /> <span className="hidden sm:inline">Anotar</span>
                   </Button>
                 </div>
-                <Button variant="outline" size="sm" className="h-8 px-2 text-xs md:text-sm" onClick={() => handleOpenNote(null)}>
-                  <StickyNote className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Anotar</span>
-                </Button>
               </div>
 
               {/* Book info */}
