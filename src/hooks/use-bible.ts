@@ -26,6 +26,7 @@ export interface BibleVerse {
 
 export interface BibleSearchResult {
   book_name: string;
+  book_abbrev?: string;
   chapter: number;
   verse: number;
   text: string;
