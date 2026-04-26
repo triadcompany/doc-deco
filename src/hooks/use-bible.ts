@@ -26,6 +26,7 @@ export interface BibleVerse {
 
 export interface BibleSearchResult {
   book_name: string;
+  book_abbrev?: string;
   chapter: number;
   verse: number;
   text: string;
@@ -313,6 +314,7 @@ export function useBible() {
                 if (v.text.toLowerCase().includes(lowerTerm)) {
                   results.push({
                     book_name: fullBook.name,
+                    book_abbrev: String(bookInfo.nr),
                     chapter: ch.chapter,
                     verse: v.verse,
                     text: v.text.trim(),
@@ -335,6 +337,7 @@ export function useBible() {
               if (book.chapters[ci][vi].toLowerCase().includes(lowerTerm)) {
                 results.push({
                   book_name: book.name,
+                  book_abbrev: book.id,
                   chapter: ci + 1,
                   verse: vi + 1,
                   text: book.chapters[ci][vi].trim(),

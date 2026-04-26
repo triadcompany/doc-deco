@@ -108,6 +108,8 @@ export function BibleTab() {
   const handleVersionChange = (v: string) => {
     setVersion(v);
     setSelectedBook('');
+    setSearchTerm('');
+    setExpandedVerse(null);
     fetchBooks(v);
   };
 
@@ -191,20 +193,24 @@ export function BibleTab() {
     const iconSize = isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5';
 
     return (
-      <div className={`flex items-center gap-0.5 ${inline ? '' : 'flex-wrap justify-center gap-1 py-1'}`}>
+      <div
+        className={`flex items-center gap-0.5 ${inline ? '' : 'flex-wrap justify-center gap-1 py-1'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className={btnSize} title="Grifar">
+            <Button variant="ghost" size="icon" className={btnSize} title="Grifar" onClick={(e) => e.stopPropagation()}>
               <Highlighter className={`${iconSize} ${hlColor ? hlColor.text : ''}`} />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" side={isMobile ? 'top' : 'left'}>
+          <PopoverContent className="w-auto p-2" side={isMobile ? 'top' : 'left'} onClick={(e) => e.stopPropagation()}>
             <div className="flex gap-2 items-center">
               {HIGHLIGHT_COLORS.map(c => (
                 <button
                   key={c.value}
                   className={`w-7 h-7 rounded-full ${c.dot} hover:scale-110 transition-transform ring-2 ${highlight?.color === c.value ? 'ring-foreground' : 'ring-transparent'}`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     addHighlight({ version, book_abbrev: selectedBook, chapter: selectedChapter, verse: v.number, color: c.value });
                     toast.success(`Grifado com ${c.label}`);
                   }}
@@ -214,7 +220,7 @@ export function BibleTab() {
               {highlight && (
                 <button
                   className="w-7 h-7 rounded-full border-2 border-destructive flex items-center justify-center hover:scale-110 transition-transform"
-                  onClick={() => { removeHighlight(highlight.id); toast.success('Grifo removido'); }}
+                  onClick={(e) => { e.stopPropagation(); removeHighlight(highlight.id); toast.success('Grifo removido'); }}
                   title="Remover grifo"
                 >
                   <X className="w-3.5 h-3.5 text-destructive" />
@@ -223,16 +229,16 @@ export function BibleTab() {
             </div>
           </PopoverContent>
         </Popover>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => handleToggleBookmark(v)} title={isFav ? 'Remover favorito' : 'Favoritar'}>
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); handleToggleBookmark(v); }} title={isFav ? 'Remover favorito' : 'Favoritar'}>
           {isFav ? <Star className={`${iconSize} fill-primary text-primary`} /> : <StarOff className={iconSize} />}
         </Button>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => handleCopyVerse(v)} title="Copiar">
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); handleCopyVerse(v); }} title="Copiar">
           <Copy className={iconSize} />
         </Button>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => handleOpenNote(v.number)} title="Anotar">
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); handleOpenNote(v.number); }} title="Anotar">
           <StickyNote className={`${iconSize} ${verseNote ? 'text-primary' : ''}`} />
         </Button>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => { setCrossRefVerse(v.number); setCrossRefDialogOpen(true); }} title="Referências cruzadas">
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); setCrossRefVerse(v.number); setCrossRefDialogOpen(true); }} title="Referências cruzadas">
           <Link2 className={`${iconSize} ${verseRefs.length > 0 ? 'text-primary' : ''}`} />
         </Button>
       </div>
@@ -500,12 +506,25 @@ export function BibleTab() {
             ) : searchResults.length > 0 ? (
               <ScrollArea className="h-[calc(100vh-280px)] md:h-[60vh]">
                 <div className="space-y-2 pr-2 md:pr-4">
-                  {searchResults.map((r, i) => (
-                    <div key={i} className="glass rounded-lg p-3 md:p-4 space-y-1">
-                      <Badge variant="secondary" className="text-xs">{r.book_name} {r.chapter}:{r.verse}</Badge>
-                      <p className="text-sm leading-relaxed">{r.text}</p>
-                    </div>
-                  ))}
+                  {searchResults.map((r, i) => {
+                    const targetAbbrev = r.book_abbrev
+                      || books.find(b => b.name === r.book_name)?.abbrev
+                      || books.find(b => (b.namePt || '').toLowerCase() === r.book_name.toLowerCase())?.abbrev
+                      || '';
+                    const canNavigate = !!targetAbbrev;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={!canNavigate}
+                        onClick={() => canNavigate && handleNavigateToRef(targetAbbrev, r.chapter, r.verse)}
+                        className={`w-full text-left glass rounded-lg p-3 md:p-4 space-y-1 transition-colors ${canNavigate ? 'hover:bg-accent/50 cursor-pointer' : 'cursor-default'}`}
+                      >
+                        <Badge variant="secondary" className="text-xs">{r.book_name} {r.chapter}:{r.verse}</Badge>
+                        <p className="text-sm leading-relaxed">{r.text}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             ) : searchTerm && !loadingSearch ? (
@@ -525,13 +544,18 @@ export function BibleTab() {
             <ScrollArea className="h-[calc(100vh-240px)] md:h-[60vh]">
               <div className="space-y-2 pr-2 md:pr-4">
                 {bookmarks.map(bm => (
-                  <div key={bm.id} className="glass rounded-lg p-3 md:p-4 flex items-start gap-2 md:gap-3">
+                  <div key={bm.id} className="glass rounded-lg p-3 md:p-4 flex items-start gap-2 md:gap-3 group hover:bg-accent/30 transition-colors">
                     <Star className="w-4 h-4 fill-primary text-primary mt-1 shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1">
+                    <button
+                      type="button"
+                      className="flex-1 min-w-0 space-y-1 text-left"
+                      onClick={() => { if (bm.version !== version) { setVersion(bm.version); fetchBooks(bm.version); } handleNavigateToRef(bm.book_abbrev, bm.chapter, bm.verse); }}
+                      title="Ir para o versículo"
+                    >
                       <Badge variant="secondary" className="text-xs">{bm.book_name} {bm.chapter}:{bm.verse}</Badge>
                       <p className="text-sm">{bm.verse_text}</p>
                       <p className="text-xs text-muted-foreground">{bm.version.toUpperCase()}</p>
-                    </div>
+                    </button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => { removeBookmark(bm.id); toast.success('Favorito removido'); }}>
                       <Trash2 className="w-4 h-4" />
                     </Button>

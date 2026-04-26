@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Highlighter,
-  Bookmark,
   Download,
   FileText,
   Loader2,
@@ -82,25 +81,17 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
     return () => observer.disconnect();
   }, []);
 
-  const onDocumentLoadSuccess = useCallback(async ({ numPages }: { numPages: number }) => {
+  const onDocumentLoadSuccess = useCallback(async (pdf: any) => {
+    const numPages = pdf.numPages;
     setTotalPages(numPages);
     setLoading(false);
 
-    // Store pdf instance for in-doc search
-    if (doc.url) {
-      try {
-        const loadingTask = pdfjs.getDocument(doc.url);
-        pdfDocRef.current = await loadingTask.promise;
-      } catch {}
-    }
+    // Reuse the already-loaded pdf instance (avoid double download)
+    pdfDocRef.current = pdf;
 
-    if (searchContext && !searchPageFound && doc.url) {
+    if (searchContext && !searchPageFound) {
       const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       try {
-        const pdfjsLib = pdfjs;
-        const loadingTask = pdfjsLib.getDocument(doc.url);
-        const pdf = await loadingTask.promise;
-        
         const termNorm = normalize(searchContext.searchTerm);
         const termWords = termNorm.split(/\s+/).filter(Boolean);
         const termPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
@@ -110,13 +101,13 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
         const snippetWords = cleanSnippet.slice(0, 100).split(/\s+/).filter(Boolean).slice(0, 8);
         const snippetPattern = snippetWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*?');
         const snippetRegex = snippetWords.length > 3 ? new RegExp(snippetPattern, 'i') : null;
-        
+
         let found = false;
         for (let i = 1; i <= numPages && !found; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
           const pageText = normalize(textContent.items.map((item: any) => item.str).join(' '));
-          
+
           if (snippetRegex && snippetRegex.test(pageText)) {
             setCurrentPage(i);
             setSearchPageFound(true);
@@ -131,7 +122,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
         console.warn('Could not find search page:', e);
       }
     }
-  }, [searchContext, searchPageFound, doc.url]);
+  }, [searchContext, searchPageFound]);
 
   // In-document search
   const executeInDocSearch = useCallback(async (term: string) => {
@@ -181,9 +172,26 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const activeSearchTerm = inDocSearch && inDocSearchTerm.trim() ? inDocSearchTerm.trim() : searchContext?.searchTerm || '';
 
   useEffect(() => {
-    if (!activeSearchTerm) return;
     const container = pageContainerRef.current;
     if (!container) return;
+
+    // Always clean previous highlight marks first (avoid stale marks accumulating
+    // when user changes pages or clears the search term).
+    const cleanupOldMarks = () => {
+      const layer = container.querySelector('.react-pdf__Page__textContent');
+      if (!layer) return;
+      const oldMarks = layer.querySelectorAll('mark[data-search-mark]');
+      oldMarks.forEach((m) => {
+        const parent = m.parentNode;
+        if (!parent) return;
+        const text = document.createTextNode(m.textContent || '');
+        parent.replaceChild(text, m);
+        parent.normalize();
+      });
+    };
+    cleanupOldMarks();
+
+    if (!activeSearchTerm) return;
 
     const timeout = setTimeout(() => {
       const textLayer = container.querySelector('.react-pdf__Page__textContent');
@@ -258,6 +266,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
           const frag = document.createDocumentFragment();
           if (before) frag.appendChild(document.createTextNode(before));
           const mark = document.createElement('mark');
+          mark.setAttribute('data-search-mark', 'true');
           mark.style.background = 'hsl(48, 96%, 53%, 0.6)';
           mark.style.color = 'inherit';
           mark.style.borderRadius = '2px';
@@ -508,9 +517,6 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               title="Pesquisar no documento"
             >
               <Search className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Bookmark className="w-3.5 h-3.5" />
             </Button>
             {pdfUrl && (
               <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
