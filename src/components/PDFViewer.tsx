@@ -871,27 +871,38 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
       </div>
 
       {/* Bottom bar */}
-      <footer className="h-12 border-t border-border flex items-center justify-center gap-3 shrink-0 mb-[20px]">
+      <footer className="h-14 sm:h-12 border-t border-border flex items-center justify-center gap-2 sm:gap-3 shrink-0 mb-[20px] px-3 bg-background/95 backdrop-blur">
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10 sm:h-8 sm:w-8 touch-target"
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-5 h-5 sm:w-4 sm:h-4" />
         </Button>
-        <span className="text-sm text-muted-foreground">
-          Página <span className="text-foreground font-medium">{currentPage}</span> de {totalPages}
-        </span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/60 min-w-[120px] justify-center">
+          <Input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={currentPage}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (n >= 1 && n <= totalPages) setCurrentPage(n);
+            }}
+            className="h-7 w-12 text-center text-sm font-semibold border-0 bg-transparent p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+        </div>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10 sm:h-8 sm:w-8 touch-target"
           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
         </Button>
       </footer>
     </div>
