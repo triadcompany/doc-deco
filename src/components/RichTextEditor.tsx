@@ -116,6 +116,18 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
   }, [value]);
 
+  // Sync external value changes (e.g. when loading an existing study async)
+  // without disrupting the user while typing.
+  useEffect(() => {
+    if (!editorRef.current) return;
+    if (!isInitialized.current) return;
+    const current = editorRef.current.innerHTML;
+    if (current === value) return;
+    // Only overwrite if the editor isn't currently focused (avoid clobbering typing)
+    if (document.activeElement === editorRef.current) return;
+    editorRef.current.innerHTML = value || '';
+  }, [value]);
+
   const applyBlock = useCallback((tag: 'h1' | 'h2' | 'p') => {
     editorRef.current?.focus();
     restoreSelection();
