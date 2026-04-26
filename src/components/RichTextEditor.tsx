@@ -560,10 +560,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       {/* MSG multiple matches - choose document */}
       {msgPopup && msgMatches && msgMatches.length > 0 && (
         <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[420px] h-[320px] overflow-hidden flex flex-col"
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[min(420px,calc(100vw-32px))] max-h-[min(320px,60vh)] overflow-hidden flex flex-col"
           style={{
-            top: Math.min(msgPopup.top + 42, containerRef.current?.clientHeight ? containerRef.current.clientHeight - 328 : msgPopup.top + 42),
-            left: Math.min(msgPopup.left, containerRef.current?.clientWidth ? containerRef.current.clientWidth - 428 : msgPopup.left),
+            top: Math.min(msgPopup.top + 42, containerRef.current?.clientHeight ? containerRef.current.clientHeight - 200 : msgPopup.top + 42),
+            left: Math.max(8, Math.min(msgPopup.left, containerRef.current?.clientWidth ? containerRef.current.clientWidth - Math.min(420, window.innerWidth - 32) - 8 : msgPopup.left)),
           }}
         >
           <div className="flex items-center justify-between mb-2 px-1 shrink-0">
@@ -573,14 +573,14 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
             >
               ✕
             </Button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1" onWheel={(e) => e.stopPropagation()}>
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
             <div className="space-y-1">
               {msgMatches.map((m) => (
                 <Button
