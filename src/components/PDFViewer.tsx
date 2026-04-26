@@ -20,7 +20,10 @@ import {
   Search,
   X,
   Eraser,
+  MoreVertical,
 } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -40,6 +43,7 @@ const highlightColors = [
 ];
 
 export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFViewerProps) {
+  const isMobile = useIsMobile();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(doc.pages || 1);
   const getInitialZoom = () => {
@@ -58,6 +62,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const [inDocResults, setInDocResults] = useState<{ page: number; index: number }[]>([]);
   const [inDocResultIdx, setInDocResultIdx] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
@@ -459,10 +464,10 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
     <div className={embedded ? "h-full flex flex-col bg-background" : "h-screen flex flex-col bg-background"}>
       {/* Top bar */}
       <header className="border-b border-border shrink-0 glass mt-[20px] sm:mt-0 md:mt-[20px] xl:mt-0">
-        <div className="h-14 flex items-center justify-between px-2 sm:px-4 md:pl-[76px] xl:pl-4">
+        <div className="h-14 flex items-center justify-between px-2 sm:px-4 md:pl-[76px] xl:pl-4 gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 h-9 w-9 sm:h-9 sm:w-9 touch-target">
+              <ArrowLeft className="w-5 h-5 sm:w-5 sm:h-5" />
             </Button>
             <div className="min-w-0 flex-1">
               <h1 className="text-xs sm:text-sm font-semibold truncate">{doc.title}</h1>
@@ -470,42 +475,24 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
             </div>
           </div>
 
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.max(50, z - 10))}>
-              <ZoomOut className="w-3.5 h-3.5" />
-            </Button>
-            <span className="text-[10px] sm:text-xs text-muted-foreground w-9 sm:w-12 text-center">{zoom}%</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.min(300, z + 10))}>
-              <ZoomIn className="w-3.5 h-3.5" />
-            </Button>
+          {/* Mobile: compact toolbar with overflow sheet */}
+          <div className="flex items-center gap-0.5 shrink-0 sm:hidden">
             <Button
               variant={highlightMode ? 'default' : 'ghost'}
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9 touch-target"
               onClick={() => {
                 setHighlightMode(!highlightMode);
                 if (!highlightMode) setEraserMode(false);
               }}
               title="Modo grifo"
             >
-              <Highlighter className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              variant={eraserMode ? 'default' : 'ghost'}
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => {
-                setEraserMode(!eraserMode);
-                if (!eraserMode) setHighlightMode(false);
-              }}
-              title="Borracha - clique em um grifo para apagar"
-            >
-              <Eraser className="w-3.5 h-3.5" />
+              <Highlighter className="w-4 h-4" />
             </Button>
             <Button
               variant={inDocSearch ? 'default' : 'ghost'}
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9 touch-target"
               onClick={() => {
                 setInDocSearch(!inDocSearch);
                 if (inDocSearch) {
@@ -516,12 +503,115 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               }}
               title="Pesquisar no documento"
             >
-              <Search className="w-3.5 h-3.5" />
+              <Search className="w-4 h-4" />
+            </Button>
+            <Sheet open={toolsSheetOpen} onOpenChange={setToolsSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 touch-target" title="Mais ferramentas">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl pb-8 pt-3 px-4">
+                <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-3" />
+                <SheetHeader className="text-left mb-3">
+                  <SheetTitle className="text-base">Ferramentas</SheetTitle>
+                </SheetHeader>
+
+                {/* Zoom group */}
+                <div className="bg-secondary/50 rounded-xl p-3 mb-3">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Zoom</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setZoom((z) => Math.max(50, z - 10))}>
+                      <ZoomOut className="w-5 h-5" />
+                    </Button>
+                    <span className="text-base font-semibold flex-1 text-center">{zoom}%</span>
+                    <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setZoom((z) => Math.min(300, z + 10))}>
+                      <ZoomIn className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Tool actions */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={eraserMode ? 'default' : 'outline'}
+                    className="h-12 justify-start gap-2"
+                    onClick={() => {
+                      setEraserMode(!eraserMode);
+                      if (!eraserMode) setHighlightMode(false);
+                      setToolsSheetOpen(false);
+                    }}
+                  >
+                    <Eraser className="w-4 h-4" />
+                    <span className="text-sm">Borracha</span>
+                  </Button>
+                  {pdfUrl && (
+                    <Button variant="outline" className="h-12 justify-start gap-2" asChild>
+                      <a href={pdfUrl} download={doc.fileName} target="_blank" rel="noopener noreferrer" onClick={() => setToolsSheetOpen(false)}>
+                        <Download className="w-4 h-4" />
+                        <span className="text-sm">Baixar</span>
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Desktop / iPad: full toolbar */}
+          <div className="hidden sm:flex items-center gap-0.5 sm:gap-1 shrink-0">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setZoom((z) => Math.max(50, z - 10))}>
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground w-12 text-center font-medium">{zoom}%</span>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setZoom((z) => Math.min(300, z + 10))}>
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <div className="w-px h-5 bg-border mx-1" />
+            <Button
+              variant={highlightMode ? 'default' : 'ghost'}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => {
+                setHighlightMode(!highlightMode);
+                if (!highlightMode) setEraserMode(false);
+              }}
+              title="Modo grifo"
+            >
+              <Highlighter className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={eraserMode ? 'default' : 'ghost'}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => {
+                setEraserMode(!eraserMode);
+                if (!eraserMode) setHighlightMode(false);
+              }}
+              title="Borracha — toque em um grifo para apagar"
+            >
+              <Eraser className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={inDocSearch ? 'default' : 'ghost'}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => {
+                setInDocSearch(!inDocSearch);
+                if (inDocSearch) {
+                  setInDocSearchTerm('');
+                  setInDocResults([]);
+                  setInDocResultIdx(0);
+                }
+              }}
+              title="Pesquisar no documento"
+            >
+              <Search className="w-4 h-4" />
             </Button>
             {pdfUrl && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
                 <a href={pdfUrl} download={doc.fileName} target="_blank" rel="noopener noreferrer">
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-4 h-4" />
                 </a>
               </Button>
             )}
@@ -781,27 +871,38 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
       </div>
 
       {/* Bottom bar */}
-      <footer className="h-12 border-t border-border flex items-center justify-center gap-3 shrink-0 mb-[20px]">
+      <footer className="h-14 sm:h-12 border-t border-border flex items-center justify-center gap-2 sm:gap-3 shrink-0 mb-[20px] px-3 bg-background/95 backdrop-blur">
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10 sm:h-8 sm:w-8 touch-target"
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-5 h-5 sm:w-4 sm:h-4" />
         </Button>
-        <span className="text-sm text-muted-foreground">
-          Página <span className="text-foreground font-medium">{currentPage}</span> de {totalPages}
-        </span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/60 min-w-[120px] justify-center">
+          <Input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={currentPage}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (n >= 1 && n <= totalPages) setCurrentPage(n);
+            }}
+            className="h-7 w-12 text-center text-sm font-semibold border-0 bg-transparent p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+        </div>
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10 sm:h-8 sm:w-8 touch-target"
           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
         </Button>
       </footer>
     </div>
