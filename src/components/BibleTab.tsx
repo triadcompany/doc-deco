@@ -293,10 +293,10 @@ export function BibleTab() {
                 <>
                   <div>
                     <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3">Antigo Testamento</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1.5 md:gap-2">
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
                       {otBooks.map(b => (
                         <Button key={b.abbrev} variant="outline" size="sm"
-                          className="h-9 md:h-8 text-xs px-1.5 truncate touch-target"
+                          className="h-11 md:h-9 text-xs sm:text-sm px-2 truncate touch-target hover:bg-accent hover:text-accent-foreground hover:border-primary/40"
                           onClick={() => handleSelectBook(b.abbrev)}
                           title={b.namePt || b.name}
                         >
@@ -307,10 +307,10 @@ export function BibleTab() {
                   </div>
                   <div>
                     <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3">Novo Testamento</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1.5 md:gap-2">
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
                       {ntBooks.map(b => (
                         <Button key={b.abbrev} variant="outline" size="sm"
-                          className="h-9 md:h-8 text-xs px-1.5 truncate touch-target"
+                          className="h-11 md:h-9 text-xs sm:text-sm px-2 truncate touch-target hover:bg-accent hover:text-accent-foreground hover:border-primary/40"
                           onClick={() => handleSelectBook(b.abbrev)}
                           title={b.namePt || b.name}
                         >
