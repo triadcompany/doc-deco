@@ -314,6 +314,7 @@ export function useBible() {
                 if (v.text.toLowerCase().includes(lowerTerm)) {
                   results.push({
                     book_name: fullBook.name,
+                    book_abbrev: String(bookInfo.nr),
                     chapter: ch.chapter,
                     verse: v.verse,
                     text: v.text.trim(),
