@@ -108,6 +108,8 @@ export function BibleTab() {
   const handleVersionChange = (v: string) => {
     setVersion(v);
     setSelectedBook('');
+    setSearchTerm('');
+    setExpandedVerse(null);
     fetchBooks(v);
   };
 
