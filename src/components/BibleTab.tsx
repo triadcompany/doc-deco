@@ -549,7 +549,7 @@ export function BibleTab() {
                     <button
                       type="button"
                       className="flex-1 min-w-0 space-y-1 text-left"
-                      onClick={() => { if (bm.version !== version) handleVersionChange(bm.version); handleNavigateToRef(bm.book_abbrev, bm.chapter, bm.verse); }}
+                      onClick={() => { if (bm.version !== version) { setVersion(bm.version); fetchBooks(bm.version); } handleNavigateToRef(bm.book_abbrev, bm.chapter, bm.verse); }}
                       title="Ir para o versículo"
                     >
                       <Badge variant="secondary" className="text-xs">{bm.book_name} {bm.chapter}:{bm.verse}</Badge>
