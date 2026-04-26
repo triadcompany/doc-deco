@@ -173,9 +173,26 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const activeSearchTerm = inDocSearch && inDocSearchTerm.trim() ? inDocSearchTerm.trim() : searchContext?.searchTerm || '';
 
   useEffect(() => {
-    if (!activeSearchTerm) return;
     const container = pageContainerRef.current;
     if (!container) return;
+
+    // Always clean previous highlight marks first (avoid stale marks accumulating
+    // when user changes pages or clears the search term).
+    const cleanupOldMarks = () => {
+      const layer = container.querySelector('.react-pdf__Page__textContent');
+      if (!layer) return;
+      const oldMarks = layer.querySelectorAll('mark[data-search-mark]');
+      oldMarks.forEach((m) => {
+        const parent = m.parentNode;
+        if (!parent) return;
+        const text = document.createTextNode(m.textContent || '');
+        parent.replaceChild(text, m);
+        parent.normalize();
+      });
+    };
+    cleanupOldMarks();
+
+    if (!activeSearchTerm) return;
 
     const timeout = setTimeout(() => {
       const textLayer = container.querySelector('.react-pdf__Page__textContent');
