@@ -506,12 +506,25 @@ export function BibleTab() {
             ) : searchResults.length > 0 ? (
               <ScrollArea className="h-[calc(100vh-280px)] md:h-[60vh]">
                 <div className="space-y-2 pr-2 md:pr-4">
-                  {searchResults.map((r, i) => (
-                    <div key={i} className="glass rounded-lg p-3 md:p-4 space-y-1">
-                      <Badge variant="secondary" className="text-xs">{r.book_name} {r.chapter}:{r.verse}</Badge>
-                      <p className="text-sm leading-relaxed">{r.text}</p>
-                    </div>
-                  ))}
+                  {searchResults.map((r, i) => {
+                    const targetAbbrev = r.book_abbrev
+                      || books.find(b => b.name === r.book_name)?.abbrev
+                      || books.find(b => (b.namePt || '').toLowerCase() === r.book_name.toLowerCase())?.abbrev
+                      || '';
+                    const canNavigate = !!targetAbbrev;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={!canNavigate}
+                        onClick={() => canNavigate && handleNavigateToRef(targetAbbrev, r.chapter, r.verse)}
+                        className={`w-full text-left glass rounded-lg p-3 md:p-4 space-y-1 transition-colors ${canNavigate ? 'hover:bg-accent/50 cursor-pointer' : 'cursor-default'}`}
+                      >
+                        <Badge variant="secondary" className="text-xs">{r.book_name} {r.chapter}:{r.verse}</Badge>
+                        <p className="text-sm leading-relaxed">{r.text}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             ) : searchTerm && !loadingSearch ? (
