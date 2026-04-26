@@ -82,25 +82,17 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
     return () => observer.disconnect();
   }, []);
 
-  const onDocumentLoadSuccess = useCallback(async ({ numPages }: { numPages: number }) => {
+  const onDocumentLoadSuccess = useCallback(async (pdf: any) => {
+    const numPages = pdf.numPages;
     setTotalPages(numPages);
     setLoading(false);
 
-    // Store pdf instance for in-doc search
-    if (doc.url) {
-      try {
-        const loadingTask = pdfjs.getDocument(doc.url);
-        pdfDocRef.current = await loadingTask.promise;
-      } catch {}
-    }
+    // Reuse the already-loaded pdf instance (avoid double download)
+    pdfDocRef.current = pdf;
 
-    if (searchContext && !searchPageFound && doc.url) {
+    if (searchContext && !searchPageFound) {
       const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       try {
-        const pdfjsLib = pdfjs;
-        const loadingTask = pdfjsLib.getDocument(doc.url);
-        const pdf = await loadingTask.promise;
-        
         const termNorm = normalize(searchContext.searchTerm);
         const termWords = termNorm.split(/\s+/).filter(Boolean);
         const termPattern = termWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*');
@@ -110,13 +102,13 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
         const snippetWords = cleanSnippet.slice(0, 100).split(/\s+/).filter(Boolean).slice(0, 8);
         const snippetPattern = snippetWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*?');
         const snippetRegex = snippetWords.length > 3 ? new RegExp(snippetPattern, 'i') : null;
-        
+
         let found = false;
         for (let i = 1; i <= numPages && !found; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
           const pageText = normalize(textContent.items.map((item: any) => item.str).join(' '));
-          
+
           if (snippetRegex && snippetRegex.test(pageText)) {
             setCurrentPage(i);
             setSearchPageFound(true);
@@ -131,7 +123,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
         console.warn('Could not find search page:', e);
       }
     }
-  }, [searchContext, searchPageFound, doc.url]);
+  }, [searchContext, searchPageFound]);
 
   // In-document search
   const executeInDocSearch = useCallback(async (term: string) => {
