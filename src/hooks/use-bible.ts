@@ -337,7 +337,7 @@ export function useBible() {
               if (book.chapters[ci][vi].toLowerCase().includes(lowerTerm)) {
                 results.push({
                   book_name: book.name,
-                  book_abbrev: book.abbrev,
+                  book_abbrev: book.id,
                   chapter: ci + 1,
                   verse: vi + 1,
                   text: book.chapters[ci][vi].trim(),
