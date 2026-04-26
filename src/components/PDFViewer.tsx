@@ -43,6 +43,7 @@ const highlightColors = [
 ];
 
 export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFViewerProps) {
+  const isMobile = useIsMobile();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(doc.pages || 1);
   const getInitialZoom = () => {
@@ -61,6 +62,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const [inDocResults, setInDocResults] = useState<{ page: number; index: number }[]>([]);
   const [inDocResultIdx, setInDocResultIdx] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
