@@ -333,7 +333,7 @@ const Index = () => {
             ))}
 
             {/* Mobile bottom tab bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
+            <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom shadow-[0_-2px_12px_rgba(0,0,0,0.04)]">
               <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-6 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
@@ -345,7 +345,7 @@ const Index = () => {
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-none text-muted-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none touch-target"
+                    className="relative flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-none text-muted-foreground data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none touch-target transition-colors before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:h-0.5 before:w-8 before:rounded-b-full before:bg-transparent data-[state=active]:before:bg-primary"
                   >
                     <tab.icon className="w-5 h-5" />
                     <span className="text-[10px] leading-tight font-medium">{tab.label}</span>
@@ -354,9 +354,9 @@ const Index = () => {
                 <Sheet>
                   <SheetTrigger asChild>
                     <button
-                      className={`flex flex-col items-center gap-0.5 py-2.5 px-1 touch-target ${
+                      className={`relative flex flex-col items-center gap-0.5 py-2.5 px-1 touch-target transition-colors ${
                         ['pastas', 'favoritos', 'concluidos', 'configuracoes'].includes(activeTab)
-                          ? 'text-primary'
+                          ? 'text-primary before:absolute before:top-0 before:left-1/2 before:-translate-x-1/2 before:h-0.5 before:w-8 before:rounded-b-full before:bg-primary'
                           : 'text-muted-foreground'
                       }`}
                     >
@@ -366,7 +366,7 @@ const Index = () => {
                   </SheetTrigger>
                   <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8 pt-3">
                     <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-4" />
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       {[
                         { value: 'pastas', icon: FolderTree, label: 'Pastas' },
                         { value: 'favoritos', icon: Star, label: 'Favoritos' },
@@ -376,14 +376,14 @@ const Index = () => {
                         <SheetTrigger key={tab.value} asChild>
                           <button
                             onClick={() => setActiveTab(tab.value)}
-                            className={`flex flex-col items-center gap-1.5 py-4 rounded-xl transition-colors ${
+                            className={`flex items-center gap-3 py-4 px-4 rounded-xl transition-colors ${
                               activeTab === tab.value
                                 ? 'bg-accent text-primary'
-                                : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                                : 'bg-secondary/50 text-foreground hover:bg-secondary'
                             }`}
                           >
-                            <tab.icon className="w-6 h-6" />
-                            <span className="text-xs font-medium">{tab.label}</span>
+                            <tab.icon className="w-5 h-5 shrink-0" />
+                            <span className="text-sm font-medium">{tab.label}</span>
                           </button>
                         </SheetTrigger>
                       ))}
