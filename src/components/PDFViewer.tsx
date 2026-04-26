@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Highlighter,
-  Bookmark,
   Download,
   FileText,
   Loader2,
