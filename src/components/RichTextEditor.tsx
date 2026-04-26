@@ -434,40 +434,40 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         fillHeight && "flex flex-col flex-1 min-h-0"
       )}
     >
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 p-1 sm:p-1.5 border-b border-input bg-muted/30 overflow-x-auto">
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+      {/* Toolbar — sticky on mobile so it stays reachable while scrolling */}
+      <div className="sticky top-0 z-20 flex items-center gap-0.5 p-1 sm:p-1.5 border-b border-input bg-muted/95 backdrop-blur sm:bg-muted/30 overflow-x-auto scrollbar-none">
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-target sm:touch-auto"
           onMouseDown={(e) => e.preventDefault()} onClick={() => exec('bold')} title="Negrito">
           <Bold className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-target sm:touch-auto"
           onMouseDown={(e) => e.preventDefault()} onClick={() => exec('italic')} title="Itálico">
           <Italic className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
 
-        <div className="w-px h-5 bg-border mx-0.5 sm:mx-1 shrink-0" />
+        <div className="w-px h-6 sm:h-5 bg-border mx-1 shrink-0" />
 
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-target sm:touch-auto"
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('h1')} title="Título 1">
           <Heading1 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-target sm:touch-auto"
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('h2')} title="Título 2">
           <Heading2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-target sm:touch-auto"
           onMouseDown={(e) => e.preventDefault()} onClick={() => applyBlock('p')} title="Corpo">
           <Type className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7 shrink-0"
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 sm:h-7 sm:w-7 shrink-0 touch-target sm:touch-auto"
           onMouseDown={(e) => e.preventDefault()} onClick={removeBlockquote} title="Sair da citação">
           <RemoveFormatting className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </Button>
 
-        <div className="w-px h-5 bg-border mx-0.5 sm:mx-1 shrink-0" />
+        <div className="w-px h-6 sm:h-5 bg-border mx-1 shrink-0" />
 
         <Select onValueChange={(v) => exec('fontName', v)}>
-          <SelectTrigger className="h-8 sm:h-7 w-[90px] sm:w-[110px] text-xs shrink-0">
+          <SelectTrigger className="h-9 sm:h-7 w-[100px] sm:w-[110px] text-xs shrink-0">
             <SelectValue placeholder="Fonte" />
           </SelectTrigger>
           <SelectContent>
@@ -480,7 +480,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         </Select>
 
         <Select onValueChange={(v) => exec('fontSize', v)}>
-          <SelectTrigger className="h-8 sm:h-7 w-[60px] sm:w-[70px] text-xs shrink-0">
+          <SelectTrigger className="h-9 sm:h-7 w-[68px] sm:w-[70px] text-xs shrink-0">
             <SelectValue placeholder="Tam." />
           </SelectTrigger>
           <SelectContent>
