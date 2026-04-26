@@ -193,20 +193,24 @@ export function BibleTab() {
     const iconSize = isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5';
 
     return (
-      <div className={`flex items-center gap-0.5 ${inline ? '' : 'flex-wrap justify-center gap-1 py-1'}`}>
+      <div
+        className={`flex items-center gap-0.5 ${inline ? '' : 'flex-wrap justify-center gap-1 py-1'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className={btnSize} title="Grifar">
+            <Button variant="ghost" size="icon" className={btnSize} title="Grifar" onClick={(e) => e.stopPropagation()}>
               <Highlighter className={`${iconSize} ${hlColor ? hlColor.text : ''}`} />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" side={isMobile ? 'top' : 'left'}>
+          <PopoverContent className="w-auto p-2" side={isMobile ? 'top' : 'left'} onClick={(e) => e.stopPropagation()}>
             <div className="flex gap-2 items-center">
               {HIGHLIGHT_COLORS.map(c => (
                 <button
                   key={c.value}
                   className={`w-7 h-7 rounded-full ${c.dot} hover:scale-110 transition-transform ring-2 ${highlight?.color === c.value ? 'ring-foreground' : 'ring-transparent'}`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     addHighlight({ version, book_abbrev: selectedBook, chapter: selectedChapter, verse: v.number, color: c.value });
                     toast.success(`Grifado com ${c.label}`);
                   }}
@@ -216,7 +220,7 @@ export function BibleTab() {
               {highlight && (
                 <button
                   className="w-7 h-7 rounded-full border-2 border-destructive flex items-center justify-center hover:scale-110 transition-transform"
-                  onClick={() => { removeHighlight(highlight.id); toast.success('Grifo removido'); }}
+                  onClick={(e) => { e.stopPropagation(); removeHighlight(highlight.id); toast.success('Grifo removido'); }}
                   title="Remover grifo"
                 >
                   <X className="w-3.5 h-3.5 text-destructive" />
@@ -225,16 +229,16 @@ export function BibleTab() {
             </div>
           </PopoverContent>
         </Popover>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => handleToggleBookmark(v)} title={isFav ? 'Remover favorito' : 'Favoritar'}>
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); handleToggleBookmark(v); }} title={isFav ? 'Remover favorito' : 'Favoritar'}>
           {isFav ? <Star className={`${iconSize} fill-primary text-primary`} /> : <StarOff className={iconSize} />}
         </Button>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => handleCopyVerse(v)} title="Copiar">
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); handleCopyVerse(v); }} title="Copiar">
           <Copy className={iconSize} />
         </Button>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => handleOpenNote(v.number)} title="Anotar">
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); handleOpenNote(v.number); }} title="Anotar">
           <StickyNote className={`${iconSize} ${verseNote ? 'text-primary' : ''}`} />
         </Button>
-        <Button variant="ghost" size="icon" className={btnSize} onClick={() => { setCrossRefVerse(v.number); setCrossRefDialogOpen(true); }} title="Referências cruzadas">
+        <Button variant="ghost" size="icon" className={btnSize} onClick={(e) => { e.stopPropagation(); setCrossRefVerse(v.number); setCrossRefDialogOpen(true); }} title="Referências cruzadas">
           <Link2 className={`${iconSize} ${verseRefs.length > 0 ? 'text-primary' : ''}`} />
         </Button>
       </div>
