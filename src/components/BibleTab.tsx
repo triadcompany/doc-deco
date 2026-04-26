@@ -544,13 +544,18 @@ export function BibleTab() {
             <ScrollArea className="h-[calc(100vh-240px)] md:h-[60vh]">
               <div className="space-y-2 pr-2 md:pr-4">
                 {bookmarks.map(bm => (
-                  <div key={bm.id} className="glass rounded-lg p-3 md:p-4 flex items-start gap-2 md:gap-3">
+                  <div key={bm.id} className="glass rounded-lg p-3 md:p-4 flex items-start gap-2 md:gap-3 group hover:bg-accent/30 transition-colors">
                     <Star className="w-4 h-4 fill-primary text-primary mt-1 shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1">
+                    <button
+                      type="button"
+                      className="flex-1 min-w-0 space-y-1 text-left"
+                      onClick={() => { if (bm.version !== version) handleVersionChange(bm.version); handleNavigateToRef(bm.book_abbrev, bm.chapter, bm.verse); }}
+                      title="Ir para o versículo"
+                    >
                       <Badge variant="secondary" className="text-xs">{bm.book_name} {bm.chapter}:{bm.verse}</Badge>
                       <p className="text-sm">{bm.verse_text}</p>
                       <p className="text-xs text-muted-foreground">{bm.version.toUpperCase()}</p>
-                    </div>
+                    </button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => { removeBookmark(bm.id); toast.success('Favorito removido'); }}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
