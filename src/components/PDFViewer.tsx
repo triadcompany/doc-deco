@@ -519,9 +519,6 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
             >
               <Search className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Bookmark className="w-3.5 h-3.5" />
-            </Button>
             {pdfUrl && (
               <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                 <a href={pdfUrl} download={doc.fileName} target="_blank" rel="noopener noreferrer">
