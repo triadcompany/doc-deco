@@ -24,7 +24,6 @@ import {
   FileText,
   FolderSearch,
   FolderTree,
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
   Settings,
   LogOut,
   Target,
@@ -36,6 +35,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MetaTab } from '@/components/MetaTab';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const Index = () => {
   const { documents, loading, fetchDocuments, uploadDocument, toggleFavorite, deleteDocument, updateDocument, searchContent } = useDocuments();
