@@ -249,7 +249,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 ${splitMode ? 'py-3 flex-1 min-h-0 flex flex-col w-full' : 'py-4 sm:py-6'}`}>
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner size={32} />
