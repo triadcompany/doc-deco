@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, Suspense } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
@@ -6,10 +6,8 @@ import { PDFViewer } from '@/components/PDFViewer';
 import { UploadDialog } from '@/components/UploadDialog';
 import { EditDocumentDialog } from '@/components/EditDocumentDialog';
 import { PDFCard } from '@/components/PDFCard';
-import { CurrentReadings } from '@/components/CurrentReadings';
 import { useSettings } from '@/hooks/use-settings';
 import { useReadingGoals } from '@/hooks/use-reading-goals';
-import { Progress } from '@/components/ui/progress';
 import { useDocumentSummaries } from '@/hooks/use-document-summaries';
 import { TabContentRenderer, TabContentProps } from '@/components/TabContentRenderer';
 import { SplitViewSelector, TAB_OPTIONS } from '@/components/SplitViewSelector';
@@ -26,7 +24,6 @@ import {
   FolderTree,
   Settings,
   LogOut,
-  Target,
   Search,
   MoreHorizontal,
   PanelLeftClose,
@@ -45,7 +42,7 @@ const Index = () => {
     translators: Array.from(new Set(documents.map((doc) => doc.translator?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'pt-BR')),
   }), [documents]);
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings(settingsSeed.authors, settingsSeed.translators);
-  const { goal, progress, currentReadings, completedThisMonth, upsertGoal, startReading, markCompleted, unmarkCompleted, removeReading, resetMonthlyProgress } = useReadingGoals();
+  const { goal, progress, completedThisMonth, upsertGoal, startReading, markCompleted, unmarkCompleted, resetMonthlyProgress } = useReadingGoals();
   const { summaries, loading: summariesLoading, upsertSummary, deleteSummary } = useDocumentSummaries();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
@@ -207,7 +204,7 @@ const Index = () => {
       {viewingDoc && !splitMode && (
         <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />
       )}
-    <div className={`min-h-screen bg-background safe-top safe-x pb-20 sm:pb-0 sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
+    <div className={`${splitMode ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen pb-20 sm:pb-0'} bg-background safe-top safe-x sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
@@ -249,7 +246,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 ${splitMode ? 'py-3 flex-1 min-h-0 flex flex-col w-full' : 'py-4 sm:py-6'}`}>
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner size={32} />
