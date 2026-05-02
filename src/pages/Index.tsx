@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, Suspense } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
