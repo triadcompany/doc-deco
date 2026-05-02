@@ -24,7 +24,6 @@ import {
   FolderTree,
   Settings,
   LogOut,
-  Target,
   Search,
   MoreHorizontal,
   PanelLeftClose,
