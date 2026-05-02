@@ -24,7 +24,7 @@ import {
   FileText,
   FolderSearch,
   FolderTree,
-  Loader2,
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
   Settings,
   LogOut,
   Target,
@@ -252,7 +252,7 @@ const Index = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <LoadingSpinner size={32} />
           </div>
         ) : splitMode ? (
           /* ======== SPLIT VIEW MODE ======== */

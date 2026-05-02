@@ -57,6 +57,12 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
   const savedRangeRef = useRef<Range | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Selection popup
+  const [selectionPopup, setSelectionPopup] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
   // Scripture popup
   const [scripturePopup, setScripturePopup] = useState<{
     ref: ScriptureRef;
@@ -228,6 +234,14 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
 
   // Detect scripture or MSG references near cursor
   const detectReferences = useCallback(() => {
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) {
+      setScripturePopup(null);
+      setMsgPopup(null);
+      setMsgMatches(null);
+      return;
+    }
+
     const cursorInfo = getTextNearCursor();
     if (!cursorInfo || !containerRef.current) {
       setScripturePopup(null);
@@ -283,6 +297,34 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     debounceRef.current = setTimeout(detectReferences, 500);
   }, [detectReferences]);
 
+  const checkSelection = useCallback(() => {
+    setTimeout(() => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        if (containerRef.current && rect.width > 0 && rect.height > 0) {
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const popupWidth = 144;
+          const popupHeight = 36;
+          const gutter = 8;
+          
+          const relativeLeft = rect.left - containerRect.left + (rect.width / 2) - (popupWidth / 2);
+          const relativeTop = rect.top - containerRect.top;
+          
+          const left = Math.max(gutter, Math.min(relativeLeft, containerRect.width - popupWidth - gutter));
+          const top = relativeTop > popupHeight + gutter
+            ? relativeTop - popupHeight - 6
+            : relativeTop + rect.height + 6;
+            
+          setSelectionPopup({ top, left });
+          return;
+        }
+      }
+      setSelectionPopup(null);
+    }, 10);
+  }, []);
+
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
@@ -290,7 +332,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
   const handleKeyUp = useCallback((_e: React.KeyboardEvent) => {
     saveSelection();
     debouncedDetect();
-  }, [saveSelection, debouncedDetect]);
+    checkSelection();
+  }, [saveSelection, debouncedDetect, checkSelection]);
 
   // Replace the reference text in the editor with the given HTML
   const replaceReferenceAndInsert = useCallback((referenceText: string, html: string) => {
@@ -496,13 +539,14 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         ref={handleRef}
         contentEditable
         onInput={handleInput}
-        onMouseUp={() => { saveSelection(); debouncedDetect(); }}
-        onTouchEnd={() => { saveSelection(); debouncedDetect(); }}
+        onMouseUp={() => { saveSelection(); debouncedDetect(); checkSelection(); }}
+        onTouchEnd={() => { saveSelection(); debouncedDetect(); checkSelection(); }}
         onKeyUp={handleKeyUp}
         onBlur={() => {
           saveSelection();
           setTimeout(() => {
             setScripturePopup(null);
+            setSelectionPopup(null);
             if (!msgMatches) setMsgPopup(null);
           }, 200);
         }}
@@ -513,6 +557,32 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         )}
         style={{ wordBreak: 'break-word', WebkitUserSelect: 'text', userSelect: 'text' }}
       />
+
+      {/* Text Selection Popup */}
+      {selectionPopup && (
+        <div
+          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 flex items-center gap-1 p-1 bg-background border border-border rounded-md shadow-md"
+          style={{ top: selectionPopup.top, left: selectionPopup.left }}
+        >
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+            onMouseDown={(e) => e.preventDefault()} onClick={() => { exec('bold'); checkSelection(); }} title="Negrito">
+            <Bold className="w-3.5 h-3.5" />
+          </Button>
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+            onMouseDown={(e) => e.preventDefault()} onClick={() => { exec('italic'); checkSelection(); }} title="Itálico">
+            <Italic className="w-3.5 h-3.5" />
+          </Button>
+          <div className="w-px h-4 bg-border mx-0.5 shrink-0" />
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+            onMouseDown={(e) => e.preventDefault()} onClick={() => { applyBlock('h1'); checkSelection(); }} title="Título 1">
+            <Heading1 className="w-3.5 h-3.5" />
+          </Button>
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+            onMouseDown={(e) => e.preventDefault()} onClick={() => { applyBlock('h2'); checkSelection(); }} title="Título 2">
+            <Heading2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
 
       {/* Scripture insert popup */}
       {scripturePopup && (

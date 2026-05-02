@@ -44,6 +44,11 @@ export function useDocuments() {
   const [loading, setLoading] = useState(true);
 
   const fetchDocuments = useCallback(async () => {
+    if (!user) {
+      setDocuments([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const batchSize = 1000;
@@ -55,6 +60,7 @@ export function useDocuments() {
         const { data, error } = await supabase
           .from('documents')
           .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .range(offset, offset + batchSize - 1);
 
@@ -93,8 +99,16 @@ export function useDocuments() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'documents' },
-        () => {
-          fetchDocuments();
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+
+          if (eventType === 'INSERT') {
+            setDocuments((prev) => [toAppDoc(newRecord), ...prev].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+          } else if (eventType === 'UPDATE') {
+            setDocuments((prev) => prev.map((doc) => (doc.id === newRecord.id ? toAppDoc(newRecord) : doc)));
+          } else if (eventType === 'DELETE') {
+            setDocuments((prev) => prev.filter((doc) => doc.id !== oldRecord.id));
+          }
         }
       )
       .subscribe();
@@ -155,7 +169,7 @@ export function useDocuments() {
 
     await supabase
       .from('documents')
-      .update({ favorite: !doc.favorite } as any)
+      .update({ favorite: !doc.favorite })
       .eq('id', id);
 
     setDocuments((prev) =>
@@ -195,7 +209,7 @@ export function useDocuments() {
       .maybeSingle();
 
     if (data) {
-      await supabase.storage.from('pdfs').remove([(data as any).storage_path]);
+      await supabase.storage.from('pdfs').remove([data.storage_path]);
     }
 
     await supabase.from('documents').delete().eq('id', id);
