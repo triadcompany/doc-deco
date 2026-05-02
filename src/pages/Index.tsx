@@ -42,7 +42,7 @@ const Index = () => {
     translators: Array.from(new Set(documents.map((doc) => doc.translator?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'pt-BR')),
   }), [documents]);
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings(settingsSeed.authors, settingsSeed.translators);
-  const { goal, progress, currentReadings, completedThisMonth, upsertGoal, startReading, markCompleted, unmarkCompleted, removeReading, resetMonthlyProgress } = useReadingGoals();
+  const { goal, progress, completedThisMonth, upsertGoal, startReading, markCompleted, unmarkCompleted, resetMonthlyProgress } = useReadingGoals();
   const { summaries, loading: summariesLoading, upsertSummary, deleteSummary } = useDocumentSummaries();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
