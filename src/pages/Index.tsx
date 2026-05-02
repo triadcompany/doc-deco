@@ -207,7 +207,7 @@ const Index = () => {
       {viewingDoc && !splitMode && (
         <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />
       )}
-    <div className={`min-h-screen bg-background safe-top safe-x pb-20 sm:pb-0 sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
+    <div className={`${splitMode ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen pb-20 sm:pb-0'} bg-background safe-top safe-x sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
