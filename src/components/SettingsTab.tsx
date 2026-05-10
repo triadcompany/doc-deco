@@ -3,6 +3,7 @@ import { useTheme } from 'next-themes';
 import { SettingsEntry } from '@/hooks/use-settings';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadToR2, getR2PublicUrl } from '@/lib/r2';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -181,16 +182,11 @@ function ProfileSection() {
       const ext = file.name.split('.').pop();
       const path = `${user.id}/avatar.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('pdfs')
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('pdfs').getPublicUrl(path);
+      await uploadToR2(file, path);
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: urlData.publicUrl + '?t=' + Date.now() })
+        .update({ avatar_url: getR2PublicUrl(path) + '?t=' + Date.now() })
         .eq('user_id', user.id);
       if (updateError) throw updateError;
 

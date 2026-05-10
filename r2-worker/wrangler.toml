@@ -1,0 +1,10 @@
+name = "doc-deco-r2"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "sistema-abertura-da-mensagem"
+
+# Variáveis de ambiente (coloque o valor real no dashboard ou via --var)
+# Para deploy local: wrangler secret put UPLOAD_SECRET

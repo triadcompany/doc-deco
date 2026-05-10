@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PDFDocument } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
+import { uploadToR2, deleteFromR2, getR2PublicUrl } from '@/lib/r2';
 
 interface DbDocument {
   id: string;
@@ -20,7 +21,6 @@ interface DbDocument {
 }
 
 function toAppDoc(d: any): PDFDocument {
-  const { data } = supabase.storage.from('pdfs').getPublicUrl(d.storage_path);
   return {
     id: d.id,
     title: d.title,
@@ -32,7 +32,7 @@ function toAppDoc(d: any): PDFDocument {
     tags: d.tags,
     favorite: d.favorite,
     createdAt: d.created_at,
-    url: data.publicUrl,
+    url: getR2PublicUrl(d.storage_path),
     visibility: d.visibility || 'personal',
     translator: d.translator || '',
   };
@@ -140,11 +140,7 @@ export function useDocuments() {
       console.warn('Could not extract text from PDF:', e);
     }
 
-    const { error: storageError } = await supabase.storage
-      .from('pdfs')
-      .upload(storagePath, file, { contentType: 'application/pdf' });
-
-    if (storageError) throw storageError;
+    await uploadToR2(file, storagePath);
 
     const { error: dbError } = await supabase.from('documents').insert({
       title: meta.title,
@@ -209,7 +205,7 @@ export function useDocuments() {
       .maybeSingle();
 
     if (data) {
-      await supabase.storage.from('pdfs').remove([data.storage_path]);
+      await deleteFromR2(data.storage_path);
     }
 
     await supabase.from('documents').delete().eq('id', id);

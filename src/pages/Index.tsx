@@ -14,6 +14,7 @@ import { SplitViewSelector, TAB_OPTIONS } from '@/components/SplitViewSelector';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   Upload,
   BookOpen,
