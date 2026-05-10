@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -90,6 +91,13 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
                 <Undo2 className="w-4 h-4 mr-2" /> Remover de Concluídos
               </DropdownMenuItem>
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => { if (confirm(`Excluir "${doc.title}"? O arquivo também será removido do storage.`)) onDelete(doc.id); }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Excluir
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </Card>
@@ -150,6 +158,13 @@ export function PDFCard({ doc, viewMode, onView, onToggleFavorite, onDelete, onE
                   <Undo2 className="w-4 h-4 mr-2" /> Remover de Concluídos
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => { if (confirm(`Excluir "${doc.title}"? O arquivo também será removido do storage.`)) onDelete(doc.id); }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Excluir
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
