@@ -103,7 +103,10 @@ export function useDocuments() {
           const { eventType, new: newRecord, old: oldRecord } = payload;
 
           if (eventType === 'INSERT') {
-            setDocuments((prev) => [toAppDoc(newRecord), ...prev].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setDocuments((prev) => {
+              if (prev.some((d) => d.id === newRecord.id)) return prev;
+              return [toAppDoc(newRecord), ...prev].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
           } else if (eventType === 'UPDATE') {
             setDocuments((prev) => prev.map((doc) => (doc.id === newRecord.id ? toAppDoc(newRecord) : doc)));
           } else if (eventType === 'DELETE') {
