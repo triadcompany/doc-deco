@@ -1,6 +1,6 @@
-const WORKER_URL = import.meta.env.VITE_R2_WORKER_URL as string;
-const UPLOAD_SECRET = import.meta.env.VITE_R2_UPLOAD_SECRET as string;
-const PUBLIC_URL = import.meta.env.VITE_R2_PUBLIC_URL as string;
+const WORKER_URL = "https://doc-deco-r2.thiagolisboa.workers.dev";
+const UPLOAD_SECRET = "Glmu9671@";
+const PUBLIC_URL = "https://pub-095921a1fb5c4283a1b28b2204f65dee.r2.dev";
 
 function authHeaders() {
   return { Authorization: `Bearer ${UPLOAD_SECRET}` };
