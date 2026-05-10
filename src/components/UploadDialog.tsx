@@ -127,7 +127,7 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
         <ScrollArea className="flex-1 overflow-auto">
           <div className="p-6 space-y-6">
             <p className="text-sm text-muted-foreground">Adicione PDFs à sua biblioteca</p>
@@ -188,10 +188,10 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
             {files.length > 0 && (
               <div className="space-y-1.5">
                 {files.map((file, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded-md bg-secondary/50 px-3 py-2 text-sm">
-                    <FileText className="w-4 h-4 text-primary shrink-0" />
-                    <span className="flex-1 truncate min-w-0">{file.name}</span>
-                    <span className="text-xs text-muted-foreground shrink-0">{formatFileSize(file.size)}</span>
+                  <div key={i} className="flex items-start gap-2 rounded-md bg-secondary/50 px-3 py-2 text-sm">
+                    <FileText className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <span className="flex-1 min-w-0 break-words">{file.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{formatFileSize(file.size)}</span>
                     <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-foreground">
                       <X className="w-4 h-4" />
                     </button>
@@ -233,9 +233,9 @@ export function UploadDialog({ open, onOpenChange, onUpload, onComplete, authors
                   {files.map((file, i) => {
                     const parsed = parseFileName(file.name);
                     return (
-                      <div key={i} className="px-3 py-2 text-sm flex items-center gap-4">
-                        <span className="flex-1 min-w-0 truncate">{parsed.title}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">{parsed.date}</span>
+                      <div key={i} className="px-3 py-2 text-sm flex items-start gap-4">
+                        <span className="flex-1 min-w-0 break-words">{parsed.title}</span>
+                        <span className="text-xs text-muted-foreground shrink-0 mt-0.5">{parsed.date}</span>
                       </div>
                     );
                   })}
