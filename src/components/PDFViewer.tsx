@@ -46,12 +46,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const isMobile = useIsMobile();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(doc.pages || 1);
-  const getInitialZoom = () => {
-    const w = window.innerWidth;
-    if (w >= 768 && w < 1280) return 160; // iPad/tablet
-    return 100;
-  };
-  const [zoom, setZoom] = useState(getInitialZoom);
+  const [zoom, setZoom] = useState(100);
   const [activeColor, setActiveColor] = useState(highlightColors[0].color);
   const [highlightMode, setHighlightMode] = useState(false);
   const [eraserMode, setEraserMode] = useState(false);
