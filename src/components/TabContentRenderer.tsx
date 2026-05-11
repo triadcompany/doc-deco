@@ -13,6 +13,7 @@ const SettingsTab = lazy(() => import('@/components/SettingsTab').then(m => ({ d
 const MetaTab = lazy(() => import('@/components/MetaTab').then(m => ({ default: m.MetaTab })));
 const BibleTab = lazy(() => import('@/components/BibleTab').then(m => ({ default: m.BibleTab })));
 const SummariesTab = lazy(() => import('@/components/SummariesTab').then(m => ({ default: m.SummariesTab })));
+const AITab = lazy(() => import('@/components/ai/AITab').then(m => ({ default: m.AITab })));
 
 const SuspenseFallback = () => (
   <div className="flex justify-center py-20">
@@ -139,6 +140,19 @@ export function TabContentRenderer({ tabId, ...props }: TabContentProps) {
       return (
         <Suspense fallback={<SuspenseFallback />}>
           <BibleTab />
+        </Suspense>
+      );
+
+    case 'ia':
+      return (
+        <Suspense fallback={<SuspenseFallback />}>
+          <AITab
+            documents={props.documents}
+            authors={props.authors}
+            searchContent={props.searchContent}
+            onViewDoc={props.onViewDoc}
+            embedded={props.embedded}
+          />
         </Suspense>
       );
 

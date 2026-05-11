@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   FileText,
   Settings,
+  Bot,
 } from 'lucide-react';
 import {
   Select,
@@ -25,6 +26,7 @@ export const TAB_OPTIONS = [
   { value: 'pesquisa', icon: Search, label: 'Pesquisa' },
   { value: 'concluidos', icon: CheckCircle2, label: 'Concluídos' },
   { value: 'resumos', icon: FileText, label: 'Estudo' },
+  { value: 'ia', icon: Bot, label: 'IA' },
   { value: 'configuracoes', icon: Settings, label: 'Config' },
 ] as const;
 

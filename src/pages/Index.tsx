@@ -29,6 +29,7 @@ import {
   MoreHorizontal,
   PanelLeftClose,
   Columns2,
+  Bot,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -337,7 +338,7 @@ const Index = () => {
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'documentos', icon: FolderSearch, label: 'Docs' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
-                  { value: 'resumos', icon: FileText, label: 'Estudo' },
+                  { value: 'ia', icon: Bot, label: 'IA' },
                 ].map((tab) => (
                   <TabsTrigger
                     key={tab.value}
