@@ -21,7 +21,7 @@ CREATE TABLE public.ai_messages (
   chat_id UUID NOT NULL REFERENCES public.ai_chats(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
-  references JSONB DEFAULT '[]',
+  doc_references JSONB DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

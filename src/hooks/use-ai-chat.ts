@@ -122,7 +122,7 @@ export function useAIChat(searchContent: SearchFn) {
       chatId: chat.id,
       role: 'user',
       content: text,
-      references: [],
+      doc_references: [],
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, tempUserMsg]);
@@ -166,12 +166,12 @@ export function useAIChat(searchContent: SearchFn) {
         chat_id: chat.id,
         role: 'user',
         content: text,
-        references: [],
+        doc_references: [],
       });
 
       const { data: assistantData } = await supabase
         .from('ai_messages' as any)
-        .insert({ chat_id: chat.id, role: 'assistant', content: answer, references })
+        .insert({ chat_id: chat.id, role: 'assistant', content: answer, doc_references: references })
         .select()
         .single();
 
@@ -212,5 +212,5 @@ function toAIChat(d: any): AIChat {
 }
 
 function toAIMessage(d: any): AIMessage {
-  return { id: d.id, chatId: d.chat_id, role: d.role, content: d.content, references: d.references || [], createdAt: d.created_at };
+  return { id: d.id, chatId: d.chat_id, role: d.role, content: d.content, references: d.doc_references || [], createdAt: d.created_at };
 }
