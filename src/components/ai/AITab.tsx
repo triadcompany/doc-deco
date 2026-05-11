@@ -31,8 +31,10 @@ export function AITab({ documents, authors, searchContent, onViewDoc, embedded }
     }
     try {
       await sendMessage(text, chat);
-    } catch {
-      toast.error('Erro ao obter resposta. Verifique a chave da API Gemini.');
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      console.error('[AITab] sendMessage error:', err);
+      toast.error(`Erro: ${msg}`);
     }
   };
 
