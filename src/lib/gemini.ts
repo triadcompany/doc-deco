@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = 'COLE_SUA_CHAVE_GEMINI_AQUI';
+const GEMINI_API_KEY = 'AIzaSyBI-MZmksJEwrh5LmF1Z46yZByaPdTDSfo';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface GeminiMessage {
@@ -16,7 +16,8 @@ export interface GeminiChunk {
 export async function askGemini(
   question: string,
   chunks: GeminiChunk[],
-  history: GeminiMessage[]
+  history: GeminiMessage[],
+  signal?: AbortSignal
 ): Promise<string> {
   const chunksText = chunks.length > 0
     ? chunks.map((c, i) => `[${i + 1}] "${c.title}" (${c.author}, ${c.date}):\n${c.snippet}`).join('\n\n')
@@ -40,6 +41,7 @@ ${chunksText}`;
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal,
     body: JSON.stringify({
       contents,
       generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },

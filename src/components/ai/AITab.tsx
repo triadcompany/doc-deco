@@ -18,7 +18,7 @@ interface AITabProps {
 }
 
 export function AITab({ documents, authors, searchContent, onViewDoc, embedded }: AITabProps) {
-  const { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage } =
+  const { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage, cancelMessage } =
     useAIChat(searchContent);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -86,7 +86,7 @@ export function AITab({ documents, authors, searchContent, onViewDoc, embedded }
               sending={sending}
               onOpenDoc={handleOpenDoc}
             />
-            <ChatInput onSend={handleSend} disabled={sending} />
+            <ChatInput onSend={handleSend} onCancel={cancelMessage} disabled={sending} />
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-8">

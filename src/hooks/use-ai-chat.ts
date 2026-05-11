@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { askGemini, GeminiMessage } from '@/lib/gemini';
@@ -49,6 +49,7 @@ export function useAIChat(searchContent: SearchFn) {
   const [filters, setFilters] = useState<AIChatFilters>({});
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchChats = useCallback(async () => {
     if (!user) return;
@@ -111,9 +112,15 @@ export function useAIChat(searchContent: SearchFn) {
     }
   };
 
+  const cancelMessage = () => {
+    abortRef.current?.abort();
+  };
+
   const sendMessage = async (text: string, chatOverride?: AIChat) => {
     const chat = chatOverride ?? activeChat;
     if (!chat || !text.trim()) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setSending(true);
 
     const tempId = crypto.randomUUID();
@@ -154,7 +161,7 @@ export function useAIChat(searchContent: SearchFn) {
         .map((m) => ({ role: m.role === 'user' ? 'user' : ('model' as const), content: m.content }));
 
       // 3. Call Gemini
-      const answer = await askGemini(text, chunks, history);
+      const answer = await askGemini(text, chunks, history, controller.signal);
 
       // 4. Extract references mentioned in the answer
       const references: AIReference[] = chunks.filter(
@@ -195,16 +202,19 @@ export function useAIChat(searchContent: SearchFn) {
         const confirmedUserMsg: AIMessage = { ...tempUserMsg, id: crypto.randomUUID() };
         return [...withoutTemp, confirmedUserMsg, assistantMsg];
       });
-    } catch (err) {
-      console.error('Erro ao enviar mensagem:', err);
+    } catch (err: any) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      throw err;
+      if (err?.name !== 'AbortError') {
+        console.error('Erro ao enviar mensagem:', err);
+        throw err;
+      }
     } finally {
+      abortRef.current = null;
       setSending(false);
     }
   };
 
-  return { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage };
+  return { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage, cancelMessage };
 }
 
 function toAIChat(d: any): AIChat {
