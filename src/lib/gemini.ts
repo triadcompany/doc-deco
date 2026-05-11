@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = 'AIzaSyBI-MZmksJEwrh5LmF1Z46yZByaPdTDSfo';
+const GEMINI_API_KEY = 'AIzaSyAKqc_jc1PtDRt2SHW9vhF3K8vPwoTKsyA';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface GeminiMessage {
