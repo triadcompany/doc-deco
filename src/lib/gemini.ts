@@ -1,5 +1,6 @@
-const GEMINI_API_KEY = 'AIzaSyBUrK9sdoC3K-3WJbRZBzNlcx3F4u28boM';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const OPENAI_API_KEY = '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';
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const MODEL = 'gpt-4o-mini';
 
 export interface GeminiMessage {
   role: 'user' | 'model';
@@ -28,31 +29,30 @@ export async function askGemini(
 TRECHOS RELEVANTES:
 ${chunksText}`;
 
-  const contents = [
-    { role: 'user', parts: [{ text: systemPrompt }] },
-    { role: 'model', parts: [{ text: 'Entendido. Vou responder apenas com base nos trechos fornecidos.' }] },
+  const messages = [
+    { role: 'system', content: systemPrompt },
     ...history.map((m) => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.content }],
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.content,
     })),
-    { role: 'user', parts: [{ text: question }] },
+    { role: 'user', content: question },
   ];
 
-  const res = await fetch(GEMINI_URL, {
+  const res = await fetch(OPENAI_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
     signal,
-    body: JSON.stringify({
-      contents,
-      generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
-    }),
+    body: JSON.stringify({ model: MODEL, messages, temperature: 0.3, max_tokens: 2048 }),
   });
 
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText);
-    throw new Error(`Gemini error: ${err}`);
+    throw new Error(`OpenAI error: ${err}`);
   }
 
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '(sem resposta)';
+  return data.choices?.[0]?.message?.content ?? '(sem resposta)';
 }
