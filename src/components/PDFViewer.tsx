@@ -44,7 +44,14 @@ const highlightColors = [
 
 export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFViewerProps) {
   const isMobile = useIsMobile();
-  const [currentPage, setCurrentPage] = useState(1);
+  const savedPage = searchContext ? 1 : (() => {
+    try { return parseInt(localStorage.getItem(`pdf_page_${doc.id}`) || '1', 10) || 1; } catch { return 1; }
+  })();
+  const [currentPage, setCurrentPage] = useState(savedPage);
+
+  useEffect(() => {
+    try { localStorage.setItem(`pdf_page_${doc.id}`, String(currentPage)); } catch {}
+  }, [currentPage, doc.id]);
   const [totalPages, setTotalPages] = useState(doc.pages || 1);
   const [zoom, setZoom] = useState(100);
   const [activeColor, setActiveColor] = useState(highlightColors[0].color);
