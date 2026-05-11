@@ -24,11 +24,13 @@ export function AITab({ documents, authors, searchContent, onViewDoc, embedded }
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleSend = async (text: string) => {
-    if (!activeChat) {
-      await createChat();
+    let chat = activeChat;
+    if (!chat) {
+      chat = await createChat();
+      if (!chat) return;
     }
     try {
-      await sendMessage(text);
+      await sendMessage(text, chat);
     } catch {
       toast.error('Erro ao obter resposta. Verifique a chave da API Gemini.');
     }

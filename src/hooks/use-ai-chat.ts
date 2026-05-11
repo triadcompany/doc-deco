@@ -72,19 +72,20 @@ export function useAIChat(searchContent: SearchFn) {
     setLoading(false);
   }, []);
 
-  const createChat = async () => {
-    if (!user) return;
+  const createChat = async (): Promise<AIChat | null> => {
+    if (!user) return null;
     const { data, error } = await supabase
       .from('ai_chats' as any)
       .insert({ user_id: user.id, title: 'Novo Chat', filters: {} })
       .select()
       .single();
-    if (error || !data) return;
+    if (error || !data) return null;
     const chat = toAIChat(data as any);
     setChats((prev) => [chat, ...prev]);
     setActiveChat(chat);
     setMessages([]);
     setFilters({});
+    return chat;
   };
 
   const selectChat = async (chat: AIChat) => {
@@ -110,14 +111,15 @@ export function useAIChat(searchContent: SearchFn) {
     }
   };
 
-  const sendMessage = async (text: string) => {
-    if (!activeChat || !text.trim()) return;
+  const sendMessage = async (text: string, chatOverride?: AIChat) => {
+    const chat = chatOverride ?? activeChat;
+    if (!chat || !text.trim()) return;
     setSending(true);
 
     const tempId = crypto.randomUUID();
     const tempUserMsg: AIMessage = {
       id: tempId,
-      chatId: activeChat.id,
+      chatId: chat.id,
       role: 'user',
       content: text,
       references: [],
@@ -161,7 +163,7 @@ export function useAIChat(searchContent: SearchFn) {
 
       // 5. Persist messages
       await supabase.from('ai_messages' as any).insert({
-        chat_id: activeChat.id,
+        chat_id: chat.id,
         role: 'user',
         content: text,
         references: [],
@@ -169,7 +171,7 @@ export function useAIChat(searchContent: SearchFn) {
 
       const { data: assistantData } = await supabase
         .from('ai_messages' as any)
-        .insert({ chat_id: activeChat.id, role: 'assistant', content: answer, references })
+        .insert({ chat_id: chat.id, role: 'assistant', content: answer, references })
         .select()
         .single();
 
@@ -177,16 +179,16 @@ export function useAIChat(searchContent: SearchFn) {
       const isFirstMessage = messages.length === 0;
       if (isFirstMessage) {
         const title = text.length > 60 ? text.slice(0, 60) + '...' : text;
-        await supabase.from('ai_chats' as any).update({ title, updated_at: new Date().toISOString() }).eq('id', activeChat.id);
+        await supabase.from('ai_chats' as any).update({ title, updated_at: new Date().toISOString() }).eq('id', chat.id);
         setActiveChat((c) => (c ? { ...c, title } : c));
-        setChats((prev) => prev.map((c) => (c.id === activeChat.id ? { ...c, title } : c)));
+        setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, title } : c)));
       } else {
-        await supabase.from('ai_chats' as any).update({ updated_at: new Date().toISOString() }).eq('id', activeChat.id);
+        await supabase.from('ai_chats' as any).update({ updated_at: new Date().toISOString() }).eq('id', chat.id);
       }
 
       const assistantMsg: AIMessage = assistantData
         ? toAIMessage(assistantData as any)
-        : { id: crypto.randomUUID(), chatId: activeChat.id, role: 'assistant', content: answer, references, createdAt: new Date().toISOString() };
+        : { id: crypto.randomUUID(), chatId: chat.id, role: 'assistant', content: answer, references, createdAt: new Date().toISOString() };
 
       setMessages((prev) => {
         const withoutTemp = prev.filter((m) => m.id !== tempId);
