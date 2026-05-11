@@ -835,13 +835,13 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 <>
                   <button
                     className="absolute left-0 top-0 h-full cursor-pointer"
-                    style={{ width: '15%', zIndex: 50, opacity: 0, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
+                    style={{ width: '10%', zIndex: 50, opacity: 0, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     aria-label="Página anterior"
                   />
                   <button
                     className="absolute right-0 top-0 h-full cursor-pointer"
-                    style={{ width: '15%', zIndex: 50, opacity: 0, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
+                    style={{ width: '10%', zIndex: 50, opacity: 0, WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     aria-label="Próxima página"
                   />
