@@ -1,4 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+
+const PT_STOPWORDS = new Set([
+  'quem', 'qual', 'quais', 'quando', 'como', 'onde', 'porque', 'pois', 'sera',
+  'o', 'a', 'os', 'as', 'um', 'uma', 'uns', 'umas',
+  'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas',
+  'por', 'para', 'com', 'que', 'se', 'mas', 'ou', 'e', 'ao', 'aos',
+  'foi', 'ser', 'ter', 'ha', 'ja', 'mais', 'so', 'nao', 'bem', 'muito',
+  'tambem', 'ate', 'sobre', 'este', 'esta', 'esse', 'essa', 'isso', 'isto',
+  'aqui', 'la', 'me', 'te', 'lhe', 'seu', 'sua', 'seus', 'suas', 'sao',
+  'meu', 'minha', 'pode', 'diz', 'disse', 'faz', 'fez', 'vai', 'vem',
+]);
+
+function extractKeyTerms(question: string): string {
+  const normalized = question
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[?!.,;:]/g, ' ');
+
+  const terms = normalized
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !PT_STOPWORDS.has(w));
+
+  return terms.join(' ');
+}
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { askGemini, GeminiMessage } from '@/lib/gemini';
@@ -140,7 +165,8 @@ export function useAIChat(searchContent: SearchFn) {
       if (filters.author) searchFilters.author = filters.author;
       if (filters.tags?.length) searchFilters.tags = filters.tags;
 
-      const results = await searchContent(text, 'proximity', searchFilters);
+      const keyTerms = extractKeyTerms(text);
+      const results = await searchContent(keyTerms || text, 'proximity', searchFilters);
 
       let filtered = results;
       if (filters.documentIds?.length) {
