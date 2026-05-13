@@ -65,10 +65,34 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const [inDocResultIdx, setInDocResultIdx] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
+  const [pageInputValue, setPageInputValue] = useState(String(savedPage));
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
+
+  // Keep page input in sync when page changes via tap zones or arrow keys
+  useEffect(() => { setPageInputValue(String(currentPage)); }, [currentPage]);
+
+  // Scroll to top on page change
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [currentPage]);
+
+  // Keyboard navigation (← →)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setCurrentPage((p) => Math.min(totalPages, p + 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setCurrentPage((p) => Math.max(1, p - 1));
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [totalPages]);
 
   const { annotations, addAnnotation, removeAnnotation, clearPageAnnotations } = useDocumentAnnotations(doc.id);
 
@@ -565,7 +589,11 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setZoom((z) => Math.max(50, z - 10))}>
               <ZoomOut className="w-4 h-4" />
             </Button>
-            <span className="text-xs text-muted-foreground w-12 text-center font-medium">{zoom}%</span>
+            <button
+              onClick={() => setZoom(100)}
+              title="Resetar zoom para 100%"
+              className="text-xs text-muted-foreground w-12 text-center font-medium hover:text-foreground transition-colors"
+            >{zoom}%</button>
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setZoom((z) => Math.min(300, z + 10))}>
               <ZoomIn className="w-4 h-4" />
             </Button>
@@ -888,10 +916,20 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
             type="number"
             min={1}
             max={totalPages}
-            value={currentPage}
-            onChange={(e) => {
-              const n = Number(e.target.value);
+            value={pageInputValue}
+            onChange={(e) => setPageInputValue(e.target.value)}
+            onBlur={() => {
+              const n = parseInt(pageInputValue, 10);
               if (n >= 1 && n <= totalPages) setCurrentPage(n);
+              else setPageInputValue(String(currentPage));
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const n = parseInt(pageInputValue, 10);
+                if (n >= 1 && n <= totalPages) setCurrentPage(n);
+                else setPageInputValue(String(currentPage));
+                (e.target as HTMLInputElement).blur();
+              }
             }}
             className="h-7 w-12 text-center text-sm font-semibold border-0 bg-transparent p-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
