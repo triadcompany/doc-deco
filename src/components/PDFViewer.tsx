@@ -21,6 +21,8 @@ import {
   X,
   Eraser,
   MoreVertical,
+  PenLine,
+  Type,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -40,6 +42,14 @@ const highlightColors = [
   { name: 'Azul', color: 'hsl(217, 91%, 60%)' },
   { name: 'Rosa', color: 'hsl(330, 81%, 60%)' },
   { name: 'Laranja', color: 'hsl(25, 95%, 53%)' },
+];
+
+const drawColors = [
+  { name: 'Preto', color: '#1a1a1a' },
+  { name: 'Vermelho', color: '#ef4444' },
+  { name: 'Azul', color: '#3b82f6' },
+  { name: 'Verde', color: '#22c55e' },
+  { name: 'Roxo', color: '#a855f7' },
 ];
 
 export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFViewerProps) {
@@ -65,10 +75,28 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const [inDocResultIdx, setInDocResultIdx] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
+  const [drawMode, setDrawMode] = useState(false);
+  const [textMode, setTextMode] = useState(false);
+  const [drawColor, setDrawColor] = useState('#1a1a1a');
+  const [drawStrokeWidth, setDrawStrokeWidth] = useState(3);
+  const [textFontSize, setTextFontSize] = useState(14);
+  const [pendingTextBox, setPendingTextBox] = useState<{ x: number; y: number } | null>(null);
+  const [pendingText, setPendingText] = useState('');
   const [pageInputValue, setPageInputValue] = useState(String(savedPage));
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const currentStrokeRef = useRef<{ x: number; y: number }[]>([]);
+  const isDrawingRef = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const confirmButtonRef = useRef<HTMLDivElement>(null);
+  const [pendingHighlight, setPendingHighlight] = useState<{
+    rects: { top: number; left: number; width: number; height: number }[];
+    text: string;
+    btnX: number;
+    btnY: number;
+  } | null>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
   // Keep page input in sync when page changes via tap zones or arrow keys
@@ -82,6 +110,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (drawMode || textMode) return;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault();
         setCurrentPage((p) => Math.min(totalPages, p + 1));
@@ -92,9 +121,22 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [totalPages]);
+  }, [totalPages, drawMode, textMode]);
 
-  const { annotations, addAnnotation, removeAnnotation, clearPageAnnotations } = useDocumentAnnotations(doc.id);
+  // Size canvas to match PDF page on layout changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const { clientWidth: w, clientHeight: h } = canvas;
+    if (w > 0 && h > 0) { canvas.width = w; canvas.height = h; }
+  }, [currentPage, zoom, containerWidth, loading]);
+
+  // Focus textarea when a new pending text box is created
+  useEffect(() => {
+    if (pendingTextBox) textareaRef.current?.focus();
+  }, [pendingTextBox]);
+
+  const { annotations, addAnnotation, addDrawing, addTextBox, removeAnnotation, clearPageAnnotations } = useDocumentAnnotations(doc.id);
 
   const pdfDocRef = useRef<any>(null);
   const pdfUrl = doc.url;
@@ -381,15 +423,17 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
 
     if (rects.length === 0) return;
 
-    addAnnotation({
-      page: currentPage,
-      color: activeColor,
+    const maxBottom = Math.max(...rects.map((r) => r.top + r.height));
+    const minTop = Math.min(...rects.map((r) => r.top));
+    const centerX = rects.reduce((sum, r) => sum + r.left + r.width / 2, 0) / rects.length;
+
+    setPendingHighlight({
       rects,
       text: selection.toString().trim(),
+      btnX: Math.min(84, Math.max(1, centerX - 8)),
+      btnY: maxBottom > 88 ? Math.max(0, minTop - 12) : maxBottom + 2,
     });
-
-    selection.removeAllRanges();
-  }, [highlightMode, activeColor, currentPage, addAnnotation]);
+  }, [highlightMode, setPendingHighlight]);
 
   // Listen for selection end events
   // Listen for selection end events (mouse + touch)
@@ -508,8 +552,10 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               size="icon"
               className="h-9 w-9 touch-target"
               onClick={() => {
-                setHighlightMode(!highlightMode);
-                if (!highlightMode) setEraserMode(false);
+                const entering = !highlightMode;
+                setHighlightMode(entering);
+                if (!entering) setPendingHighlight(null);
+                if (entering) { setEraserMode(false); setDrawMode(false); setTextMode(false); }
               }}
               title="Modo grifo"
             >
@@ -560,11 +606,38 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 {/* Tool actions */}
                 <div className="grid grid-cols-2 gap-2">
                   <Button
+                    variant={drawMode ? 'default' : 'outline'}
+                    className="h-12 justify-start gap-2"
+                    onClick={() => {
+                      const entering = !drawMode;
+                      setDrawMode(entering);
+                      if (entering) { setHighlightMode(false); setEraserMode(false); setTextMode(false); setPendingHighlight(null); }
+                      setToolsSheetOpen(false);
+                    }}
+                  >
+                    <PenLine className="w-4 h-4" />
+                    <span className="text-sm">Desenhar</span>
+                  </Button>
+                  <Button
+                    variant={textMode ? 'default' : 'outline'}
+                    className="h-12 justify-start gap-2"
+                    onClick={() => {
+                      const entering = !textMode;
+                      setTextMode(entering);
+                      if (entering) { setHighlightMode(false); setEraserMode(false); setDrawMode(false); }
+                      setToolsSheetOpen(false);
+                    }}
+                  >
+                    <Type className="w-4 h-4" />
+                    <span className="text-sm">Texto</span>
+                  </Button>
+                  <Button
                     variant={eraserMode ? 'default' : 'outline'}
                     className="h-12 justify-start gap-2"
                     onClick={() => {
-                      setEraserMode(!eraserMode);
-                      if (!eraserMode) setHighlightMode(false);
+                      const entering = !eraserMode;
+                      setEraserMode(entering);
+                      if (entering) { setHighlightMode(false); setDrawMode(false); setTextMode(false); setPendingHighlight(null); }
                       setToolsSheetOpen(false);
                     }}
                   >
@@ -603,22 +676,51 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               size="icon"
               className="h-9 w-9"
               onClick={() => {
-                setHighlightMode(!highlightMode);
-                if (!highlightMode) setEraserMode(false);
+                const entering = !highlightMode;
+                setHighlightMode(entering);
+                if (!entering) setPendingHighlight(null);
+                if (entering) { setEraserMode(false); setDrawMode(false); setTextMode(false); }
               }}
               title="Modo grifo"
             >
               <Highlighter className="w-4 h-4" />
             </Button>
             <Button
+              variant={drawMode ? 'default' : 'ghost'}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => {
+                const entering = !drawMode;
+                setDrawMode(entering);
+                if (entering) { setHighlightMode(false); setEraserMode(false); setTextMode(false); setPendingHighlight(null); }
+              }}
+              title="Modo desenho"
+            >
+              <PenLine className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={textMode ? 'default' : 'ghost'}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => {
+                const entering = !textMode;
+                setTextMode(entering);
+                if (entering) { setHighlightMode(false); setEraserMode(false); setDrawMode(false); }
+              }}
+              title="Inserir texto"
+            >
+              <Type className="w-4 h-4" />
+            </Button>
+            <Button
               variant={eraserMode ? 'default' : 'ghost'}
               size="icon"
               className="h-9 w-9"
               onClick={() => {
-                setEraserMode(!eraserMode);
-                if (!eraserMode) setHighlightMode(false);
+                const entering = !eraserMode;
+                setEraserMode(entering);
+                if (entering) { setHighlightMode(false); setDrawMode(false); setTextMode(false); setPendingHighlight(null); }
               }}
-              title="Borracha — toque em um grifo para apagar"
+              title="Borracha — toque em uma anotação para apagar"
             >
               <Eraser className="w-4 h-4" />
             </Button>
@@ -751,7 +853,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
       {eraserMode && (
         <div className="min-h-[48px] border-b border-border flex items-center justify-center gap-2 sm:gap-3 px-2 shrink-0 bg-destructive/5 flex-wrap py-1.5">
           <Eraser className="w-4 h-4 text-destructive" />
-          <span className="text-xs text-muted-foreground">Toque em um grifo para apagar</span>
+          <span className="text-xs text-muted-foreground">Toque em uma anotação para apagar</span>
           {pageAnnotations.length > 0 && (
             <Button
               variant="ghost"
@@ -764,12 +866,89 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               <span className="sm:hidden">Limpar</span>
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 sm:h-7 sm:w-7"
-            onClick={() => setEraserMode(false)}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => setEraserMode(false)}>
+            <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Draw mode bar */}
+      {drawMode && (
+        <div className="min-h-[48px] border-b border-border flex items-center justify-center gap-2 sm:gap-3 px-2 shrink-0 bg-muted/50 flex-wrap py-1.5">
+          <PenLine className="w-4 h-4 text-primary shrink-0" />
+          <span className="text-xs text-muted-foreground shrink-0">Desenhar</span>
+          <div className="flex gap-1.5">
+            {drawColors.map((c) => (
+              <button
+                key={c.name}
+                className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 transition-all ${drawColor === c.color ? 'scale-110 border-foreground shadow-md' : 'border-transparent hover:scale-105'}`}
+                style={{ backgroundColor: c.color }}
+                onClick={() => setDrawColor(c.color)}
+                title={c.name}
+              />
+            ))}
+          </div>
+          <div className="flex gap-1">
+            {([2, 3, 5] as const).map((w, i) => (
+              <button
+                key={w}
+                className={`px-2 h-8 sm:h-7 rounded text-xs border transition-colors ${drawStrokeWidth === w ? 'bg-foreground text-background border-foreground' : 'bg-transparent border-border hover:bg-secondary/80'}`}
+                onClick={() => setDrawStrokeWidth(w)}
+                title={['Fino', 'Médio', 'Grosso'][i]}
+              >
+                {['F', 'M', 'G'][i]}
+              </button>
+            ))}
+          </div>
+          {pageAnnotations.length > 0 && (
+            <Button variant="ghost" size="sm" className="text-xs h-8 sm:h-7 text-destructive px-2" onClick={() => clearPageAnnotations(currentPage)}>
+              <Trash2 className="w-3 h-3 mr-1" />
+              <span className="hidden sm:inline">Limpar página</span>
+              <span className="sm:hidden">Limpar</span>
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => setDrawMode(false)}>
+            <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Text mode bar */}
+      {textMode && (
+        <div className="min-h-[48px] border-b border-border flex items-center justify-center gap-2 sm:gap-3 px-2 shrink-0 bg-muted/50 flex-wrap py-1.5">
+          <Type className="w-4 h-4 text-primary shrink-0" />
+          <span className="text-xs text-muted-foreground shrink-0">Clique na página para inserir texto</span>
+          <div className="flex gap-1.5">
+            {drawColors.map((c) => (
+              <button
+                key={c.name}
+                className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 transition-all ${drawColor === c.color ? 'scale-110 border-foreground shadow-md' : 'border-transparent hover:scale-105'}`}
+                style={{ backgroundColor: c.color }}
+                onClick={() => setDrawColor(c.color)}
+                title={c.name}
+              />
+            ))}
+          </div>
+          <div className="flex gap-1">
+            {([12, 16, 22] as const).map((sz, i) => (
+              <button
+                key={sz}
+                className={`px-2 h-8 sm:h-7 rounded text-xs border transition-colors ${textFontSize === sz ? 'bg-foreground text-background border-foreground' : 'bg-transparent border-border hover:bg-secondary/80'}`}
+                onClick={() => setTextFontSize(sz)}
+                title={['Pequeno', 'Médio', 'Grande'][i]}
+              >
+                {['P', 'M', 'G'][i]}
+              </button>
+            ))}
+          </div>
+          {pageAnnotations.length > 0 && (
+            <Button variant="ghost" size="sm" className="text-xs h-8 sm:h-7 text-destructive px-2" onClick={() => clearPageAnnotations(currentPage)}>
+              <Trash2 className="w-3 h-3 mr-1" />
+              <span className="hidden sm:inline">Limpar página</span>
+              <span className="sm:hidden">Limpar</span>
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => setTextMode(false)}>
             <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </Button>
         </div>
@@ -778,7 +957,24 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
       <div className="flex flex-1 overflow-hidden">
         <main ref={mainRef} className="flex-1 bg-muted/30 overflow-auto p-4">
           {pdfUrl ? (
-            <div className="relative mx-auto w-fit" ref={pageContainerRef}>
+            <div
+              className="relative mx-auto w-fit"
+              ref={pageContainerRef}
+              style={{ cursor: textMode ? 'text' : undefined }}
+              onMouseDown={pendingHighlight ? (e) => {
+                if (!confirmButtonRef.current?.contains(e.target as Node)) {
+                  setPendingHighlight(null);
+                }
+              } : undefined}
+              onClick={textMode ? (e) => {
+                if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setPendingText('');
+                setPendingTextBox({ x, y });
+              } : undefined}
+            >
               <Document
                 file={pdfUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
@@ -805,16 +1001,79 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 />
               </Document>
 
-              {/* Render persisted highlights overlay */}
-              {pageAnnotations.map((h) => {
-                const rects = h.position?.rects || [];
+              {/* Render persisted annotations overlay */}
+              {pageAnnotations.map((ann) => {
+                const pos = ann.position as any;
+                if (!pos) return null;
+
+                if (pos.type === 'drawing') {
+                  return (
+                    <svg
+                      key={ann.id}
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', zIndex: eraserMode ? 60 : 10, pointerEvents: eraserMode ? 'auto' : 'none', cursor: eraserMode ? 'pointer' : 'default' }}
+                      onClick={(e) => { if (eraserMode) { e.stopPropagation(); removeAnnotation(ann.id); } }}
+                      onTouchEnd={(e) => { if (eraserMode) { e.preventDefault(); e.stopPropagation(); removeAnnotation(ann.id); } }}
+                    >
+                      {(pos.strokes as { x: number; y: number }[][]).map((stroke: { x: number; y: number }[], si: number) => (
+                        <polyline
+                          key={si}
+                          points={stroke.map((p: { x: number; y: number }) => `${p.x},${p.y}`).join(' ')}
+                          fill="none"
+                          stroke={pos.color || ann.color}
+                          strokeWidth={pos.strokeWidth || 3}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          vectorEffect="non-scaling-stroke"
+                          style={{ opacity: eraserMode ? 0.5 : 1 }}
+                        />
+                      ))}
+                    </svg>
+                  );
+                }
+
+                if (pos.type === 'textbox') {
+                  return (
+                    <div
+                      key={ann.id}
+                      style={{
+                        position: 'absolute',
+                        left: `${pos.x}%`,
+                        top: `${pos.y}%`,
+                        color: pos.color || ann.color,
+                        fontSize: `${pos.fontSize || 14}px`,
+                        zIndex: eraserMode ? 60 : 10,
+                        whiteSpace: 'pre-wrap',
+                        pointerEvents: eraserMode ? 'auto' : 'none',
+                        cursor: eraserMode ? 'pointer' : 'default',
+                        userSelect: 'none',
+                        fontFamily: 'sans-serif',
+                        lineHeight: '1.4',
+                        padding: '2px 4px',
+                        border: eraserMode ? '1px dashed #ef4444' : 'none',
+                        borderRadius: '2px',
+                        maxWidth: '60%',
+                        wordBreak: 'break-word',
+                        background: eraserMode ? 'rgba(255,255,255,0.8)' : 'transparent',
+                      }}
+                      onClick={(e) => { if (eraserMode) { e.stopPropagation(); removeAnnotation(ann.id); } }}
+                      onTouchEnd={(e) => { if (eraserMode) { e.preventDefault(); e.stopPropagation(); removeAnnotation(ann.id); } }}
+                    >
+                      {pos.content}
+                    </div>
+                  );
+                }
+
+                // Default: highlight (has rects)
+                const rects = pos.rects || [];
                 if (rects.length === 0) return null;
-                const bgColor = h.color.replace('hsl(', 'hsla(').replace(')', ', 0.4)');
+                const bgColor = ann.color.replace('hsl(', 'hsla(').replace(')', ', 0.4)');
                 const mergedRects = mergeHighlightRects(rects);
 
                 return (
                   <svg
-                    key={h.id}
+                    key={ann.id}
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -849,14 +1108,14 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                         onClick={(e) => {
                           if (eraserMode || highlightMode) {
                             e.stopPropagation();
-                            removeAnnotation(h.id);
+                            removeAnnotation(ann.id);
                           }
                         }}
                         onTouchEnd={(e) => {
                           if (eraserMode) {
                             e.preventDefault();
                             e.stopPropagation();
-                            removeAnnotation(h.id);
+                            removeAnnotation(ann.id);
                           }
                         }}
                       />
@@ -865,8 +1124,176 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 );
               })}
 
+              {/* Highlight confirm button — appears after text selection */}
+              {highlightMode && pendingHighlight && (
+                <div
+                  ref={confirmButtonRef}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    left: `${pendingHighlight.btnX}%`,
+                    top: `${pendingHighlight.btnY}%`,
+                    zIndex: 40,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'white',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    borderRadius: '8px',
+                    padding: '5px 10px 5px 7px',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+                    userSelect: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {highlightColors.map((c) => (
+                    <button
+                      key={c.name}
+                      title={c.name}
+                      style={{
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        background: c.color,
+                        border: activeColor === c.color ? '2.5px solid #111' : '2px solid rgba(0,0,0,0.1)',
+                        cursor: 'pointer', flexShrink: 0, transition: 'transform 0.1s',
+                        transform: activeColor === c.color ? 'scale(1.15)' : 'scale(1)',
+                      }}
+                      onClick={(e) => { e.stopPropagation(); setActiveColor(c.color); }}
+                    />
+                  ))}
+                  <div style={{ width: '1px', height: '16px', background: 'rgba(0,0,0,0.12)', margin: '0 2px' }} />
+                  <button
+                    style={{ fontSize: '12px', fontWeight: 600, color: '#111', cursor: 'pointer', background: 'none', border: 'none', padding: '0 2px' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addAnnotation({ page: currentPage, color: activeColor, rects: pendingHighlight.rects, text: pendingHighlight.text });
+                      setPendingHighlight(null);
+                      window.getSelection()?.removeAllRanges();
+                    }}
+                  >
+                    Grifar
+                  </button>
+                  <button
+                    style={{ fontSize: '11px', color: '#888', cursor: 'pointer', background: 'none', border: 'none', padding: '0', lineHeight: 1 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPendingHighlight(null);
+                      window.getSelection()?.removeAllRanges();
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {/* Drawing canvas — real-time preview during stroke */}
+              <canvas
+                ref={canvasRef}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  zIndex: 20,
+                  cursor: drawMode ? 'crosshair' : 'default',
+                  pointerEvents: drawMode ? 'auto' : 'none',
+                  touchAction: 'none',
+                }}
+                onPointerDown={(e) => {
+                  if (!drawMode) return;
+                  const canvas = e.currentTarget;
+                  // Ensure canvas pixel size matches layout
+                  if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+                    canvas.width = canvas.clientWidth;
+                    canvas.height = canvas.clientHeight;
+                  }
+                  canvas.setPointerCapture(e.pointerId);
+                  const rect = canvas.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  currentStrokeRef.current = [{ x, y }];
+                  isDrawingRef.current = true;
+                }}
+                onPointerMove={(e) => {
+                  if (!drawMode || !isDrawingRef.current) return;
+                  const canvas = e.currentTarget;
+                  const rect = canvas.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  const stroke = currentStrokeRef.current;
+                  const prev = stroke[stroke.length - 1];
+                  stroke.push({ x, y });
+                  const ctx = canvas.getContext('2d');
+                  if (!ctx || !prev) return;
+                  ctx.beginPath();
+                  ctx.strokeStyle = drawColor;
+                  ctx.lineWidth = drawStrokeWidth;
+                  ctx.lineCap = 'round';
+                  ctx.lineJoin = 'round';
+                  ctx.moveTo((prev.x / 100) * canvas.width, (prev.y / 100) * canvas.height);
+                  ctx.lineTo((x / 100) * canvas.width, (y / 100) * canvas.height);
+                  ctx.stroke();
+                }}
+                onPointerUp={async (e) => {
+                  if (!drawMode || !isDrawingRef.current) return;
+                  isDrawingRef.current = false;
+                  const stroke = [...currentStrokeRef.current];
+                  currentStrokeRef.current = [];
+                  const canvas = e.currentTarget;
+                  canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+                  if (stroke.length < 2) return;
+                  await addDrawing({ page: currentPage, strokes: [stroke], strokeWidth: drawStrokeWidth, color: drawColor });
+                }}
+                onPointerCancel={() => {
+                  isDrawingRef.current = false;
+                  currentStrokeRef.current = [];
+                  const canvas = canvasRef.current;
+                  if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+                }}
+              />
+
+              {/* Pending text box input */}
+              {textMode && pendingTextBox && (
+                <textarea
+                  ref={textareaRef}
+                  value={pendingText}
+                  onChange={(e) => setPendingText(e.target.value)}
+                  onBlur={async () => {
+                    const content = pendingText.trim();
+                    const pos = pendingTextBox;
+                    setPendingTextBox(null);
+                    setPendingText('');
+                    if (content && pos) {
+                      await addTextBox({ page: currentPage, x: pos.x, y: pos.y, content, fontSize: textFontSize, color: drawColor });
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') { setPendingTextBox(null); setPendingText(''); }
+                  }}
+                  placeholder="Digite aqui..."
+                  style={{
+                    position: 'absolute',
+                    left: `${pendingTextBox.x}%`,
+                    top: `${pendingTextBox.y}%`,
+                    zIndex: 30,
+                    minWidth: '120px',
+                    minHeight: '36px',
+                    resize: 'both',
+                    border: `2px dashed ${drawColor}`,
+                    borderRadius: '3px',
+                    background: 'rgba(255,255,255,0.92)',
+                    color: drawColor,
+                    fontSize: `${textFontSize}px`,
+                    padding: '3px 6px',
+                    outline: 'none',
+                    fontFamily: 'sans-serif',
+                    lineHeight: '1.4',
+                  }}
+                />
+              )}
+
               {/* Tap zones for mobile navigation */}
-              {totalPages > 1 && !highlightMode && !eraserMode && (
+              {totalPages > 1 && !highlightMode && !eraserMode && !drawMode && !textMode && (
                 <>
                   <button
                     className="absolute left-0 top-0 h-full cursor-pointer"
