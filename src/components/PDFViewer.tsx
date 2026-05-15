@@ -86,10 +86,18 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+  const [draggingTextbox, setDraggingTextbox] = useState<{
+    annId: string; startX: number; startY: number;
+    origX: number; origY: number; currentX: number; currentY: number; didDrag: boolean;
+  } | null>(null);
+  const [editingTextbox, setEditingTextbox] = useState<{
+    annId: string; x: number; y: number; content: string; fontSize: number; color: string;
+  } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentStrokeRef = useRef<{ x: number; y: number }[]>([]);
   const isDrawingRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const confirmButtonRef = useRef<HTMLDivElement>(null);
   const [pendingHighlight, setPendingHighlight] = useState<{
     rects: { top: number; left: number; width: number; height: number }[];
@@ -136,7 +144,17 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
     if (pendingTextBox) textareaRef.current?.focus();
   }, [pendingTextBox]);
 
-  const { annotations, addAnnotation, addDrawing, addTextBox, removeAnnotation, clearPageAnnotations } = useDocumentAnnotations(doc.id);
+  // Focus and select all when editing an existing text box
+  useEffect(() => {
+    if (editingTextbox) { editTextareaRef.current?.focus(); editTextareaRef.current?.select(); }
+  }, [editingTextbox?.annId]);
+
+  // Cancel drag when leaving text mode
+  useEffect(() => {
+    if (!textMode) setDraggingTextbox(null);
+  }, [textMode]);
+
+  const { annotations, addAnnotation, addDrawing, addTextBox, updateAnnotation, removeAnnotation, clearPageAnnotations } = useDocumentAnnotations(doc.id);
 
   const pdfDocRef = useRef<any>(null);
   const pdfUrl = doc.url;
@@ -900,6 +918,16 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
               </button>
             ))}
           </div>
+          <div className="w-px h-4 bg-border/60 mx-1 shrink-0" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 sm:h-7 sm:w-7 text-destructive"
+            title="Borracha — apagar anotações"
+            onClick={() => { setDrawMode(false); setEraserMode(true); }}
+          >
+            <Eraser className="w-4 h-4" />
+          </Button>
           {pageAnnotations.length > 0 && (
             <Button variant="ghost" size="sm" className="text-xs h-8 sm:h-7 text-destructive px-2" onClick={() => clearPageAnnotations(currentPage)}>
               <Trash2 className="w-3 h-3 mr-1" />
@@ -1012,7 +1040,14 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                       key={ann.id}
                       viewBox="0 0 100 100"
                       preserveAspectRatio="none"
-                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', zIndex: eraserMode ? 60 : 10, pointerEvents: eraserMode ? 'auto' : 'none', cursor: eraserMode ? 'pointer' : 'default' }}
+                      style={{
+                        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                        overflow: 'visible', zIndex: eraserMode ? 60 : 10,
+                        pointerEvents: eraserMode ? 'auto' : 'none',
+                        cursor: eraserMode ? 'pointer' : 'default',
+                        filter: eraserMode ? 'drop-shadow(0 0 4px #ef4444)' : 'none',
+                        opacity: eraserMode ? 0.7 : 1,
+                      }}
                       onClick={(e) => { if (eraserMode) { e.stopPropagation(); removeAnnotation(ann.id); } }}
                       onTouchEnd={(e) => { if (eraserMode) { e.preventDefault(); e.stopPropagation(); removeAnnotation(ann.id); } }}
                     >
@@ -1021,12 +1056,11 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                           key={si}
                           points={stroke.map((p: { x: number; y: number }) => `${p.x},${p.y}`).join(' ')}
                           fill="none"
-                          stroke={pos.color || ann.color}
+                          stroke={eraserMode ? '#ef4444' : (pos.color || ann.color)}
                           strokeWidth={pos.strokeWidth || 3}
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           vectorEffect="non-scaling-stroke"
-                          style={{ opacity: eraserMode ? 0.5 : 1 }}
                         />
                       ))}
                     </svg>
@@ -1034,31 +1068,98 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                 }
 
                 if (pos.type === 'textbox') {
+                  const isEditing = editingTextbox?.annId === ann.id;
+                  const isDragging = draggingTextbox?.annId === ann.id;
+                  const displayX = isDragging ? draggingTextbox!.currentX : pos.x;
+                  const displayY = isDragging ? draggingTextbox!.currentY : pos.y;
+
+                  if (isEditing) {
+                    return (
+                      <textarea
+                        key={ann.id}
+                        ref={editTextareaRef}
+                        value={editingTextbox!.content}
+                        onChange={(e) => setEditingTextbox((prev) => prev ? { ...prev, content: e.target.value } : null)}
+                        onBlur={async () => {
+                          const et = editingTextbox!;
+                          setEditingTextbox(null);
+                          await updateAnnotation(et.annId, { ...pos, content: et.content });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); }
+                          if (e.key === 'Escape') setEditingTextbox(null);
+                        }}
+                        style={{
+                          position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, zIndex: 30,
+                          minWidth: '120px', minHeight: '36px', resize: 'both',
+                          border: `2px dashed ${pos.color || ann.color}`, borderRadius: '3px',
+                          background: 'rgba(255,255,255,0.92)', color: pos.color || ann.color,
+                          fontSize: `${pos.fontSize || 14}px`, padding: '3px 6px', outline: 'none',
+                          fontFamily: 'sans-serif', lineHeight: '1.4',
+                        }}
+                      />
+                    );
+                  }
+
                   return (
                     <div
                       key={ann.id}
                       style={{
                         position: 'absolute',
-                        left: `${pos.x}%`,
-                        top: `${pos.y}%`,
+                        left: `${displayX}%`,
+                        top: `${displayY}%`,
                         color: pos.color || ann.color,
                         fontSize: `${pos.fontSize || 14}px`,
-                        zIndex: eraserMode ? 60 : 10,
+                        zIndex: (eraserMode || textMode) ? 60 : 10,
                         whiteSpace: 'pre-wrap',
-                        pointerEvents: eraserMode ? 'auto' : 'none',
-                        cursor: eraserMode ? 'pointer' : 'default',
+                        pointerEvents: (eraserMode || textMode) ? 'auto' : 'none',
+                        cursor: eraserMode ? 'pointer' : (textMode ? (isDragging ? 'grabbing' : 'grab') : 'default'),
                         userSelect: 'none',
                         fontFamily: 'sans-serif',
                         lineHeight: '1.4',
                         padding: '2px 4px',
-                        border: eraserMode ? '1px dashed #ef4444' : 'none',
+                        border: eraserMode ? '1px dashed #ef4444' : (textMode ? '1px dashed rgba(0,0,0,0.25)' : 'none'),
                         borderRadius: '2px',
                         maxWidth: '60%',
                         wordBreak: 'break-word',
-                        background: eraserMode ? 'rgba(255,255,255,0.8)' : 'transparent',
+                        background: eraserMode ? 'rgba(255,255,255,0.8)' : (textMode ? 'rgba(255,255,255,0.05)' : 'transparent'),
+                        touchAction: textMode ? 'none' : 'auto',
                       }}
-                      onClick={(e) => { if (eraserMode) { e.stopPropagation(); removeAnnotation(ann.id); } }}
+                      onClick={(e) => {
+                        if (eraserMode) { e.stopPropagation(); removeAnnotation(ann.id); return; }
+                        if (textMode) e.stopPropagation();
+                      }}
+                      onDoubleClick={textMode && !eraserMode ? (e) => {
+                        e.stopPropagation();
+                        setEditingTextbox({ annId: ann.id, x: pos.x, y: pos.y, content: pos.content, fontSize: pos.fontSize || 14, color: pos.color || ann.color });
+                      } : undefined}
                       onTouchEnd={(e) => { if (eraserMode) { e.preventDefault(); e.stopPropagation(); removeAnnotation(ann.id); } }}
+                      onPointerDown={textMode && !eraserMode ? (e) => {
+                        e.stopPropagation();
+                        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                        setDraggingTextbox({ annId: ann.id, startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y, currentX: pos.x, currentY: pos.y, didDrag: false });
+                      } : undefined}
+                      onPointerMove={textMode && !eraserMode && draggingTextbox?.annId === ann.id ? (e) => {
+                        const container = pageContainerRef.current;
+                        if (!container || !draggingTextbox) return;
+                        const rect = container.getBoundingClientRect();
+                        const dx = ((e.clientX - draggingTextbox.startX) / rect.width) * 100;
+                        const dy = ((e.clientY - draggingTextbox.startY) / rect.height) * 100;
+                        setDraggingTextbox((prev) => prev ? {
+                          ...prev,
+                          currentX: Math.max(0, Math.min(90, prev.origX + dx)),
+                          currentY: Math.max(0, Math.min(95, prev.origY + dy)),
+                          didDrag: Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5,
+                        } : null);
+                      } : undefined}
+                      onPointerUp={textMode && !eraserMode ? async (e) => {
+                        if (!draggingTextbox || draggingTextbox.annId !== ann.id) return;
+                        const dt = draggingTextbox;
+                        setDraggingTextbox(null);
+                        if (dt.didDrag) {
+                          await updateAnnotation(ann.id, { ...pos, x: dt.currentX, y: dt.currentY });
+                        }
+                      } : undefined}
                     >
                       {pos.content}
                     </div>
@@ -1268,6 +1369,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                     }
                   }}
                   onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); }
                     if (e.key === 'Escape') { setPendingTextBox(null); setPendingText(''); }
                   }}
                   placeholder="Digite aqui..."

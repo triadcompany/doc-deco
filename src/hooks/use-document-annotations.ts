@@ -128,6 +128,13 @@ export function useDocumentAnnotations(documentId: string | undefined) {
     if (error) console.error('Error adding text box:', error);
   }, [user?.id, documentId]);
 
+  const updateAnnotation = useCallback(async (id: string, position: any) => {
+    if (!user?.id) return;
+    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, position } : a)));
+    const { error } = await supabase.from('document_annotations').update({ position } as any).eq('id', id);
+    if (error) { console.error('Error updating annotation:', error); fetchAnnotations(); }
+  }, [user?.id, fetchAnnotations]);
+
   const removeAnnotation = useCallback(async (id: string) => {
     const { error } = await supabase.from('document_annotations').delete().eq('id', id);
     if (error) console.error('Error removing annotation:', error);
@@ -143,5 +150,5 @@ export function useDocumentAnnotations(documentId: string | undefined) {
     setAnnotations((prev) => prev.filter((a) => a.page !== page));
   }, [user?.id, documentId, annotations]);
 
-  return { annotations, loading, addAnnotation, addDrawing, addTextBox, removeAnnotation, clearPageAnnotations };
+  return { annotations, loading, addAnnotation, addDrawing, addTextBox, updateAnnotation, removeAnnotation, clearPageAnnotations };
 }
