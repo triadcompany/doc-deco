@@ -351,22 +351,24 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       const node = walker.currentNode as Text;
       const idx = node.textContent?.indexOf(refNorm) ?? -1;
       if (idx !== -1) {
-        // Check if this text node is the whole line or part of it
-        
-        // Create a range to replace
         const range = document.createRange();
-        
-        // If the node is essentially just the reference (maybe with whitespace), remove the parent block
-        const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
-        const blockText = parentBlock?.textContent?.trim() || '';
-        
-        if (blockText === refNorm || blockText === refNorm + '\n' || blockText === '\n' + refNorm) {
-          // The entire block is just the reference — replace the whole block
-          range.selectNode(parentBlock!);
+
+        // If the reference text lives inside an already-rendered scripture/msg
+        // blockquote, replace the entire blockquote — not just the inner text.
+        // This prevents the "duplicate verses" bug that happens when the user
+        // edits the title inside an existing blockquote and re-inserts.
+        const existingBlockquote = node.parentElement?.closest('blockquote');
+        if (existingBlockquote) {
+          range.selectNode(existingBlockquote);
         } else {
-          // Only part of the block — remove just the reference text
-          range.setStart(node, idx);
-          range.setEnd(node, idx + refNorm.length);
+          const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+          const blockText = parentBlock?.textContent?.trim() || '';
+          if (blockText === refNorm || blockText === refNorm + '\n' || blockText === '\n' + refNorm) {
+            range.selectNode(parentBlock!);
+          } else {
+            range.setStart(node, idx);
+            range.setEnd(node, idx + refNorm.length);
+          }
         }
 
         range.deleteContents();
