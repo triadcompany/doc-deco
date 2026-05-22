@@ -746,25 +746,99 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               ? "max-w-[98vw] sm:max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] h-[98vh] sm:h-[95vh] md:h-[90vh]"
               : "max-w-[98vw] sm:max-w-2xl max-h-[98vh] sm:max-h-[90vh] h-[98vh] sm:h-[88vh]"
           )}>
-            <DialogHeader className="shrink-0">
+            <DialogHeader className="shrink-0 pb-0">
               <DialogTitle className="text-base sm:text-lg">{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
-            <div className={cn("flex-1 min-h-0 flex flex-col", isCurrentMindMap ? "gap-2 overflow-hidden" : "gap-3 overflow-hidden")}>
-              <div className="shrink-0">
-                <label className="text-sm font-medium mb-1 sm:mb-1.5 block">Nome do Estudo</label>
+
+            <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+              {/* Row 1: title + format toggle */}
+              <div className="flex items-center gap-2 shrink-0">
                 <Input
                   value={studyTitle}
                   onChange={(e) => setStudyTitle(e.target.value)}
-                  placeholder="Ex: Sonhos e Visões - Resumo"
-                  className="h-10 sm:h-9"
+                  placeholder="Nome do estudo..."
+                  className="h-8 flex-1 text-sm"
                 />
+                <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
+                  <TabsList className="h-8">
+                    <TabsTrigger value="text" className="h-7 text-xs px-3 gap-1">
+                      <FileText className="w-3 h-3" /> Texto
+                    </TabsTrigger>
+                    <TabsTrigger value="mindmap" className="h-7 text-xs px-3 gap-1">
+                      <Network className="w-3 h-3" /> Mapa
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
-              <div className="shrink-0">{renderDocSelector()}</div>
-              <div className="flex-1 min-h-0 flex flex-col">{renderEditor()}</div>
+
+              {/* Row 2: compact doc selector */}
+              <div className="shrink-0">
+                {selectedDocIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    {selectedDocIds.map((docId) => (
+                      <Badge key={docId} variant="secondary" className="gap-1 pr-1 text-xs">
+                        <span className="truncate max-w-[180px]">{getDocTitle(docId)}</span>
+                        <button onClick={() => removeDoc(docId)} className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={comboOpen} className="w-full h-8 justify-between font-normal text-sm">
+                      <span className="truncate text-muted-foreground">
+                        {selectedDocIds.length === 0
+                          ? 'Vincular documentos (opcional)...'
+                          : `${selectedDocIds.length} documento${selectedDocIds.length > 1 ? 's' : ''} vinculado${selectedDocIds.length > 1 ? 's' : ''}`}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command filter={accentInsensitiveFilter}>
+                      <CommandInput placeholder="Pesquisar documento..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum documento encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {documents.map((d) => (
+                            <CommandItem key={d.id} value={d.title} onSelect={() => toggleDocSelection(d.id)}>
+                              <Check className={cn("mr-2 h-4 w-4", selectedDocIds.includes(d.id) ? "opacity-100" : "opacity-0")} />
+                              <span className="truncate">{d.title}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Editor fills remaining space */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                {studyMode === 'text' ? (
+                  <RichTextEditor
+                    key={editingSummary?.id || 'new'}
+                    value={isMindMap(summaryText) ? '' : summaryText}
+                    onChange={setSummaryText}
+                    placeholder="Escreva o conteúdo do estudo..."
+                    fillHeight
+                  />
+                ) : (
+                  <MindMapEditor
+                    key={`mm-${editingSummary?.id || 'new'}`}
+                    initialValue={isMindMap(summaryText) ? summaryText : undefined}
+                    onChange={setSummaryText}
+                    fillHeight
+                  />
+                )}
+              </div>
             </div>
+
             <DialogFooter className="shrink-0 flex-row gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1 sm:flex-initial h-10 sm:h-9">Cancelar</Button>
-              <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="flex-1 sm:flex-initial h-10 sm:h-9">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1 sm:flex-initial h-9">Cancelar</Button>
+              <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="flex-1 sm:flex-initial h-9">
                 {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                 Salvar
               </Button>
