@@ -746,11 +746,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               ? "max-w-[98vw] sm:max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] h-[98vh] sm:h-[95vh] md:h-[90vh]"
               : "max-w-[98vw] sm:max-w-2xl max-h-[98vh] sm:max-h-[90vh] h-[98vh] sm:h-[88vh]"
           )}>
-            <DialogHeader className="shrink-0 pb-0">
+            <DialogHeader className="shrink-0">
               <DialogTitle className="text-base sm:text-lg">{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
 
-            <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
               {/* Row 1: title + format toggle */}
               <div className="flex items-center gap-2 shrink-0">
                 <Input
