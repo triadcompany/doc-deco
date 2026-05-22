@@ -311,7 +311,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               value={isMindMap(summaryText) ? '' : summaryText}
               onChange={setSummaryText}
               placeholder="Escreva o conteúdo do estudo..."
-              fillHeight={embedded}
+              fillHeight={embedded || dialogOpen}
             />
           </>
         ) : (
@@ -319,7 +319,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             key={`mm-${editingSummary?.id || 'new'}`}
             initialValue={isMindMap(summaryText) ? summaryText : undefined}
             onChange={setSummaryText}
-            fillHeight={embedded}
+            fillHeight={embedded || dialogOpen}
           />
         )}
       </div>
@@ -744,12 +744,12 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             "flex flex-col",
             isCurrentMindMap
               ? "max-w-[98vw] sm:max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] h-[98vh] sm:h-[95vh] md:h-[90vh]"
-              : "max-w-[98vw] sm:max-w-2xl max-h-[98vh] sm:max-h-[90vh] h-[98vh] sm:h-auto"
+              : "max-w-[98vw] sm:max-w-2xl max-h-[98vh] sm:max-h-[90vh] h-[98vh] sm:h-[88vh]"
           )}>
             <DialogHeader className="shrink-0">
               <DialogTitle className="text-base sm:text-lg">{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
-            <div className={cn("flex-1 min-h-0 flex flex-col", isCurrentMindMap ? "gap-2 overflow-hidden" : "space-y-3 sm:space-y-4 overflow-y-auto")}>
+            <div className={cn("flex-1 min-h-0 flex flex-col", isCurrentMindMap ? "gap-2 overflow-hidden" : "gap-3 overflow-hidden")}>
               <div className="shrink-0">
                 <label className="text-sm font-medium mb-1 sm:mb-1.5 block">Nome do Estudo</label>
                 <Input
@@ -760,7 +760,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                 />
               </div>
               <div className="shrink-0">{renderDocSelector()}</div>
-              <div className={cn(isCurrentMindMap ? "flex-1 min-h-0" : "flex-1 min-h-0")}>{renderEditor()}</div>
+              <div className="flex-1 min-h-0 flex flex-col">{renderEditor()}</div>
             </div>
             <DialogFooter className="shrink-0 flex-row gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1 sm:flex-initial h-10 sm:h-9">Cancelar</Button>
