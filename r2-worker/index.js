@@ -4,6 +4,8 @@
  * Rotas:
  *   POST   /upload   — recebe multipart/form-data com { file, path }
  *   DELETE /delete   — ?path=<caminho>
+ *   GET    /list     — ?cursor=<opcional> — lista até 1000 objetos por página,
+ *                       usado pela limpeza de PDFs órfãos
  *
  * Variáveis de ambiente (definidas no wrangler.toml ou dashboard):
  *   UPLOAD_SECRET  — token Bearer para autenticar o frontend
@@ -14,7 +16,7 @@
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type',
 };
 
@@ -66,6 +68,16 @@ export default {
       });
 
       return json({ path });
+    }
+
+    // ── GET /list ─────────────────────────────────────────────────────────────
+    if (request.method === 'GET' && pathname === '/list') {
+      const cursor = searchParams.get('cursor') || undefined;
+      const listed = await env.R2_BUCKET.list({ limit: 1000, cursor });
+      return json({
+        keys: listed.objects.map((o) => o.key),
+        cursor: listed.truncated ? listed.cursor : null,
+      });
     }
 
     // ── DELETE /delete ────────────────────────────────────────────────────────
