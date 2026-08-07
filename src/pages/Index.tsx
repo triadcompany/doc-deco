@@ -332,11 +332,12 @@ const Index = () => {
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom shadow-[0_-2px_12px_rgba(0,0,0,0.04)]">
-              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-6 gap-0 p-0">
+              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-7 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
                   { value: 'documentos', icon: FolderSearch, label: 'Docs' },
+                  { value: 'resumos', icon: FileText, label: 'Estudo' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
                   { value: 'ia', icon: Bot, label: 'IA' },
                 ].map((tab) => (
