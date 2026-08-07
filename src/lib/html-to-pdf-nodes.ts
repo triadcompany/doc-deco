@@ -23,17 +23,15 @@ const BASE_FONT_SIZE_PT = 10.5; // matches the app's text-sm (14px) body copy
 // everywhere, so this stays Helvetica. See src/lib/pdf/theme.ts.
 const DEFAULT_FONT_FAMILY = 'Helvetica';
 
-// Dark-theme HSL triplets (src/index.css .dark block) — the app defaults to dark
-// mode (ThemeProvider defaultTheme="dark"), so the exported PDF matches that, not
-// a print-style light page. Content pasted from the app (e.g. near-white text
-// meant to sit on a dark card) only reads correctly against this same background.
-const DARK_THEME_HSL: Record<string, string> = {
-  background: '225 25% 8%',
-  foreground: '210 20% 92%',
+// Light-theme HSL triplets (src/index.css :root block) — PDF exports use a white
+// page with black text (user preference), not the app's on-screen dark theme.
+const LIGHT_THEME_HSL: Record<string, string> = {
+  background: '220 20% 97%',
+  foreground: '220 25% 10%',
   primary: '38 92% 50%',
-  muted: '225 18% 16%',
-  'muted-foreground': '215 15% 55%',
-  accent: '38 50% 15%',
+  muted: '220 15% 94%',
+  'muted-foreground': '220 10% 45%',
+  accent: '38 80% 94%',
 };
 
 function hslTripletToCss(triplet: string): string {
@@ -49,7 +47,7 @@ function resolveColor(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
   const match = raw.match(/var\(--([a-z-]+)\)/i);
   if (!match) return raw;
-  const triplet = DARK_THEME_HSL[match[1]];
+  const triplet = LIGHT_THEME_HSL[match[1]];
   return triplet ? hslTripletToCss(triplet) : undefined;
 }
 

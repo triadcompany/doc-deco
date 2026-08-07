@@ -1,12 +1,11 @@
-// Dark-theme palette (src/index.css .dark block) — the app defaults to dark mode,
-// so exported PDFs match that instead of a print-style light page. Keep in sync
-// with DARK_THEME_HSL in html-to-pdf-nodes.ts.
+// Light print palette — white page, black text (user preference, not the app's
+// on-screen dark theme). Keep in sync with LIGHT_THEME_HSL in html-to-pdf-nodes.ts.
 export const PDF_COLORS = {
-  background: 'hsl(225, 25%, 8%)',
-  foreground: 'hsl(210, 20%, 92%)',
+  background: 'hsl(0, 0%, 100%)',
+  foreground: 'hsl(220, 25%, 10%)',
   primary: 'hsl(38, 92%, 50%)',
-  muted: 'hsl(225, 18%, 16%)',
-  mutedForeground: 'hsl(215, 15%, 55%)',
+  muted: 'hsl(220, 15%, 94%)',
+  mutedForeground: 'hsl(220, 10%, 45%)',
 };
 
 // The app's on-screen font is Poppins, but @react-pdf/renderer's font embedding
