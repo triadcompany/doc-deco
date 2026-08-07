@@ -1,16 +1,20 @@
 import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
-
-const MUTED_FOREGROUND = 'hsl(220, 10%, 45%)';
-const MUTED_BG = 'hsl(220, 15%, 94%)';
-const FOREGROUND = 'hsl(220, 25%, 10%)';
+import { PDF_COLORS, DEFAULT_PDF_FONT } from '@/lib/pdf/theme';
 
 const styles = StyleSheet.create({
-  page: { paddingTop: 48, paddingBottom: 48, paddingHorizontal: 44, fontFamily: 'Helvetica', color: FOREGROUND },
+  page: {
+    paddingTop: 48,
+    paddingBottom: 48,
+    paddingHorizontal: 44,
+    fontFamily: DEFAULT_PDF_FONT,
+    color: PDF_COLORS.foreground,
+    backgroundColor: PDF_COLORS.background,
+  },
   title: { fontSize: 20, fontWeight: 700, marginBottom: 4 },
   docBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
-  docBadge: { fontSize: 8, color: MUTED_FOREGROUND, backgroundColor: MUTED_BG, borderRadius: 3, paddingVertical: 2, paddingHorizontal: 6, marginRight: 4 },
-  meta: { fontSize: 9, color: MUTED_FOREGROUND, marginBottom: 18 },
-  emptyNote: { fontSize: 11, color: MUTED_FOREGROUND, fontStyle: 'italic', marginTop: 20 },
+  docBadge: { fontSize: 8, color: PDF_COLORS.mutedForeground, backgroundColor: PDF_COLORS.muted, borderRadius: 3, paddingVertical: 2, paddingHorizontal: 6, marginRight: 4 },
+  meta: { fontSize: 9, color: PDF_COLORS.mutedForeground, marginBottom: 18 },
+  emptyNote: { fontSize: 11, color: PDF_COLORS.mutedForeground, fontStyle: 'italic', marginTop: 20 },
 });
 
 interface Props {

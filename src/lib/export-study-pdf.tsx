@@ -53,7 +53,7 @@ async function captureMindMapPng(summaryJson: string): Promise<{ dataUrl: string
   container.style.left = '-10000px';
   container.style.width = '1200px';
   container.style.height = '800px';
-  container.style.background = '#ffffff';
+  container.style.background = 'hsl(225, 25%, 8%)';
   document.body.appendChild(container);
 
   const root = createRoot(container);
@@ -68,7 +68,7 @@ async function captureMindMapPng(summaryJson: string): Promise<{ dataUrl: string
     const flowEl = container.querySelector('.react-flow') as HTMLElement | null;
     if (!flowEl) return null;
 
-    const dataUrl = await toPng(flowEl, { pixelRatio: 2, backgroundColor: '#ffffff' });
+    const dataUrl = await toPng(flowEl, { pixelRatio: 2, backgroundColor: 'hsl(225, 25%, 8%)' });
 
     const size = await new Promise<{ width: number; height: number } | null>((resolve) => {
       const img = new Image();

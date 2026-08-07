@@ -10,26 +10,30 @@ export interface PdfTextRun {
   italic?: boolean;
   color?: string;
   fontSize?: number; // pt
-  fontFamily?: string; // 'Helvetica' | 'Times-Roman' | 'Courier'
+  fontFamily?: string; // 'Poppins' | 'Times-Roman' | 'Courier'
 }
 
 export type PdfBlock =
   | { type: 'heading1' | 'heading2' | 'paragraph'; runs: PdfTextRun[] }
   | { type: 'quote'; blocks: PdfBlock[] };
 
-const BASE_FONT_SIZE_PT = 11;
+const BASE_FONT_SIZE_PT = 10.5; // matches the app's text-sm (14px) body copy
+// @react-pdf/renderer's font embedding corrupts Poppins glyphs (verified broken in
+// both macOS Quartz and Chrome/PDFium) — built-in PDF fonts render correctly
+// everywhere, so this stays Helvetica. See src/lib/pdf/theme.ts.
 const DEFAULT_FONT_FAMILY = 'Helvetica';
 
-// Light-theme HSL triplets (src/index.css :root block). The PDF always prints in the
-// light palette regardless of the app's active theme — there's no such thing as a
-// "dark" printed page.
-const LIGHT_THEME_HSL: Record<string, string> = {
-  background: '220 20% 97%',
-  foreground: '220 25% 10%',
+// Dark-theme HSL triplets (src/index.css .dark block) — the app defaults to dark
+// mode (ThemeProvider defaultTheme="dark"), so the exported PDF matches that, not
+// a print-style light page. Content pasted from the app (e.g. near-white text
+// meant to sit on a dark card) only reads correctly against this same background.
+const DARK_THEME_HSL: Record<string, string> = {
+  background: '225 25% 8%',
+  foreground: '210 20% 92%',
   primary: '38 92% 50%',
-  muted: '220 15% 94%',
-  'muted-foreground': '220 10% 45%',
-  accent: '38 80% 94%',
+  muted: '225 18% 16%',
+  'muted-foreground': '215 15% 55%',
+  accent: '38 50% 15%',
 };
 
 function hslTripletToCss(triplet: string): string {
@@ -38,12 +42,14 @@ function hslTripletToCss(triplet: string): string {
 }
 
 // Resolves `hsl(var(--primary))` / `hsl(var(--muted) / 0.3)` (the only patterns the
-// app emits) into a literal color react-pdf can render. Anything else passes through.
+// app emits) into a literal color react-pdf can render. Anything else (already a
+// literal hex/rgb/hsl color — including colors pasted in from elsewhere) passes
+// through unchanged.
 function resolveColor(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
   const match = raw.match(/var\(--([a-z-]+)\)/i);
   if (!match) return raw;
-  const triplet = LIGHT_THEME_HSL[match[1]];
+  const triplet = DARK_THEME_HSL[match[1]];
   return triplet ? hslTripletToCss(triplet) : undefined;
 }
 
@@ -64,11 +70,18 @@ function resolveFontFamily(face: string | null | undefined, inherited: string): 
   const f = face.toLowerCase();
   if (f.includes('serif') && !f.includes('sans') || f.includes('georgia') || f.includes('times')) return 'Times-Roman';
   if (f.includes('mono') || f.includes('courier')) return 'Courier';
-  return 'Helvetica';
+  return DEFAULT_FONT_FAMILY;
 }
+
+const ROOT_FONT_SIZE_PT = 12; // 16px root, browser default — rem is relative to this, not to the inherited size
 
 function resolveFontSize(cssFontSize: string | null | undefined, inherited: number): number {
   if (!cssFontSize) return inherited;
+  // Check "rem" before "em" — "0.875rem".endsWith('em') is also true.
+  if (cssFontSize.endsWith('rem')) {
+    const factor = parseFloat(cssFontSize);
+    return Number.isFinite(factor) ? ROOT_FONT_SIZE_PT * factor : inherited;
+  }
   if (cssFontSize.endsWith('em')) {
     const factor = parseFloat(cssFontSize);
     return Number.isFinite(factor) ? inherited * factor : inherited;
@@ -190,7 +203,7 @@ function parseBlocks(container: Element): PdfBlock[] {
     if (tag === 'h1' || tag === 'h2') {
       const style = baseStyle();
       style.bold = true;
-      style.fontSizePt = resolveFontSize(getInlineStyleProp(el, 'font-size'), tag === 'h1' ? 20 : 15);
+      style.fontSizePt = resolveFontSize(getInlineStyleProp(el, 'font-size'), tag === 'h1' ? 18 : 15);
       const color = resolveColor(getInlineStyleProp(el, 'color'));
       if (color) style.color = color;
       const runs: PdfTextRun[] = [];
