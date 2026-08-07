@@ -70,7 +70,7 @@ const Auth = () => {
           <div className="mx-auto w-12 h-12 rounded-xl bg-primary flex items-center justify-center glow-amber mb-4">
             <BookOpen className="w-6 h-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">DocVault</CardTitle>
+          <CardTitle className="text-2xl">Estudo Bíblico</CardTitle>
           <CardDescription>
             {isLogin ? 'Faça login para acessar seus documentos' : 'Crie sua conta'}
           </CardDescription>

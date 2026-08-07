@@ -214,7 +214,7 @@ const Index = () => {
               <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-base sm:text-lg font-bold tracking-tight">DocVault</h1>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight">Estudo Bíblico</h1>
               <p className="text-[9px] sm:text-[10px] text-muted-foreground -mt-0.5 hidden sm:block">Biblioteca Digital</p>
             </div>
           </div>
