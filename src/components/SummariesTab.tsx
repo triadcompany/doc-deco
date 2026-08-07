@@ -9,8 +9,10 @@ import { RichTextEditor } from '@/components/RichTextEditor';
 import { MindMapEditor } from '@/components/mindmap/MindMapEditor';
 import { MindMapViewer } from '@/components/mindmap/MindMapViewer';
 import { isMindMap } from '@/components/mindmap/types';
+import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -65,6 +67,8 @@ import {
   ChevronRight,
   MoreHorizontal,
   FolderInput,
+  FileDown,
+  CheckSquare,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -103,6 +107,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [viewingSummary, setViewingSummary] = useState<DocSummary | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [inlineView, setInlineView] = useState<InlineView>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportingBatch, setExportingBatch] = useState(false);
 
   const normalizeForSearch = (text: string) =>
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -188,6 +196,48 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     if (s.title) return s.title;
     if (s.documentIds.length > 0) return getDocTitle(s.documentIds[0]);
     return 'Sem título';
+  };
+
+  const handleExportOne = async (s: DocSummary) => {
+    setExportingId(s.id);
+    try {
+      const { exportStudyToPdf } = await import('@/lib/export-study-pdf');
+      await exportStudyToPdf(s, documents);
+    } catch {
+      toast.error('Erro ao gerar o PDF do estudo');
+    } finally {
+      setExportingId(null);
+    }
+  };
+
+  const toggleSelectionMode = () => {
+    setSelectionMode((v) => !v);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleExportSelected = async () => {
+    const toExport = summaries.filter((s) => selectedIds.has(s.id));
+    if (toExport.length === 0) return;
+    setExportingBatch(true);
+    try {
+      const { exportStudiesToZip } = await import('@/lib/export-study-pdf');
+      await exportStudiesToZip(toExport, documents);
+      setSelectionMode(false);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Erro ao gerar os PDFs dos estudos selecionados');
+    } finally {
+      setExportingBatch(false);
+    }
   };
 
   if (loading) {
@@ -349,6 +399,20 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               </div>
             )}
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={exportingId === viewingSummary.id}
+            onClick={() => handleExportOne(viewingSummary)}
+            className="gap-1 h-8 shrink-0"
+          >
+            {exportingId === viewingSummary.id ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileDown className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">Exportar</span>
+          </Button>
           <Button size="sm" variant="outline" onClick={() => { openEdit(viewingSummary); }} className="gap-1 h-8 shrink-0">
             <Pencil className="w-3.5 h-3.5" />
             Editar
@@ -496,16 +560,40 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           <FileText className="w-5 h-5 text-primary" />
           Meus Estudos
         </h2>
-        <div className="flex items-center gap-1.5">
-          <Button size="sm" variant="outline" onClick={() => setShowNewFolder(true)} className="gap-1.5">
-            <FolderPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">Pasta</span>
-          </Button>
-          <Button size="sm" onClick={openNew} className="gap-1.5">
-            <Plus className="w-4 h-4" />
-            Novo Estudo
-          </Button>
-        </div>
+        {selectionMode ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-muted-foreground tabular-nums">{selectedIds.size} selecionado{selectedIds.size !== 1 ? 's' : ''}</span>
+            <Button
+              size="sm"
+              onClick={handleExportSelected}
+              disabled={selectedIds.size === 0 || exportingBatch}
+              className="gap-1.5"
+            >
+              {exportingBatch ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+              <span className="hidden sm:inline">Exportar selecionados</span>
+            </Button>
+            <Button size="sm" variant="ghost" onClick={toggleSelectionMode} disabled={exportingBatch}>
+              Cancelar
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            {summaries.length > 0 && (
+              <Button size="sm" variant="outline" onClick={toggleSelectionMode} className="gap-1.5">
+                <CheckSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">Selecionar</span>
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={() => setShowNewFolder(true)} className="gap-1.5">
+              <FolderPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Pasta</span>
+            </Button>
+            <Button size="sm" onClick={openNew} className="gap-1.5">
+              <Plus className="w-4 h-4" />
+              Novo Estudo
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Search bar */}
@@ -675,36 +763,58 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           {filteredSummaries.map((s) => {
             const isMM = isMindMap(s.summary);
             return (
-              <Card key={s.id} className="group cursor-pointer" onClick={() => openView(s)}>
+              <Card
+                key={s.id}
+                className="group cursor-pointer"
+                onClick={() => (selectionMode ? toggleSelected(s.id) : openView(s))}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
+                    {selectionMode && (
+                      <Checkbox
+                        checked={selectedIds.has(s.id)}
+                        onCheckedChange={() => toggleSelected(s.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-0.5 shrink-0"
+                      />
+                    )}
                     <CardTitle className="text-sm font-medium flex-1 flex items-center gap-1.5 min-w-0">
                       {isMM && <Network className="w-3.5 h-3.5 text-primary shrink-0" />}
                       <span className="truncate">{getStudyDisplayTitle(s)}</span>
                     </CardTitle>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openView(s)} title="Visualizar estudo">
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Mais opções">
-                            <MoreHorizontal className="w-3.5 h-3.5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem onClick={() => { setMovingStudyId(s.id); setSelectedFolderId(s.folderId); }}>
-                            <FolderInput className="w-3.5 h-3.5 mr-2" /> Mover para pasta
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => onDelete(s.id)}>
-                            <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    {!selectionMode && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openView(s)} title="Visualizar estudo">
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Mais opções">
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem disabled={exportingId === s.id} onClick={() => handleExportOne(s)}>
+                              {exportingId === s.id ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                              ) : (
+                                <FileDown className="w-3.5 h-3.5 mr-2" />
+                              )}
+                              Exportar PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setMovingStudyId(s.id); setSelectedFolderId(s.folderId); }}>
+                              <FolderInput className="w-3.5 h-3.5 mr-2" /> Mover para pasta
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(s.id)}>
+                              <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
                   </div>
                   {s.documentIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -887,6 +997,18 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setViewingSummary(null)}>Fechar</Button>
+              <Button
+                variant="outline"
+                disabled={!viewingSummary || exportingId === viewingSummary.id}
+                onClick={() => viewingSummary && handleExportOne(viewingSummary)}
+              >
+                {viewingSummary && exportingId === viewingSummary.id ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <FileDown className="w-4 h-4 mr-1" />
+                )}
+                Exportar PDF
+              </Button>
               <Button onClick={() => { if (viewingSummary) { openEdit(viewingSummary); setViewingSummary(null); } }}>
                 <Pencil className="w-4 h-4 mr-1" />
                 Editar
