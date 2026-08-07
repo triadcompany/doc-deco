@@ -1,10 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { getStoredToken, setStoredToken } from '@/integrations/supabase/client';
+
+interface AuthUser {
+  id: string;
+  email?: string;
+}
 
 interface AuthContextType {
-  session: Session | null;
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -12,6 +15,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const LOGIN_SERVICE_URL = import.meta.env.VITE_LOGIN_SERVICE_URL as string;
 
 // Helper: race a promise against a timeout
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -24,31 +29,33 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshSession = useCallback(async () => {
+    const token = getStoredToken();
+    if (!token) {
+      setUser(null);
+      return;
+    }
+    const res = await fetch(`${LOGIN_SERVICE_URL}/session`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data.authenticated) {
+      setUser({ id: data.userId, email: data.email });
+    } else {
+      setStoredToken(null);
+      setUser(null);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setSession(session);
-        setLoading(false);
-      }
-    });
-
-    // Try to get session with a 10s timeout
-    withTimeout(supabase.auth.getSession(), 10000, 'getSession')
-      .then(({ data: { session } }) => {
-        if (mounted) {
-          setSession(session);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Erro ao obter sessão:', err);
-        if (mounted) setLoading(false);
-      });
+    withTimeout(refreshSession(), 10000, 'getSession')
+      .catch((err) => console.error('Erro ao obter sessão:', err))
+      .finally(() => { if (mounted) setLoading(false); });
 
     // Safety net: if nothing resolves in 12s, stop loading
     const timeout = setTimeout(() => {
@@ -62,44 +69,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
       clearTimeout(timeout);
     };
-  }, []);
+  }, [refreshSession]);
 
-  const signUp = async (email: string, password: string, displayName?: string) => {
-    const { error } = await withTimeout(
-      supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { display_name: displayName } },
-      }),
-      15000,
-      'Criar conta'
-    );
-    if (error) throw error;
+  const signUp = async (_email: string, _password: string, _displayName?: string) => {
+    throw new Error('Cadastro não disponível — este app tem um único usuário.');
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await withTimeout(
-      supabase.auth.signInWithPassword({ email, password }),
+    const res = await withTimeout(
+      fetch(`${LOGIN_SERVICE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      }),
       15000,
       'Login'
     );
-    if (error) throw error;
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Falha no login');
+    }
+    const data = await res.json();
+    if (!data.token || !data.userId) {
+      throw new Error('Resposta de login inválida (sem token) — o login-service está com uma versão desatualizada?');
+    }
+    setStoredToken(data.token);
+    setUser({ id: data.userId, email: data.email });
   };
 
   const signOut = async () => {
-    const { error } = await withTimeout(
-      supabase.auth.signOut(),
+    await withTimeout(
+      fetch(`${LOGIN_SERVICE_URL}/logout`, { method: 'POST', credentials: 'include' }),
       10000,
       'Logout'
-    );
-    if (error) throw error;
+    ).catch(() => { /* stateless JWT — clearing local state below is what matters */ });
+    setStoredToken(null);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

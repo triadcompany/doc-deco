@@ -56,7 +56,7 @@ app.post('/login', async (req, res) => {
   }
 
   const { rows } = await pool.query(
-    'SELECT id, encrypted_password FROM auth.users WHERE email = $1',
+    'SELECT id, email, encrypted_password FROM auth.users WHERE email = $1',
     [email],
   );
   const user = rows[0];
@@ -66,13 +66,17 @@ app.post('/login', async (req, res) => {
   if (!valid) return res.status(401).json({ error: 'credenciais inválidas' });
 
   const token = jwt.sign(
-    { sub: user.id, role: 'authenticated' },
+    { sub: user.id, email: user.email, role: 'authenticated' },
     JWT_SECRET,
     { expiresIn: TOKEN_TTL_SECONDS },
   );
 
   setSessionCookie(res, token);
-  res.json({ ok: true });
+  // PostgREST reads the JWT from an Authorization header, which JS can only attach
+  // if it can read the token — an httpOnly cookie can't be read by the frontend.
+  // Returning it here too lets the frontend store it (same place Supabase's own
+  // client already stored its token: localStorage) and send it as Bearer auth.
+  res.json({ ok: true, token, userId: user.id, email: user.email });
 });
 
 app.post('/logout', (req, res) => {
@@ -81,12 +85,15 @@ app.post('/logout', (req, res) => {
 });
 
 app.get('/session', (req, res) => {
-  const token = req.cookies?.[COOKIE_NAME];
+  const bearer = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7)
+    : null;
+  const token = bearer || req.cookies?.[COOKIE_NAME];
   if (!token) return res.json({ authenticated: false });
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    res.json({ authenticated: true, userId: payload.sub });
+    res.json({ authenticated: true, userId: payload.sub, email: payload.email });
   } catch {
     res.json({ authenticated: false });
   }
