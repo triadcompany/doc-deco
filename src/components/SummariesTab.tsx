@@ -787,8 +787,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                         className="mt-0.5 shrink-0"
                       />
                     )}
-                    <CardTitle className="text-sm font-medium flex-1 flex items-center gap-1.5 min-w-0">
-                      {isMM && <Network className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    <CardTitle className="text-xl font-bold leading-tight flex-1 flex items-center gap-1.5 min-w-0">
+                      {isMM && <Network className="w-4 h-4 text-primary shrink-0" />}
                       <span className="truncate">{getStudyDisplayTitle(s)}</span>
                     </CardTitle>
                     {!selectionMode && (
