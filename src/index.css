@@ -19,7 +19,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 10%;
 
-    --primary: 25 85% 48%;
+    --primary: 25 90% 58%;
     --primary-foreground: 0 0% 5%;
 
     --secondary: 220 15% 92%;
@@ -36,18 +36,18 @@
 
     --border: 220 15% 88%;
     --input: 220 15% 88%;
-    --ring: 25 85% 48%;
+    --ring: 25 90% 58%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 220 20% 95%;
     --sidebar-foreground: 220 15% 30%;
-    --sidebar-primary: 25 85% 48%;
+    --sidebar-primary: 25 90% 58%;
     --sidebar-primary-foreground: 0 0% 5%;
     --sidebar-accent: 25 75% 94%;
     --sidebar-accent-foreground: 25 85% 30%;
     --sidebar-border: 220 15% 88%;
-    --sidebar-ring: 25 85% 48%;
+    --sidebar-ring: 25 90% 58%;
   }
 
   .dark {
@@ -60,7 +60,7 @@
     --popover: 225 22% 11%;
     --popover-foreground: 210 20% 92%;
 
-    --primary: 25 85% 48%;
+    --primary: 25 90% 58%;
     --primary-foreground: 0 0% 5%;
 
     --secondary: 225 18% 16%;
@@ -77,16 +77,16 @@
 
     --border: 225 18% 18%;
     --input: 225 18% 18%;
-    --ring: 25 85% 48%;
+    --ring: 25 90% 58%;
 
     --sidebar-background: 225 25% 6%;
     --sidebar-foreground: 210 20% 75%;
-    --sidebar-primary: 25 85% 48%;
+    --sidebar-primary: 25 90% 58%;
     --sidebar-primary-foreground: 0 0% 5%;
     --sidebar-accent: 25 45% 12%;
     --sidebar-accent-foreground: 25 85% 62%;
     --sidebar-border: 225 18% 15%;
-    --sidebar-ring: 25 85% 48%;
+    --sidebar-ring: 25 90% 58%;
   }
 }
 
@@ -111,7 +111,7 @@
   }
   
   .glow-amber {
-    box-shadow: 0 0 20px hsl(25 85% 48% / 0.15), 0 0 60px hsl(25 85% 48% / 0.05);
+    box-shadow: 0 0 20px hsl(25 90% 58% / 0.15), 0 0 60px hsl(25 90% 58% / 0.05);
   }
 
   /* Safe area padding for notched devices */
