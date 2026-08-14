@@ -58,6 +58,27 @@ describe('parseStudyHtml', () => {
     expect(flatText).toContain('nota');
   });
 
+  it('recognizes blocks (paragraphs, blockquotes) nested inside a wrapping <div>', () => {
+    // The editor sometimes wraps a whole run of content — several blockquotes and
+    // paragraphs — inside one outer <div> (e.g. after pasting a block of text).
+    // Regression test: this used to collapse everything into one glued-together
+    // paragraph with no blockquote styling and no spacing between blocks.
+    const html =
+      '<div>' +
+      '<p>Texto antes.</p>' +
+      '<blockquote style="border-left:3px solid hsl(var(--primary));"><h2>João 3:16</h2><span>16</span>Porque Deus amou o mundo...</blockquote>' +
+      '<p>Texto depois.</p>' +
+      '</div>';
+    const blocks = parseStudyHtml(html);
+    expect(blocks).toHaveLength(3);
+    expect(blocks[0]).toMatchObject({ type: 'paragraph' });
+    expect(blocks[1]).toMatchObject({ type: 'quote' });
+    expect(blocks[2]).toMatchObject({ type: 'paragraph' });
+    if (blocks[0].type !== 'paragraph' || blocks[2].type !== 'paragraph') throw new Error('expected paragraphs');
+    expect(blocks[0].runs.map((r) => r.text).join('')).toContain('Texto antes');
+    expect(blocks[2].runs.map((r) => r.text).join('')).toContain('Texto depois');
+  });
+
   it('degrades gracefully on empty or whitespace-only input', () => {
     expect(parseStudyHtml('')).toEqual([]);
     expect(parseStudyHtml('   ')).toEqual([]);

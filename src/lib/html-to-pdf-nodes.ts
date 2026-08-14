@@ -217,7 +217,22 @@ function parseBlocks(container: Element): PdfBlock[] {
       return;
     }
 
-    // p / div
+    if (tag === 'div') {
+      // The editor uses <div> two different ways: as a plain per-line paragraph
+      // (contenteditable's default Enter behavior), and as a wrapper around a
+      // whole run of other blocks — headings, several <blockquote>s, <p>s — all
+      // pasted/typed as one chunk. Recursing through parseBlocks handles both:
+      // a div with only inline children just yields a single paragraph block,
+      // same as before; a div wrapping other block tags gets each of them
+      // recognized as its own block instead of being flattened into one run of
+      // inline text (which glued blockquotes/paragraphs together with no
+      // spacing and no blockquote styling — the bug this fixes).
+      const nested = parseBlocks(el);
+      blocks.push(...nested);
+      return;
+    }
+
+    // p
     const runs: PdfTextRun[] = [];
     el.childNodes.forEach((child) => collectRuns(child, baseStyle(), runs));
     const finalRuns = trimRuns(runs);
