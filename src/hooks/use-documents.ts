@@ -266,24 +266,41 @@ export function useDocuments() {
     const termWords = normalizeText(term).split(/\s+/).filter(Boolean);
     if (termWords.length === 0) return results;
 
-    // Step 2: Fetch content for candidate docs in batches (Supabase limit = 1000)
-    const idsToSnippet = results.map((r) => r.id);
+    // Step 2: Fetch content for candidate docs, paginated with the same filters as
+    // step 1 (rather than an `.in('id', [...hundreds of UUIDs...])` filter, which
+    // builds a URL long enough to blow past proxy/client header-size limits and
+    // makes the request fail silently — every search then returns zero results).
     const contentMap = new Map<string, string>();
-    const batchSize = 500;
-    for (let i = 0; i < idsToSnippet.length; i += batchSize) {
-      const batch = idsToSnippet.slice(i, i + batchSize);
-      const { data: contentData, error: contentError } = await supabase
-        .from('documents')
-        .select('id, content')
-        .in('id', batch);
+    const PAGE_SIZE = 200;
+    let offset = 0;
+    while (true) {
+      let contentQuery = supabase.from('documents').select('id, content');
+      if (filters?.author && filters.author !== 'all') {
+        contentQuery = contentQuery.eq('author', filters.author);
+      }
+      if (filters?.translator && filters.translator !== 'all') {
+        contentQuery = contentQuery.eq('translator', filters.translator);
+      }
+      if (filters?.startDate) {
+        contentQuery = contentQuery.gte('date', filters.startDate);
+      }
+      if (filters?.endDate) {
+        contentQuery = contentQuery.lte('date', filters.endDate);
+      }
 
-      if (contentError || !contentData) continue;
-      for (const row of contentData as any[]) {
+      const { data: page, error: pageError } = await contentQuery
+        .order('date', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (pageError || !page || page.length === 0) break;
+      for (const row of page as any[]) {
         if (row.content) contentMap.set(row.id, row.content);
       }
+      if (page.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
     }
 
-    
+
 
     const expandedResults: typeof results = [];
 
