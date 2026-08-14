@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useTheme } from 'next-themes';
+import { sanitizeContentColors } from '@/lib/sanitize-content-colors';
 import { PDFDocument } from '@/lib/types';
 import { DocSummary } from '@/hooks/use-document-summaries';
 import { useStudyFolders, StudyFolder } from '@/hooks/use-study-folders';
@@ -111,6 +113,13 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingBatch, setExportingBatch] = useState(false);
+
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+  const viewingSummaryHtml = useMemo(
+    () => (viewingSummary ? sanitizeContentColors(viewingSummary.summary, isDark) : ''),
+    [viewingSummary, isDark]
+  );
 
   const normalizeForSearch = (text: string) =>
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -426,7 +435,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           ) : (
             <div
               className="max-w-none pr-2 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
-              dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
+              dangerouslySetInnerHTML={{ __html: viewingSummaryHtml }}
             />
           )}
         </div>
@@ -837,7 +846,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   ) : (
                     <div
                       className="text-sm line-clamp-6 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-1 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-1 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
-                      dangerouslySetInnerHTML={{ __html: s.summary }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeContentColors(s.summary, isDark) }}
                     />
                   )}
                 </CardContent>
@@ -991,7 +1000,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               ) : (
                 <div
                   className="max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
-                  dangerouslySetInnerHTML={{ __html: viewingSummary.summary }}
+                  dangerouslySetInnerHTML={{ __html: viewingSummaryHtml }}
                 />
               )
             )}
