@@ -388,7 +388,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             Voltar
           </Button>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold truncate">{getStudyDisplayTitle(viewingSummary)}</h3>
+            <h3 className="text-xl font-bold leading-tight truncate">{getStudyDisplayTitle(viewingSummary)}</h3>
             {viewingSummary.documentIds.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-0.5">
                 {viewingSummary.documentIds.map((docId) => (
@@ -967,7 +967,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
               : "max-w-2xl"
           )}>
             <DialogHeader>
-              <DialogTitle className="text-base">
+              <DialogTitle className="text-2xl font-bold leading-tight">
                 {viewingSummary ? getStudyDisplayTitle(viewingSummary) : ''}
               </DialogTitle>
               {viewingSummary && viewingSummary.documentIds.length > 0 && (
