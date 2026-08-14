@@ -787,9 +787,9 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                         className="mt-0.5 shrink-0"
                       />
                     )}
-                    <CardTitle className="text-xl font-bold leading-tight flex-1 flex items-center gap-1.5 min-w-0">
-                      {isMM && <Network className="w-4 h-4 text-primary shrink-0" />}
-                      <span className="truncate">{getStudyDisplayTitle(s)}</span>
+                    <CardTitle className="text-xl font-bold leading-tight flex-1 flex items-start gap-1.5 min-w-0">
+                      {isMM && <Network className="w-4 h-4 text-primary shrink-0 mt-1" />}
+                      <span>{getStudyDisplayTitle(s)}</span>
                     </CardTitle>
                     {!selectionMode && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
