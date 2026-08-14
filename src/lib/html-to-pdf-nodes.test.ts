@@ -49,6 +49,22 @@ describe('parseStudyHtml', () => {
     expect(run.color).toBe('hsl(38, 92%, 50%)');
   });
 
+  it('drops literal colors too light to read on the white PDF page', () => {
+    // e.g. text copied from the app's own dark theme, like rgb(231, 235, 239).
+    const html = '<p><span style="color: rgb(231, 235, 239)">quase invisível</span> normal.</p>';
+    const blocks = parseStudyHtml(html);
+    if (blocks[0].type !== 'paragraph') throw new Error('expected paragraph');
+    const run = blocks[0].runs.find((r) => r.text.includes('invis'));
+    expect(run?.color).toBeUndefined();
+  });
+
+  it('keeps literal colors with enough contrast to read on white', () => {
+    const html = '<p><span style="color: rgb(180, 30, 30)">vermelho escuro</span></p>';
+    const blocks = parseStudyHtml(html);
+    if (blocks[0].type !== 'paragraph') throw new Error('expected paragraph');
+    expect(blocks[0].runs[0].color).toBe('rgb(180, 30, 30)');
+  });
+
   it('never drops text from unrecognized tags', () => {
     const html = '<p>Antes <u>sublinhado</u> depois <sup>nota</sup>.</p>';
     const blocks = parseStudyHtml(html);
