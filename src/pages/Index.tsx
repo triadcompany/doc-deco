@@ -218,7 +218,7 @@ const Index = () => {
     <div className={`${splitMode ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen pb-20 sm:pb-0'} bg-background safe-top safe-x sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        <div className={`${splitMode ? 'w-full px-3 sm:px-4' : 'max-w-7xl mx-auto px-4 sm:px-6'} h-14 sm:h-16 flex items-center justify-between`}>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary flex items-center justify-center glow-amber">
               <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
@@ -257,7 +257,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 ${splitMode ? 'py-3 flex-1 min-h-0 flex flex-col w-full' : 'py-4 sm:py-6'}`}>
+      <main className={splitMode ? 'w-full px-3 sm:px-4 py-3 flex-1 min-h-0 flex flex-col' : 'max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6'}>
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner size={32} />
