@@ -863,7 +863,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             "flex flex-col",
             isCurrentMindMap
               ? "max-w-[98vw] sm:max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] h-[98vh] sm:h-[95vh] md:h-[90vh]"
-              : "max-w-[98vw] sm:max-w-2xl max-h-[98vh] sm:max-h-[90vh] h-[98vh] sm:h-[88vh]"
+              : "max-w-[98vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl max-h-[98vh] sm:max-h-[95vh] h-[98vh] sm:h-[92vh]"
           )}>
             <DialogHeader className="shrink-0">
               <DialogTitle className="text-base sm:text-lg">{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
@@ -970,10 +970,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       {!embedded && (
         <Dialog open={!!viewingSummary} onOpenChange={(open) => !open && setViewingSummary(null)}>
           <DialogContent className={cn(
-            "max-h-[90vh] overflow-y-auto",
+            "max-h-[95vh] overflow-y-auto",
             viewingSummary && isMindMap(viewingSummary.summary)
               ? "max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-5xl"
-              : "max-w-2xl"
+              : "max-w-[98vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl"
           )}>
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold leading-tight">
