@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAIChat, AIReference } from '@/hooks/use-ai-chat';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { ChatSidebar } from '@/components/ai/ChatSidebar';
@@ -15,13 +15,27 @@ interface AITabProps {
   searchContent: (term: string, searchType: 'exact' | 'proximity', filters?: any) => Promise<(PDFDocument & { snippet?: string })[]>;
   onViewDoc: (doc: PDFDocument, ctx?: SearchContext) => void;
   embedded?: boolean;
+  pendingSummarizeDoc?: PDFDocument | null;
+  onSummarizeHandled?: () => void;
 }
 
-export function AITab({ documents, authors, searchContent, onViewDoc, embedded }: AITabProps) {
-  const { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage, cancelMessage } =
+export function AITab({ documents, authors, searchContent, onViewDoc, embedded, pendingSummarizeDoc, onSummarizeHandled }: AITabProps) {
+  const { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage, cancelMessage, startDocumentSummary } =
     useAIChat(searchContent);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const handledDocIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingSummarizeDoc || handledDocIdRef.current === pendingSummarizeDoc.id) return;
+    handledDocIdRef.current = pendingSummarizeDoc.id;
+    startDocumentSummary(pendingSummarizeDoc)
+      .catch((err) => {
+        console.error('[AITab] startDocumentSummary error:', err);
+        toast.error('Erro ao gerar resumo com IA.');
+      })
+      .finally(() => onSummarizeHandled?.());
+  }, [pendingSummarizeDoc]);
 
   const handleSend = async (text: string) => {
     let chat = activeChat;

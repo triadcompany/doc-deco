@@ -66,6 +66,14 @@ type SearchFn = (
   filters?: { author?: string; translator?: string; tags?: string[]; startDate?: string; endDate?: string }
 ) => Promise<(PDFDocument & { snippet?: string })[]>;
 
+export const DOCUMENT_SUMMARY_PROMPT = `Faça um resumo completo deste documento. Responda em português, com linguagem bíblica, seguindo exatamente esta estrutura:
+
+1. Escrituras usadas — todas as passagens bíblicas citadas no documento (livro, capítulo e versículo).
+2. Citações de William Branham (profeta) — as declarações mais relevantes atribuídas a ele no texto.
+3. 10 frases de impacto — dez frases marcantes utilizadas no documento, tal como aparecem no texto.
+4. Linha de pensamento — como o raciocínio se desenvolve do início ao fim da mensagem.
+5. Tópicos — os principais temas abordados no documento.`;
+
 export function useAIChat(searchContent: SearchFn) {
   const { user } = useAuth();
   const [chats, setChats] = useState<AIChat[]>([]);
@@ -75,6 +83,7 @@ export function useAIChat(searchContent: SearchFn) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const docContentCache = useRef<Map<string, { title: string; author: string; date: string; content: string }>>(new Map());
 
   const fetchChats = useCallback(async () => {
     if (!user) return;
@@ -141,8 +150,9 @@ export function useAIChat(searchContent: SearchFn) {
     abortRef.current?.abort();
   };
 
-  const sendMessage = async (text: string, chatOverride?: AIChat) => {
+  const sendMessage = async (text: string, chatOverride?: AIChat, filtersOverride?: AIChatFilters, titleOverride?: string) => {
     const chat = chatOverride ?? activeChat;
+    const effectiveFilters = filtersOverride ?? filters;
     if (!chat || !text.trim()) return;
     const controller = new AbortController();
     abortRef.current = controller;
@@ -154,32 +164,53 @@ export function useAIChat(searchContent: SearchFn) {
       chatId: chat.id,
       role: 'user',
       content: text,
-      doc_references: [],
+      references: [],
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, tempUserMsg]);
 
     try {
-      // 1. Retrieve relevant chunks
-      const searchFilters: any = {};
-      if (filters.author) searchFilters.author = filters.author;
-      if (filters.tags?.length) searchFilters.tags = filters.tags;
+      // 1. Retrieve relevant chunks. A chat scoped to exactly one document gets that
+      // document's full text instead of fragmentary keyword-matched snippets — needed
+      // for a faithful summary/deep-dive that stays entirely within that one PDF.
+      const singleDocId = effectiveFilters.documentIds?.length === 1 ? effectiveFilters.documentIds[0] : null;
+      let chunks: { documentId: string; title: string; author: string; date: string; snippet: string }[];
 
-      const keyTerms = extractKeyTerms(text);
-      const results = await searchContent(keyTerms || text, 'proximity', searchFilters);
+      if (singleDocId) {
+        let doc = docContentCache.current.get(singleDocId);
+        if (!doc) {
+          const { data } = await supabase
+            .from('documents')
+            .select('id, title, author, date, content')
+            .eq('id', singleDocId)
+            .single();
+          if (data) {
+            doc = { title: (data as any).title, author: (data as any).author, date: (data as any).date, content: (data as any).content || '' };
+            docContentCache.current.set(singleDocId, doc);
+          }
+        }
+        chunks = doc ? [{ documentId: singleDocId, title: doc.title, author: doc.author, date: doc.date, snippet: doc.content }] : [];
+      } else {
+        const searchFilters: any = {};
+        if (effectiveFilters.author) searchFilters.author = effectiveFilters.author;
+        if (effectiveFilters.tags?.length) searchFilters.tags = effectiveFilters.tags;
 
-      let filtered = results;
-      if (filters.documentIds?.length) {
-        filtered = results.filter((r) => filters.documentIds!.includes(r.id));
+        const keyTerms = extractKeyTerms(text);
+        const results = await searchContent(keyTerms || text, 'proximity', searchFilters);
+
+        let filtered = results;
+        if (effectiveFilters.documentIds?.length) {
+          filtered = results.filter((r) => effectiveFilters.documentIds!.includes(r.id));
+        }
+
+        chunks = filtered.slice(0, 10).map((r) => ({
+          documentId: r.id,
+          title: r.title,
+          author: r.author,
+          date: r.date,
+          snippet: r.snippet || '',
+        }));
       }
-
-      const chunks = filtered.slice(0, 10).map((r) => ({
-        documentId: r.id,
-        title: r.title,
-        author: r.author,
-        date: r.date,
-        snippet: r.snippet || '',
-      }));
 
       // 2. Build conversation history for Gemini
       const history: GeminiMessage[] = messages
@@ -187,7 +218,7 @@ export function useAIChat(searchContent: SearchFn) {
         .map((m) => ({ role: m.role === 'user' ? 'user' : ('model' as const), content: m.content }));
 
       // 3. Call Gemini
-      const answer = await askGemini(text, chunks, history, controller.signal);
+      const answer = await askGemini(text, chunks, history, controller.signal, { singleDocument: !!singleDocId });
 
       // 4. Extract references mentioned in the answer
       const references: AIReference[] = chunks.filter(
@@ -211,7 +242,7 @@ export function useAIChat(searchContent: SearchFn) {
       // 6. Update chat title on first message
       const isFirstMessage = messages.length === 0;
       if (isFirstMessage) {
-        const title = text.length > 60 ? text.slice(0, 60) + '...' : text;
+        const title = titleOverride ?? (text.length > 60 ? text.slice(0, 60) + '...' : text);
         await supabase.from('ai_chats' as any).update({ title, updated_at: new Date().toISOString() }).eq('id', chat.id);
         setActiveChat((c) => (c ? { ...c, title } : c));
         setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, title } : c)));
@@ -240,7 +271,19 @@ export function useAIChat(searchContent: SearchFn) {
     }
   };
 
-  return { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage, cancelMessage };
+  // Opens a new chat scoped to exactly one document and immediately asks for the
+  // structured summary — the "Resumir com IA" entry point from the PDF viewer.
+  const startDocumentSummary = async (doc: PDFDocument) => {
+    const chat = await createChat();
+    if (!chat) return;
+    const newFilters: AIChatFilters = { documentIds: [doc.id] };
+    setFilters(newFilters);
+    await supabase.from('ai_chats' as any).update({ filters: newFilters }).eq('id', chat.id);
+    setActiveChat((c) => (c ? { ...c, filters: newFilters } : c));
+    await sendMessage(DOCUMENT_SUMMARY_PROMPT, chat, newFilters, doc.title);
+  };
+
+  return { chats, activeChat, messages, filters, loading, sending, createChat, selectChat, deleteChat, updateFilters, sendMessage, cancelMessage, startDocumentSummary };
 }
 
 function toAIChat(d: any): AIChat {

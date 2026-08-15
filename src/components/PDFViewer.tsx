@@ -23,6 +23,7 @@ import {
   MoreVertical,
   PenLine,
   Type,
+  Bot,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,6 +35,7 @@ export interface PDFViewerProps {
   onBack: () => void;
   searchContext?: SearchContext | null;
   embedded?: boolean;
+  onSummarizeWithAI?: (doc: PDFDocument) => void;
 }
 
 const highlightColors = [
@@ -52,7 +54,7 @@ const drawColors = [
   { name: 'Roxo', color: '#a855f7' },
 ];
 
-export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFViewerProps) {
+export function PDFViewer({ doc, onBack, searchContext, embedded = false, onSummarizeWithAI }: PDFViewerProps) {
   const isMobile = useIsMobile();
   const savedPage = searchContext ? 1 : (() => {
     try { return parseInt(localStorage.getItem(`pdf_page_${doc.id}`) || '1', 10) || 1; } catch { return 1; }
@@ -670,6 +672,16 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
                       </a>
                     </Button>
                   )}
+                  {onSummarizeWithAI && (
+                    <Button
+                      variant="outline"
+                      className="h-12 justify-start gap-2"
+                      onClick={() => { onSummarizeWithAI(doc); setToolsSheetOpen(false); }}
+                    >
+                      <Bot className="w-4 h-4" />
+                      <span className="text-sm">Resumir com IA</span>
+                    </Button>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
@@ -758,6 +770,17 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
             >
               <Search className="w-4 h-4" />
             </Button>
+            {onSummarizeWithAI && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => onSummarizeWithAI(doc)}
+                title="Resumir com IA"
+              >
+                <Bot className="w-4 h-4" />
+              </Button>
+            )}
             {pdfUrl && (
               <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
                 <a href={pdfUrl} download={doc.fileName} target="_blank" rel="noopener noreferrer">

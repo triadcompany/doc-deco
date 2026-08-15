@@ -48,6 +48,7 @@ const Index = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
   const [searchContext, setSearchContext] = useState<SearchContext | null>(null);
+  const [summarizeDoc, setSummarizeDoc] = useState<PDFDocument | null>(null);
   const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
   const [activeTab, setActiveTab] = useState('inicio');
   const [splitMode, setSplitMode] = useState(false);
@@ -78,6 +79,13 @@ const Index = () => {
     startReading(doc.id);
   };
 
+  const handleSummarizeWithAI = (doc: PDFDocument) => {
+    setViewingDoc(null);
+    setSearchContext(null);
+    setSummarizeDoc(doc);
+    setActiveTab('ia');
+  };
+
   const tabContentProps: Omit<TabContentProps, 'tabId'> = {
     documents,
     onViewDoc: handleViewDoc,
@@ -104,6 +112,8 @@ const Index = () => {
     addTranslator,
     removeTranslator,
     renderHomeContent: (embedded?: boolean) => renderHomeContent(embedded),
+    pendingSummarizeDoc: summarizeDoc,
+    onSummarizeHandled: () => setSummarizeDoc(null),
   };
 
   const renderHomeContent = (embedded?: boolean) => (
@@ -203,7 +213,7 @@ const Index = () => {
   return (
     <>
       {viewingDoc && !splitMode && (
-        <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />
+        <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} onSummarizeWithAI={handleSummarizeWithAI} />
       )}
     <div className={`${splitMode ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen pb-20 sm:pb-0'} bg-background safe-top safe-x sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
       {/* Header */}
@@ -274,7 +284,7 @@ const Index = () => {
                 </div>
                 <div className="flex-1 min-h-0 flex flex-col">
                   {viewingDoc ? (
-                    <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded />
+                    <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded onSummarizeWithAI={handleSummarizeWithAI} />
                   ) : (
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                       <div className="split-panel-content relative flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">

@@ -54,6 +54,9 @@ export interface TabContentProps {
   removeTranslator: (id: string) => void;
   // Home extras
   renderHomeContent?: (embedded?: boolean) => React.ReactNode;
+  // AI
+  pendingSummarizeDoc?: PDFDocument | null;
+  onSummarizeHandled?: () => void;
 }
 
 export function TabContentRenderer({ tabId, ...props }: TabContentProps) {
@@ -152,6 +155,8 @@ export function TabContentRenderer({ tabId, ...props }: TabContentProps) {
             searchContent={props.searchContent}
             onViewDoc={props.onViewDoc}
             embedded={props.embedded}
+            pendingSummarizeDoc={props.pendingSummarizeDoc}
+            onSummarizeHandled={props.onSummarizeHandled}
           />
         </Suspense>
       );
