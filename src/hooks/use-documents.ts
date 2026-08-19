@@ -13,14 +13,15 @@ interface DbDocument {
   file_size: number;
   pages: number | null;
   tags: string[];
-  favorite: boolean;
   storage_path: string;
   created_at: string;
   updated_at: string;
   visibility: string;
 }
 
-function toAppDoc(d: any): PDFDocument {
+// `favorite` isn't a column on `documents` — it lives in the per-user
+// `document_favorites` join table, merged in by whoever calls this.
+function toAppDoc(d: any, favoriteIds?: Set<string>): PDFDocument {
   return {
     id: d.id,
     title: d.title,
@@ -30,7 +31,7 @@ function toAppDoc(d: any): PDFDocument {
     fileSize: d.file_size,
     pages: d.pages ?? undefined,
     tags: d.tags,
-    favorite: d.favorite,
+    favorite: favoriteIds?.has(d.id) ?? false,
     createdAt: d.created_at,
     url: getR2PublicUrl(d.storage_path),
     visibility: d.visibility || 'personal',
@@ -40,17 +41,28 @@ function toAppDoc(d: any): PDFDocument {
 
 export function useDocuments() {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+
+  const fetchFavoriteIds = useCallback(async (): Promise<Set<string>> => {
+    if (!user) return new Set();
+    const { data } = await supabase.from('document_favorites' as any).select('document_id');
+    return new Set((data as any[] | null || []).map((r) => r.document_id));
+  }, [user?.id]);
 
   const fetchDocuments = useCallback(async () => {
     if (!user) {
       setDocuments([]);
+      setFavoriteIds(new Set());
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
+      const favSet = await fetchFavoriteIds();
+      setFavoriteIds(favSet);
+
       const batchSize = 1000;
       let offset = 0;
       let allData: any[] = [];
@@ -62,7 +74,7 @@ export function useDocuments() {
         // documents uploaded by other accounts, which defeats the point of "global".
         const { data, error } = await supabase
           .from('documents')
-          .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator')
+          .select('id, title, author, date, file_name, file_size, pages, tags, storage_path, created_at, updated_at, visibility, translator')
           .order('created_at', { ascending: false })
           .range(offset, offset + batchSize - 1);
 
@@ -81,14 +93,14 @@ export function useDocuments() {
         }
       }
 
-      setDocuments((allData as DbDocument[]).map(toAppDoc));
+      setDocuments((allData as DbDocument[]).map((d) => toAppDoc(d, favSet)));
     } catch (err) {
       console.error('Erro inesperado ao buscar documentos:', err);
       setDocuments([]);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, fetchFavoriteIds]);
 
   useEffect(() => {
     fetchDocuments();
@@ -165,16 +177,29 @@ export function useDocuments() {
   };
 
   const toggleFavorite = async (id: string) => {
-    const doc = documents.find((d) => d.id === id);
-    if (!doc) return;
+    if (!user) return;
+    const isFavorite = favoriteIds.has(id);
 
-    await supabase
-      .from('documents')
-      .update({ favorite: !doc.favorite })
-      .eq('id', id);
+    if (isFavorite) {
+      await supabase
+        .from('document_favorites' as any)
+        .delete()
+        .eq('document_id', id)
+        .eq('user_id', user.id);
+    } else {
+      await supabase
+        .from('document_favorites' as any)
+        .insert({ document_id: id, user_id: user.id } as any);
+    }
 
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (isFavorite) next.delete(id);
+      else next.add(id);
+      return next;
+    });
     setDocuments((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, favorite: !d.favorite } : d))
+      prev.map((d) => (d.id === id ? { ...d, favorite: !isFavorite } : d))
     );
   };
 
@@ -225,7 +250,7 @@ export function useDocuments() {
     // Step 1: Query only IDs + metadata (no content) for speed
     let query = supabase
       .from('documents')
-      .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator');
+      .select('id, title, author, date, file_name, file_size, pages, tags, storage_path, created_at, updated_at, visibility, translator');
 
     if (filters?.author && filters.author !== 'all') {
       query = query.eq('author', filters.author);
@@ -243,7 +268,7 @@ export function useDocuments() {
     const { data, error } = await query.order('date', { ascending: false });
     if (error || !data) return [];
 
-    let results = (data as any[]).map((d) => ({ ...toAppDoc(d), snippet: undefined as string | undefined }));
+    let results = (data as any[]).map((d) => ({ ...toAppDoc(d, favoriteIds), snippet: undefined as string | undefined }));
 
     if (filters?.tags && filters.tags.length > 0) {
       results = results.filter((d) =>
