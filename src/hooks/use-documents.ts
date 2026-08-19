@@ -57,10 +57,12 @@ export function useDocuments() {
       let hasMore = true;
 
       while (hasMore) {
+        // No .eq('user_id', ...) here — RLS already scopes this to "own documents
+        // OR visibility = 'global'". Filtering by user_id here too would hide global
+        // documents uploaded by other accounts, which defeats the point of "global".
         const { data, error } = await supabase
           .from('documents')
           .select('id, title, author, date, file_name, file_size, pages, tags, favorite, storage_path, created_at, updated_at, visibility, translator')
-          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .range(offset, offset + batchSize - 1);
 
