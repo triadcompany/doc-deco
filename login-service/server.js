@@ -52,6 +52,31 @@ function setSessionCookie(res, token) {
   });
 }
 
+app.post('/signup', async (req, res) => {
+  const { email, password, displayName } = req.body || {};
+  if (!email || !password) {
+    return res.status(400).json({ error: 'email e senha são obrigatórios' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'a senha deve ter pelo menos 6 caracteres' });
+  }
+
+  const { rows: existing } = await pool.query('SELECT id FROM auth.users WHERE email = $1', [email]);
+  if (existing.length > 0) {
+    return res.status(409).json({ error: 'já existe uma conta com este email' });
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+  const { rows } = await pool.query(
+    `INSERT INTO auth.users (email, encrypted_password, raw_user_meta_data)
+     VALUES ($1, $2, $3) RETURNING id, email`,
+    [email, hash, JSON.stringify({ display_name: displayName || null })],
+  );
+  const user = rows[0];
+
+  res.json({ ok: true, userId: user.id, email: user.email });
+});
+
 app.post('/login', async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {

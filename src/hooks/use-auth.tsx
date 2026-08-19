@@ -73,8 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshSession]);
 
-  const signUp = async (_email: string, _password: string, _displayName?: string) => {
-    throw new Error('Cadastro não disponível — este app tem um único usuário.');
+  const signUp = async (email: string, password: string, displayName?: string) => {
+    const res = await withTimeout(
+      fetch(`${LOGIN_SERVICE_URL}/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, displayName }),
+      }),
+      15000,
+      'Cadastro'
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Falha no cadastro');
+    }
   };
 
   const signIn = async (email: string, password: string) => {
