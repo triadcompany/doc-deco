@@ -76,7 +76,7 @@ export function useDocumentAnnotations(documentId: string | undefined) {
     note?: string;
   }) => {
     if (!user?.id || !documentId) return;
-    const { error } = await supabase.from('document_annotations').insert({
+    const { data, error } = await supabase.from('document_annotations').insert({
       document_id: documentId,
       user_id: user.id,
       page: ann.page,
@@ -84,8 +84,9 @@ export function useDocumentAnnotations(documentId: string | undefined) {
       color: ann.color,
       note: ann.note || null,
       position: { rects: ann.rects },
-    } as any);
-    if (error) console.error('Error adding annotation:', error);
+    } as any).select().single();
+    if (error) { console.error('Error adding annotation:', error); return; }
+    setAnnotations((prev) => [...prev, toApp(data)]);
   }, [user?.id, documentId]);
 
   const addDrawing = useCallback(async (drawing: {
@@ -95,7 +96,7 @@ export function useDocumentAnnotations(documentId: string | undefined) {
     color: string;
   }) => {
     if (!user?.id || !documentId) return;
-    const { error } = await supabase.from('document_annotations').insert({
+    const { data, error } = await supabase.from('document_annotations').insert({
       document_id: documentId,
       user_id: user.id,
       page: drawing.page,
@@ -103,8 +104,9 @@ export function useDocumentAnnotations(documentId: string | undefined) {
       color: drawing.color,
       note: null,
       position: { type: 'drawing', strokes: drawing.strokes, strokeWidth: drawing.strokeWidth, color: drawing.color },
-    } as any);
-    if (error) console.error('Error adding drawing:', error);
+    } as any).select().single();
+    if (error) { console.error('Error adding drawing:', error); return; }
+    setAnnotations((prev) => [...prev, toApp(data)]);
   }, [user?.id, documentId]);
 
   const addTextBox = useCallback(async (tb: {
@@ -116,7 +118,7 @@ export function useDocumentAnnotations(documentId: string | undefined) {
     color: string;
   }) => {
     if (!user?.id || !documentId) return;
-    const { error } = await supabase.from('document_annotations').insert({
+    const { data, error } = await supabase.from('document_annotations').insert({
       document_id: documentId,
       user_id: user.id,
       page: tb.page,
@@ -124,8 +126,9 @@ export function useDocumentAnnotations(documentId: string | undefined) {
       color: tb.color,
       note: null,
       position: { type: 'textbox', x: tb.x, y: tb.y, content: tb.content, fontSize: tb.fontSize, color: tb.color },
-    } as any);
-    if (error) console.error('Error adding text box:', error);
+    } as any).select().single();
+    if (error) { console.error('Error adding text box:', error); return; }
+    setAnnotations((prev) => [...prev, toApp(data)]);
   }, [user?.id, documentId]);
 
   const updateAnnotation = useCallback(async (id: string, position: any) => {
