@@ -283,15 +283,17 @@ const Index = () => {
                   )}
                 </div>
                 <div className="flex-1 min-h-0 flex flex-col">
-                  {viewingDoc ? (
+                  {/* Both stay mounted — swapping them out (instead of just hiding)
+                      would unmount DocumentsTab and lose its search/filter state
+                      every time a document is opened and closed. */}
+                  {viewingDoc && (
                     <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded onSummarizeWithAI={handleSummarizeWithAI} />
-                  ) : (
-                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                      <div className="split-panel-content relative flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">
-                        <TabContentRenderer tabId={activeTab} {...tabContentProps} embedded />
-                      </div>
-                    </div>
                   )}
+                  <div className={`flex-1 min-h-0 flex flex-col overflow-hidden ${viewingDoc ? 'hidden' : ''}`}>
+                    <div className="split-panel-content relative flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">
+                      <TabContentRenderer tabId={activeTab} {...tabContentProps} embedded />
+                    </div>
+                  </div>
                 </div>
               </div>
             </ResizablePanel>
