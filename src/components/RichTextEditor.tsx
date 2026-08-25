@@ -339,77 +339,99 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
   const replaceReferenceAndInsert = useCallback((referenceText: string, html: string) => {
     if (!editorRef.current) return;
     const editor = editorRef.current;
-
-    // Find the reference text in the editor's text content and remove it
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-    let found = false;
-
-    // Normalize the reference for comparison
     const refNorm = referenceText.trim();
 
-    while (walker.nextNode()) {
-      const node = walker.currentNode as Text;
-      const idx = node.textContent?.indexOf(refNorm) ?? -1;
-      if (idx !== -1) {
+    const insertFragmentAt = (range: Range) => {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
+      range.insertNode(frag);
+      range.collapse(false);
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    };
+
+    let found = false;
+
+    // Prefer the exact spot where the reference was just typed (saved on the
+    // last keyup) over a blind document-wide search. Otherwise, typing the same
+    // reference a second time further down matches the FIRST occurrence again —
+    // which, after the first insert, is the title text inside that blockquote —
+    // silently replacing it instead of the new spot the user is looking at.
+    const savedRange = savedRangeRef.current;
+    if (savedRange && editor.contains(savedRange.startContainer) && savedRange.startContainer.nodeType === Node.TEXT_NODE) {
+      const node = savedRange.startContainer as Text;
+      const textBefore = (node.textContent || '').slice(0, savedRange.startOffset);
+      const idx = textBefore.lastIndexOf(refNorm);
+      const insideBlockquote = !!node.parentElement?.closest('blockquote');
+      if (idx !== -1 && idx + refNorm.length === textBefore.length && !insideBlockquote) {
         const range = document.createRange();
-
-        // If the reference text lives inside an already-rendered scripture/msg
-        // blockquote, replace the entire blockquote — not just the inner text.
-        // This prevents the "duplicate verses" bug that happens when the user
-        // edits the title inside an existing blockquote and re-inserts.
-        const existingBlockquote = node.parentElement?.closest('blockquote');
-        if (existingBlockquote) {
-          range.selectNode(existingBlockquote);
+        const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+        const blockText = parentBlock?.textContent?.trim() || '';
+        if (blockText === refNorm) {
+          range.selectNode(parentBlock!);
         } else {
-          const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
-          const blockText = parentBlock?.textContent?.trim() || '';
-          if (blockText === refNorm || blockText === refNorm + '\n' || blockText === '\n' + refNorm) {
-            range.selectNode(parentBlock!);
-          } else {
-            range.setStart(node, idx);
-            range.setEnd(node, idx + refNorm.length);
-          }
+          range.setStart(node, idx);
+          range.setEnd(node, idx + refNorm.length);
         }
-
         range.deleteContents();
-
-        // Insert HTML at the position
-        const sel = window.getSelection();
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const frag = document.createDocumentFragment();
-        while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
-        range.insertNode(frag);
-        range.collapse(false);
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
+        insertFragmentAt(range);
         found = true;
-        break;
       }
     }
 
     if (!found) {
-      // Fallback: just insert at cursor
+      // Fallback: document-wide search. Also handles re-inserting after editing
+      // the title text inside an existing blockquote (the saved-range match
+      // above deliberately skips that case via `insideBlockquote`).
+      const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Text;
+        const idx = node.textContent?.indexOf(refNorm) ?? -1;
+        if (idx !== -1) {
+          const range = document.createRange();
+
+          // If the reference text lives inside an already-rendered scripture/msg
+          // blockquote, replace the entire blockquote — not just the inner text.
+          const existingBlockquote = node.parentElement?.closest('blockquote');
+          if (existingBlockquote) {
+            range.selectNode(existingBlockquote);
+          } else {
+            const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+            const blockText = parentBlock?.textContent?.trim() || '';
+            if (blockText === refNorm || blockText === refNorm + '\n' || blockText === '\n' + refNorm) {
+              range.selectNode(parentBlock!);
+            } else {
+              range.setStart(node, idx);
+              range.setEnd(node, idx + refNorm.length);
+            }
+          }
+
+          range.deleteContents();
+          insertFragmentAt(range);
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (!found) {
+      // Last resort: just insert at cursor
       editor.focus();
       restoreSelection();
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const r = sel.getRangeAt(0);
         r.collapse(false);
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const frag = document.createDocumentFragment();
-        while (tempDiv.firstChild) frag.appendChild(tempDiv.firstChild);
-        r.insertNode(frag);
-        r.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(r);
+        insertFragmentAt(r);
       }
     }
 
