@@ -196,8 +196,9 @@ export interface ScriptureRef {
   bookAbbrev: string;
   bookName: string;
   chapter: number;
-  verse: number;
-  verseEnd?: number;
+  verse: number; // first verse number — kept for callers that only care about one verse (e.g. navigation)
+  verseNumbers: number[]; // every individual verse to fetch, expanded from ranges (e.g. "6-8,20" -> [6,7,8,20])
+  verseLabel: string; // display label preserving the user's own grouping (e.g. "6, 20", "6-8")
   raw: string;
 }
 
@@ -207,9 +208,34 @@ export interface TextSegment {
   ref?: ScriptureRef;
 }
 
-// Regex to match scripture references like "Jo 3:16", "1Co 13:4-7", "Êxodo 12:11"
+// Regex to match scripture references like "Jo 3:16", "1Co 13:4-7", "Êxodo 12:11",
+// "Gênesis 10:6, 20" (a comma-separated list of individual verses and/or ranges).
 // Using (?:^|[\s,;.!?()]) instead of \b because \b doesn't work with accented chars
-const SCRIPTURE_REGEX = /(?:^|[\s,;.!?()"'])((?:(?:[123]|[IiÍí]{1,3})\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?(?=[\s,;.!?()"']|$)/g;
+const SCRIPTURE_REGEX = /(?:^|[\s,;.!?()"'])((?:(?:[123]|[IiÍí]{1,3})\s?)?(?:[A-ZÀ-ÚÃÕÇa-zà-úãõç]{2,15}))\s+(\d{1,3}):(\d{1,3}(?:-\d{1,3})?(?:\s*,\s*\d{1,3}(?:-\d{1,3})?)*)(?=[\s,;.!?()"']|$)/g;
+
+// Parses a verse spec like "6", "6-8" or "6, 8-10, 20" into the flat list of
+// individual verse numbers to fetch, plus a display label that preserves the
+// user's own grouping instead of re-deriving it from a sorted/deduped list.
+function parseVerseSpec(spec: string): { first: number; numbers: number[]; label: string } {
+  const numbers: number[] = [];
+  const labelParts: string[] = [];
+  for (const part of spec.split(',').map((s) => s.trim()).filter(Boolean)) {
+    const rangeMatch = part.match(/^(\d{1,3})-(\d{1,3})$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      for (let n = start; n <= end; n++) numbers.push(n);
+      labelParts.push(`${start}-${end}`);
+    } else {
+      const n = parseInt(part, 10);
+      if (!Number.isNaN(n)) {
+        numbers.push(n);
+        labelParts.push(`${n}`);
+      }
+    }
+  }
+  return { first: numbers[0], numbers, label: labelParts.join(', ') };
+}
 
 export function parseScriptureReferences(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
@@ -218,11 +244,10 @@ export function parseScriptureReferences(text: string): TextSegment[] {
   for (const match of text.matchAll(SCRIPTURE_REGEX)) {
     const bookRaw = match[1].toLowerCase().replace(/\s+/g, '');
     const chapter = parseInt(match[2], 10);
-    const verse = parseInt(match[3], 10);
-    const verseEnd = match[4] ? parseInt(match[4], 10) : undefined;
+    const { first: verse, numbers: verseNumbers, label: verseLabel } = parseVerseSpec(match[3]);
     const bookInfo = BOOK_MAP[bookRaw];
 
-    if (!bookInfo) continue;
+    if (!bookInfo || verseNumbers.length === 0) continue;
 
     // The full match may include a leading delimiter; calculate the actual reference start
     const fullMatch = match[0];
@@ -241,7 +266,8 @@ export function parseScriptureReferences(text: string): TextSegment[] {
         bookName: bookInfo.name,
         chapter,
         verse,
-        verseEnd,
+        verseNumbers,
+        verseLabel,
         raw: refText,
       },
     });
@@ -266,13 +292,16 @@ export function detectLastScriptureReference(text: string): ScriptureRef | null 
     const bookRaw = match[1].toLowerCase().replace(/\s+/g, '');
     const bookInfo = BOOK_MAP[bookRaw];
     if (!bookInfo) continue;
+    const { first: verse, numbers: verseNumbers, label: verseLabel } = parseVerseSpec(match[3]);
+    if (verseNumbers.length === 0) continue;
     const refText = match[0].trimStart();
     last = {
       bookAbbrev: bookInfo.abbrev,
       bookName: bookInfo.name,
       chapter: parseInt(match[2], 10),
-      verse: parseInt(match[3], 10),
-      verseEnd: match[4] ? parseInt(match[4], 10) : undefined,
+      verse,
+      verseNumbers,
+      verseLabel,
       raw: refText,
     };
   }

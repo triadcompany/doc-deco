@@ -444,8 +444,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     const { ref } = scripturePopup;
     setInserting(true);
     try {
-      const { bookName, verses } = await fetchVerses(ref.bookAbbrev, ref.chapter, ref.verse, ref.verseEnd);
-      const html = formatVersesAsHtml(bookName, ref.chapter, verses);
+      const { bookName, verses } = await fetchVerses(ref.bookAbbrev, ref.chapter, ref.verse, undefined, undefined, ref.verseNumbers);
+      const html = formatVersesAsHtml(bookName, ref.chapter, verses, ref.verseLabel);
       replaceReferenceAndInsert(ref.raw, html);
       setScripturePopup(null);
     } catch (err) {
@@ -624,8 +624,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           >
             {inserting ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <BookOpen className="w-3.5 h-3.5 shrink-0" />}
             <span className="truncate">
-              Inserir {scripturePopup.ref.bookName} {scripturePopup.ref.chapter}:{scripturePopup.ref.verse}
-              {scripturePopup.ref.verseEnd ? `-${scripturePopup.ref.verseEnd}` : ''}
+              Inserir {scripturePopup.ref.bookName} {scripturePopup.ref.chapter}:{scripturePopup.ref.verseLabel}
             </span>
           </Button>
         </div>
