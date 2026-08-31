@@ -8,11 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RichTextEditor } from '@/components/RichTextEditor';
-import { MindMapEditor } from '@/components/mindmap/MindMapEditor';
 import { MindMapViewer } from '@/components/mindmap/MindMapViewer';
 import { isMindMap } from '@/components/mindmap/types';
 import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -36,11 +34,6 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -62,7 +55,6 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
-  Settings2,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -86,7 +78,6 @@ interface SummariesTabProps {
   embedded?: boolean;
 }
 
-type StudyMode = 'text' | 'mindmap';
 type InlineView = null | 'create' | 'edit' | 'view';
 
 export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete, onViewDoc, embedded = false }: SummariesTabProps) {
@@ -103,7 +94,6 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [studyTitle, setStudyTitle] = useState('');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [summaryText, setSummaryText] = useState('');
-  const [studyMode, setStudyMode] = useState<StudyMode>('text');
   const [saving, setSaving] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
   const [viewingSummary, setViewingSummary] = useState<DocSummary | null>(null);
@@ -134,7 +124,6 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setStudyTitle('');
     setSelectedDocIds([]);
     setSummaryText('');
-    setStudyMode('text');
   };
 
   const openNew = () => {
@@ -151,7 +140,6 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setStudyTitle(s.title);
     setSelectedDocIds(s.documentIds);
     setSummaryText(s.summary);
-    setStudyMode(isMindMap(s.summary) ? 'mindmap' : 'text');
     if (embedded) {
       setInlineView('edit');
     } else {
@@ -257,8 +245,6 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     );
   }
 
-  const isCurrentMindMap = studyMode === 'mindmap';
-
   // Filter summaries: by folder + search query
   const isSearching = !!searchQuery.trim();
   const currentFolderChildren = getChildren(currentFolderId);
@@ -344,45 +330,16 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
   // ===== Editor area (shared) =====
   const renderEditor = () => (
-    <>
-      {/* Mode toggle */}
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Formato</label>
-        <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
-          <TabsList className="w-full">
-            <TabsTrigger value="text" className="flex-1 gap-1.5">
-              <FileText className="w-3.5 h-3.5" /> Texto
-            </TabsTrigger>
-            <TabsTrigger value="mindmap" className="flex-1 gap-1.5">
-              <Network className="w-3.5 h-3.5" /> Mapa Mental
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Editor */}
-      <div className={cn('flex flex-col', embedded && isCurrentMindMap ? 'flex-1 min-h-0' : 'flex-1 min-h-0')}>
-        {studyMode === 'text' ? (
-          <>
-            <label className="text-sm font-medium mb-1.5 block">Conteúdo</label>
-            <RichTextEditor
-              key={editingSummary?.id || 'new'}
-              value={isMindMap(summaryText) ? '' : summaryText}
-              onChange={setSummaryText}
-              placeholder="Escreva o conteúdo do estudo..."
-              fillHeight={embedded || dialogOpen}
-            />
-          </>
-        ) : (
-          <MindMapEditor
-            key={`mm-${editingSummary?.id || 'new'}`}
-            initialValue={isMindMap(summaryText) ? summaryText : undefined}
-            onChange={setSummaryText}
-            fillHeight={embedded || dialogOpen}
-          />
-        )}
-      </div>
-    </>
+    <div className="flex flex-col flex-1 min-h-0">
+      <label className="text-sm font-medium mb-1.5 block">Conteúdo</label>
+      <RichTextEditor
+        key={editingSummary?.id || 'new'}
+        value={isMindMap(summaryText) ? '' : summaryText}
+        onChange={setSummaryText}
+        placeholder="Escreva o conteúdo do estudo..."
+        fillHeight={embedded || dialogOpen}
+      />
+    </div>
   );
 
   // ===== INLINE VIEW (for split view / embedded) =====
@@ -444,66 +401,6 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   }
 
   if (embedded && (inlineView === 'create' || inlineView === 'edit')) {
-    // In mind map mode, use a compact layout that fills the entire panel
-    if (isCurrentMindMap) {
-      return (
-        <div className="flex flex-col h-full mindmap-embedded-active">
-          {/* Compact sticky header */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border/40 bg-secondary/30 shrink-0">
-            <Button variant="ghost" size="sm" onClick={goBackToList} className="gap-1 h-7 px-1.5 text-xs">
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </Button>
-            <div className="flex-1 min-w-0">
-              <Input
-                value={studyTitle}
-                onChange={(e) => setStudyTitle(e.target.value)}
-                placeholder="Nome do estudo..."
-                className="h-7 text-xs border-none bg-transparent shadow-none focus-visible:ring-0 px-1"
-              />
-            </div>
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 px-1.5 text-xs gap-1 text-muted-foreground">
-                  <Settings2 className="w-3 h-3" />
-                  {selectedDocIds.length > 0 && (
-                    <Badge variant="secondary" className="text-[9px] py-0 px-1 h-4">{selectedDocIds.length}</Badge>
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="absolute top-full left-0 right-0 z-20 bg-popover border-b border-border shadow-lg p-3 space-y-2">
-                {renderDocSelector()}
-              </CollapsibleContent>
-            </Collapsible>
-            <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
-              <TabsList className="h-7">
-                <TabsTrigger value="text" className="h-6 text-[10px] px-2 gap-1">
-                  <FileText className="w-3 h-3" /> Texto
-                </TabsTrigger>
-                <TabsTrigger value="mindmap" className="h-6 text-[10px] px-2 gap-1">
-                  <Network className="w-3 h-3" /> Mapa
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button size="sm" onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="h-7 text-xs px-2.5">
-              {saving && <Loader2 className="w-3 h-3 animate-spin" />}
-              Salvar
-            </Button>
-          </div>
-          {/* Mind map fills remaining space */}
-          <div className="flex-1 min-h-0">
-            <MindMapEditor
-              key={`mm-${editingSummary?.id || 'new'}`}
-              initialValue={isMindMap(summaryText) ? summaryText : undefined}
-              onChange={setSummaryText}
-              fillHeight
-              compact
-            />
-          </div>
-        </div>
-      );
-    }
-
-    // Text mode: normal scrollable form
     return (
       <div className="study-inline-view absolute inset-0 flex flex-col bg-background p-2 sm:p-4">
         {/* Header */}
@@ -859,18 +756,13 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       {/* Create/Edit Dialog (non-embedded only) */}
       {!embedded && (
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className={cn(
-            "flex flex-col",
-            isCurrentMindMap
-              ? "max-w-[98vw] sm:max-w-[95vw] w-full md:max-w-[90vw] lg:max-w-6xl max-h-[98vh] sm:max-h-[95vh] h-[98vh] sm:h-[95vh] md:h-[90vh]"
-              : "max-w-[98vw] w-[98vw] max-h-[95vh] h-[95vh]"
-          )}>
+          <DialogContent className="flex flex-col max-w-[98vw] w-[98vw] max-h-[95vh] h-[95vh]">
             <DialogHeader className="shrink-0">
               <DialogTitle className="text-base sm:text-lg">{editingSummary ? 'Editar Estudo' : 'Novo Estudo'}</DialogTitle>
             </DialogHeader>
 
             <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-              {/* Row 1: title + format toggle */}
+              {/* Row 1: title */}
               <div className="flex items-center gap-2 shrink-0">
                 <Input
                   value={studyTitle}
@@ -878,16 +770,6 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
                   placeholder="Nome do estudo..."
                   className="h-8 flex-1 text-sm"
                 />
-                <Tabs value={studyMode} onValueChange={(v) => setStudyMode(v as StudyMode)}>
-                  <TabsList className="h-8">
-                    <TabsTrigger value="text" className="h-7 text-xs px-3 gap-1">
-                      <FileText className="w-3 h-3" /> Texto
-                    </TabsTrigger>
-                    <TabsTrigger value="mindmap" className="h-7 text-xs px-3 gap-1">
-                      <Network className="w-3 h-3" /> Mapa
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
               </div>
 
               {/* Row 2: compact doc selector */}
@@ -936,22 +818,13 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
 
               {/* Editor fills remaining space */}
               <div className="flex-1 min-h-0 flex flex-col">
-                {studyMode === 'text' ? (
-                  <RichTextEditor
-                    key={editingSummary?.id || 'new'}
-                    value={isMindMap(summaryText) ? '' : summaryText}
-                    onChange={setSummaryText}
-                    placeholder="Escreva o conteúdo do estudo..."
-                    fillHeight
-                  />
-                ) : (
-                  <MindMapEditor
-                    key={`mm-${editingSummary?.id || 'new'}`}
-                    initialValue={isMindMap(summaryText) ? summaryText : undefined}
-                    onChange={setSummaryText}
-                    fillHeight
-                  />
-                )}
+                <RichTextEditor
+                  key={editingSummary?.id || 'new'}
+                  value={isMindMap(summaryText) ? '' : summaryText}
+                  onChange={setSummaryText}
+                  placeholder="Escreva o conteúdo do estudo..."
+                  fillHeight
+                />
               </div>
             </div>
 
