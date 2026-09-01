@@ -29,7 +29,6 @@ import {
   MoreHorizontal,
   PanelLeftClose,
   Columns2,
-  Bot,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -48,7 +47,6 @@ const Index = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
   const [searchContext, setSearchContext] = useState<SearchContext | null>(null);
-  const [summarizeDoc, setSummarizeDoc] = useState<PDFDocument | null>(null);
   const [editingDoc, setEditingDoc] = useState<PDFDocument | null>(null);
   const [activeTab, setActiveTab] = useState('inicio');
   const [splitMode, setSplitMode] = useState(false);
@@ -79,13 +77,6 @@ const Index = () => {
     startReading(doc.id);
   };
 
-  const handleSummarizeWithAI = (doc: PDFDocument) => {
-    setViewingDoc(null);
-    setSearchContext(null);
-    setSummarizeDoc(doc);
-    setActiveTab('ia');
-  };
-
   const tabContentProps: Omit<TabContentProps, 'tabId'> = {
     documents,
     onViewDoc: handleViewDoc,
@@ -112,8 +103,6 @@ const Index = () => {
     addTranslator,
     removeTranslator,
     renderHomeContent: (embedded?: boolean) => renderHomeContent(embedded),
-    pendingSummarizeDoc: summarizeDoc,
-    onSummarizeHandled: () => setSummarizeDoc(null),
   };
 
   const renderHomeContent = (embedded?: boolean) => (
@@ -213,7 +202,7 @@ const Index = () => {
   return (
     <>
       {viewingDoc && !splitMode && (
-        <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} onSummarizeWithAI={handleSummarizeWithAI} />
+        <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />
       )}
     <div className={`${splitMode ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen pb-20 sm:pb-0'} bg-background safe-top safe-x sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
       {/* Header */}
@@ -287,7 +276,7 @@ const Index = () => {
                       would unmount DocumentsTab and lose its search/filter state
                       every time a document is opened and closed. */}
                   {viewingDoc && (
-                    <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded onSummarizeWithAI={handleSummarizeWithAI} />
+                    <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded />
                   )}
                   <div className={`flex-1 min-h-0 flex flex-col overflow-hidden ${viewingDoc ? 'hidden' : ''}`}>
                     <div className="split-panel-content relative flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">
@@ -344,14 +333,13 @@ const Index = () => {
 
             {/* Mobile bottom tab bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-background/95 backdrop-blur-xl border-t border-border safe-bottom shadow-[0_-2px_12px_rgba(0,0,0,0.04)]">
-              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-7 gap-0 p-0">
+              <TabsList className="w-full h-auto bg-transparent rounded-none grid grid-cols-6 gap-0 p-0">
                 {[
                   { value: 'inicio', icon: BookOpen, label: 'Início' },
                   { value: 'biblia', icon: BookOpen, label: 'Bíblia' },
-                  { value: 'documentos', icon: FolderSearch, label: 'Docs' },
+                  { value: 'documentos', icon: FolderSearch, label: 'Mensagens' },
                   { value: 'resumos', icon: FileText, label: 'Estudo' },
                   { value: 'pesquisa', icon: Search, label: 'Busca' },
-                  { value: 'ia', icon: Bot, label: 'IA' },
                 ].map((tab) => (
                   <TabsTrigger
                     key={tab.value}
