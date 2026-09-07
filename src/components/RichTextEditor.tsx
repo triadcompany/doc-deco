@@ -374,10 +374,15 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       const insideBlockquote = !!node.parentElement?.closest('blockquote');
       if (idx !== -1 && idx + refNorm.length === textBefore.length && !insideBlockquote) {
         const range = document.createRange();
-        const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+        // Never treat the contentEditable root itself as "the block to replace" —
+        // when the typed reference is the very first/only content, the text node's
+        // nearest p/div/li ancestor IS the editor root, and selectNode()+deleteContents()
+        // on it deletes the editor's own DOM node, silently ending all editing.
+        const rawBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+        const parentBlock = rawBlock && rawBlock !== editor ? rawBlock : null;
         const blockText = parentBlock?.textContent?.trim() || '';
-        if (blockText === refNorm) {
-          range.selectNode(parentBlock!);
+        if (parentBlock && blockText === refNorm) {
+          range.selectNode(parentBlock);
         } else {
           range.setStart(node, idx);
           range.setEnd(node, idx + refNorm.length);
@@ -405,10 +410,12 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           if (existingBlockquote) {
             range.selectNode(existingBlockquote);
           } else {
-            const parentBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+            // Same guard as above: never let the editor root itself be "the block".
+            const rawBlock = node.parentElement?.closest('p, div, li') || node.parentElement;
+            const parentBlock = rawBlock && rawBlock !== editor ? rawBlock : null;
             const blockText = parentBlock?.textContent?.trim() || '';
-            if (blockText === refNorm || blockText === refNorm + '\n' || blockText === '\n' + refNorm) {
-              range.selectNode(parentBlock!);
+            if (parentBlock && (blockText === refNorm || blockText === refNorm + '\n' || blockText === '\n' + refNorm)) {
+              range.selectNode(parentBlock);
             } else {
               range.setStart(node, idx);
               range.setEnd(node, idx + refNorm.length);
