@@ -168,10 +168,13 @@ export async function searchMsgDocuments(ref: MsgRef): Promise<MsgMatch[]> {
 
   const searchName = normalizeSearch(ref.docName);
 
-  // Query documents by William Branham
+  // Step 1: fetch metadata only (no content) for every William Branham document \u2014
+  // fetching `content` here too would pull the full text of every matching-author
+  // document (600+, often 100KB+ each) in one request just to check titles, which
+  // hangs for minutes instead of failing loudly.
   let query = supabase
     .from('documents')
-    .select('id, title, translator, date, content')
+    .select('id, title, translator, date')
     .eq('author', 'William Branham');
 
   if (ref.translator) {
@@ -185,20 +188,33 @@ export async function searchMsgDocuments(ref: MsgRef): Promise<MsgMatch[]> {
   if (error || !data) return [];
 
   // Filter by name match (fuzzy - title contains the search term)
-  const matches = (data as any[]).filter((doc) => {
+  const candidates = (data as any[]).filter((doc) => {
     const titleNorm = normalizeSearch(doc.title);
     return titleNorm.includes(searchName) || searchName.includes(titleNorm);
   });
 
-  if (matches.length === 0) return [];
+  if (candidates.length === 0) return [];
 
-  return matches.map((doc) => ({
-    id: doc.id,
-    title: doc.title,
-    translator: doc.translator || '',
-    date: doc.date || '',
-    paragraphs: doc.content ? extractParagraphs(doc.content, ref.paragraphs) : [],
-  }));
+  // Step 2: fetch content only for the small set of matching candidates
+  const { data: contentRows, error: contentError } = await supabase
+    .from('documents')
+    .select('id, content')
+    .in('id', candidates.map((c) => c.id));
+
+  if (contentError || !contentRows) return [];
+
+  const contentById = new Map((contentRows as any[]).map((r) => [r.id, r.content as string | null]));
+
+  return candidates.map((doc) => {
+    const content = contentById.get(doc.id);
+    return {
+      id: doc.id,
+      title: doc.title,
+      translator: doc.translator || '',
+      date: doc.date || '',
+      paragraphs: content ? extractParagraphs(content, ref.paragraphs) : [],
+    };
+  });
 }
 
 /**
