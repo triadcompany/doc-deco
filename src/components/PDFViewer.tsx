@@ -73,6 +73,7 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   const [inDocSearchTerm, setInDocSearchTerm] = useState('');
   const [inDocResults, setInDocResults] = useState<{ page: number; index: number }[]>([]);
   const [inDocResultIdx, setInDocResultIdx] = useState(0);
+  const inDocSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
   const [drawMode, setDrawMode] = useState(false);
@@ -259,6 +260,20 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
       setTimeout(() => searchInputRef.current?.focus(), 100);
     }
   }, [inDocSearch]);
+
+  // Re-run the search automatically as the term changes — otherwise stale
+  // results from a previous search stick around (Enter just cycles through
+  // them) until the search bar is closed and reopened.
+  useEffect(() => {
+    if (!inDocSearch) return;
+    if (inDocSearchDebounceRef.current) clearTimeout(inDocSearchDebounceRef.current);
+    inDocSearchDebounceRef.current = setTimeout(() => {
+      executeInDocSearch(inDocSearchTerm);
+    }, 350);
+    return () => {
+      if (inDocSearchDebounceRef.current) clearTimeout(inDocSearchDebounceRef.current);
+    };
+  }, [inDocSearchTerm, inDocSearch, executeInDocSearch]);
 
   const activeSearchTerm = inDocSearch && inDocSearchTerm.trim() ? inDocSearchTerm.trim() : searchContext?.searchTerm || '';
 
@@ -779,8 +794,12 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
             onChange={(e) => setInDocSearchTerm(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                if (inDocResults.length > 0 && inDocSearchTerm.trim()) {
-                  goToInDocResult(inDocResultIdx + 1);
+                // The search itself already re-runs live as the term changes
+                // (see the debounced effect above) — Enter just jumps between
+                // matches, and forces an immediate search if the debounce
+                // hasn't fired yet.
+                if (inDocResults.length > 0) {
+                  goToInDocResult(inDocResultIdx + (e.shiftKey ? -1 : 1));
                 } else {
                   executeInDocSearch(inDocSearchTerm);
                 }
