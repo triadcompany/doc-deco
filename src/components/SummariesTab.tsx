@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { sanitizeContentColors } from '@/lib/sanitize-content-colors';
 import { PDFDocument } from '@/lib/types';
@@ -72,7 +72,7 @@ interface SummariesTabProps {
   documents: PDFDocument[];
   summaries: DocSummary[];
   loading: boolean;
-  onUpsert: (id: string | null, title: string, documentIds: string[], summary: string, folderId?: string | null) => Promise<void>;
+  onUpsert: (id: string | null, title: string, documentIds: string[], summary: string, folderId?: string | null) => Promise<string | undefined>;
   onDelete: (id: string) => Promise<void>;
   onViewDoc?: (doc: PDFDocument) => void;
   embedded?: boolean;
@@ -103,6 +103,14 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingBatch, setExportingBatch] = useState(false);
+  const [lastAutoSavedAt, setLastAutoSavedAt] = useState<Date | null>(null);
+  // Id of the row a background autosave created for a study that started out
+  // unsaved — once set, later autosaves (and a manual Salvar) update that same
+  // row instead of inserting a new one every 30s.
+  const autoSaveIdRef = useRef<string | null>(null);
+  // Signature of the last content actually persisted (auto or manual), so the
+  // 30s tick skips saving when nothing changed.
+  const lastSavedSnapshotRef = useRef<string>('');
 
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -119,11 +127,17 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     return normalizeForSearch(value).includes(normalizeForSearch(search)) ? 1 : 0;
   };
 
+  const snapshotOf = (title: string, docIds: string[], text: string) =>
+    JSON.stringify([title, docIds, text]);
+
   const resetForm = () => {
     setEditingSummary(null);
     setStudyTitle('');
     setSelectedDocIds([]);
     setSummaryText('');
+    autoSaveIdRef.current = null;
+    lastSavedSnapshotRef.current = '';
+    setLastAutoSavedAt(null);
   };
 
   const openNew = () => {
@@ -140,6 +154,9 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setStudyTitle(s.title);
     setSelectedDocIds(s.documentIds);
     setSummaryText(s.summary);
+    autoSaveIdRef.current = null;
+    lastSavedSnapshotRef.current = snapshotOf(s.title, s.documentIds, s.summary);
+    setLastAutoSavedAt(null);
     if (embedded) {
       setInlineView('edit');
     } else {
@@ -163,7 +180,10 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const handleSave = async () => {
     if (!studyTitle.trim() || !summaryText.trim()) return;
     setSaving(true);
-    await onUpsert(editingSummary?.id || null, studyTitle.trim(), selectedDocIds, summaryText.trim(), editingSummary?.folderId ?? currentFolderId);
+    // An autosave may have already created this row in the background —
+    // target that same id instead of inserting a second copy.
+    const targetId = editingSummary?.id || autoSaveIdRef.current;
+    await onUpsert(targetId || null, studyTitle.trim(), selectedDocIds, summaryText.trim(), editingSummary?.folderId ?? currentFolderId);
     setSaving(false);
     if (embedded) {
       goBackToList();
@@ -171,6 +191,38 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       setDialogOpen(false);
     }
   };
+
+  // Keep the latest form values in a ref so the autosave interval (set up once
+  // per editing session, not on every keystroke) can read current values
+  // without needing to be torn down and recreated as the user types.
+  const formStateRef = useRef({ studyTitle, selectedDocIds, summaryText, editingSummary, currentFolderId });
+  useEffect(() => {
+    formStateRef.current = { studyTitle, selectedDocIds, summaryText, editingSummary, currentFolderId };
+  }, [studyTitle, selectedDocIds, summaryText, editingSummary, currentFolderId]);
+
+  // Autosave every 30s while the create/edit form is open.
+  useEffect(() => {
+    const isOpen = embedded ? (inlineView === 'create' || inlineView === 'edit') : dialogOpen;
+    if (!isOpen) return;
+
+    const interval = setInterval(async () => {
+      const { studyTitle, selectedDocIds, summaryText, editingSummary, currentFolderId } = formStateRef.current;
+      const title = studyTitle.trim();
+      const text = summaryText.trim();
+      if (!title || !text) return;
+
+      const snapshot = snapshotOf(title, selectedDocIds, text);
+      if (snapshot === lastSavedSnapshotRef.current) return;
+
+      const targetId = editingSummary?.id || autoSaveIdRef.current;
+      const resultId = await onUpsert(targetId || null, title, selectedDocIds, text, editingSummary?.folderId ?? currentFolderId);
+      if (!targetId && resultId) autoSaveIdRef.current = resultId;
+      lastSavedSnapshotRef.current = snapshot;
+      setLastAutoSavedAt(new Date());
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [embedded, inlineView, dialogOpen, onUpsert]);
 
   const toggleDocSelection = (docId: string) => {
     setSelectedDocIds((prev) =>
@@ -412,6 +464,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
           <h3 className="text-sm font-semibold flex-1 truncate">
             {inlineView === 'edit' ? 'Editar Estudo' : 'Novo Estudo'}
           </h3>
+          {lastAutoSavedAt && (
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap hidden sm:inline shrink-0">
+              Salvo automaticamente às {lastAutoSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
           <Button size="sm" onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="gap-1 h-8 shrink-0">
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Salvar
@@ -829,6 +886,11 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             </div>
 
             <DialogFooter className="shrink-0 flex-row gap-2 sm:gap-0">
+              {lastAutoSavedAt && (
+                <span className="text-xs text-muted-foreground self-center sm:mr-auto">
+                  Salvo automaticamente às {lastAutoSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
               <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1 sm:flex-initial h-9">Cancelar</Button>
               <Button onClick={handleSave} disabled={!studyTitle.trim() || !summaryText.trim() || saving} className="flex-1 sm:flex-initial h-9">
                 {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}

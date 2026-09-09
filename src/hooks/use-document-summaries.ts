@@ -61,14 +61,17 @@ export function useDocumentSummaries() {
     fetchSummaries();
   }, [fetchSummaries]);
 
+  // Returns the row's id — callers that start out with id=null (creating a new
+  // study) need this back so a subsequent save (e.g. autosave) updates that
+  // same row instead of inserting a duplicate every time.
   const upsertSummary = useCallback(async (
     id: string | null,
     title: string,
     documentIds: string[],
     summary: string,
     folderId?: string | null,
-  ) => {
-    if (!user?.id) return;
+  ): Promise<string | undefined> => {
+    if (!user?.id) return undefined;
 
     const primaryDocId = documentIds.length > 0 ? documentIds[0] : null;
     const payload: any = {
@@ -79,6 +82,8 @@ export function useDocumentSummaries() {
       ...(primaryDocId ? { document_id: primaryDocId } : {}),
     };
 
+    let resultId: string | undefined = id ?? undefined;
+
     if (id) {
       const { error } = await supabase
         .from('document_summaries')
@@ -86,12 +91,16 @@ export function useDocumentSummaries() {
         .eq('id', id);
       if (error) console.error('Error updating summary:', error);
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('document_summaries')
-        .insert({ ...payload, user_id: user.id } as any);
+        .insert({ ...payload, user_id: user.id } as any)
+        .select('id')
+        .single();
       if (error) console.error('Error inserting summary:', error);
+      else resultId = (data as any)?.id;
     }
     await fetchSummaries();
+    return resultId;
   }, [user?.id, fetchSummaries]);
 
   const deleteSummary = useCallback(async (id: string) => {

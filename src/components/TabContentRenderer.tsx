@@ -35,7 +35,7 @@ export interface TabContentProps {
   // Summaries
   summaries: DocSummary[];
   summariesLoading: boolean;
-  upsertSummary: (id: string | null, title: string, documentIds: string[], summary: string) => Promise<void>;
+  upsertSummary: (id: string | null, title: string, documentIds: string[], summary: string, folderId?: string | null) => Promise<string | undefined>;
   deleteSummary: (id: string) => Promise<void>;
   // Goals
   goal: any;
