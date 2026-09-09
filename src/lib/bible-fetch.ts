@@ -4,6 +4,9 @@
  */
 
 const GITHUB_BASE = 'https://raw.githubusercontent.com/maatheusgois/bible/main/versions/pt-br';
+// `arc` (the only version used here) is mirrored on our own domain — GitHub's
+// raw CDN has 503'd on this specific file before.
+const LOCAL_BIBLE_BASE = '/bible';
 
 interface RawBook {
   id: string;
@@ -41,7 +44,8 @@ const ABBREV_TO_JSON_ID: Record<string, string> = {
 
 async function loadBible(version: string): Promise<RawBook[]> {
   if (cache[version]) return cache[version];
-  const res = await fetch(`${GITHUB_BASE}/${version}.json`);
+  const url = version === 'arc' ? `${LOCAL_BIBLE_BASE}/arc.json` : `${GITHUB_BASE}/${version}.json`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load ${version}`);
   const data: RawBook[] = await res.json();
   cache[version] = data;

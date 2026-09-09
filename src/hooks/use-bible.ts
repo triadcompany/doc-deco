@@ -4,6 +4,10 @@ import { useAuth } from '@/hooks/use-auth';
 
 const GITHUB_BASE = 'https://raw.githubusercontent.com/maatheusgois/bible/main/versions/pt-br';
 const GETBIBLE_BASE = 'https://api.getbible.net/v2';
+// `arc` is mirrored on our own domain (public/bible/arc.json) — GitHub's raw CDN
+// has 503'd on this specific file before, and `arc` is also fetched internally
+// as a parallel-translation reference for every other Bible version below.
+const LOCAL_BIBLE_BASE = '/bible';
 
 // Versions that use getBible API instead of MaatheusGois
 const GETBIBLE_VERSIONS = new Set(['kjv', 'textusreceptus', 'aleppo']);
@@ -111,7 +115,7 @@ export function useBible() {
   // Load MaatheusGois format bible
   const loadBible = useCallback(async (version: string): Promise<RawBook[]> => {
     if (bibleCache.current[version]) return bibleCache.current[version];
-    const url = `${GITHUB_BASE}/${version}.json`;
+    const url = version === 'arc' ? `${LOCAL_BIBLE_BASE}/arc.json` : `${GITHUB_BASE}/${version}.json`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load ${version}`);
     const data: RawBook[] = await res.json();
