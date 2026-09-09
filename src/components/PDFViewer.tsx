@@ -117,8 +117,11 @@ export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFV
   // Keyboard navigation (← →)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const target = e.target as HTMLElement;
+      // Typing in the study editor (split view) uses a contentEditable div, not
+      // an <input>/<textarea> — without this check, arrow keys there paged the
+      // PDF instead of moving the cursor through the text being written.
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
       if (drawMode || textMode) return;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault();
