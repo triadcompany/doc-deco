@@ -119,6 +119,15 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     [viewingSummary, isDark]
   );
 
+  // 3 most recently updated studies, regardless of folder — quick access from the root list.
+  const recentSummaries = useMemo(
+    () =>
+      [...summaries]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 3),
+    [summaries]
+  );
+
   const normalizeForSearch = (text: string) =>
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -569,6 +578,35 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             placeholder="Pesquisar por título ou conteúdo..."
             className="pl-9"
           />
+        </div>
+      )}
+
+      {/* Recent studies — quick access to the last ones opened/edited */}
+      {!isSearching && !selectionMode && currentFolderId === null && recentSummaries.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-0.5">Recentes</h3>
+          <div className="grid gap-2">
+            {recentSummaries.map((s) => {
+              const isMM = isMindMap(s.summary);
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+                  onClick={() => openView(s)}
+                >
+                  {isMM ? (
+                    <Network className="w-5 h-5 text-primary shrink-0" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-primary shrink-0" />
+                  )}
+                  <span className="font-medium text-sm flex-1 truncate">{getStudyDisplayTitle(s)}</span>
+                  <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+                    {format(new Date(s.updatedAt), "dd 'de' MMM", { locale: ptBR })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
