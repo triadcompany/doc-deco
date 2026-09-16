@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -243,31 +244,29 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
 
     const cursorInfo = getTextNearCursor();
-    if (!cursorInfo || !containerRef.current) {
+    if (!cursorInfo) {
       setScripturePopup(null);
       setMsgPopup(null);
       setMsgMatches(null);
       return;
     }
 
+    // Popups are portalled to <body> and positioned with `fixed`, so these are
+    // plain viewport coordinates (not relative to the editor's own container —
+    // that container has overflow-hidden, which was clipping the popups).
     const { text, rect } = cursorInfo;
-    const containerRect = containerRef.current.getBoundingClientRect();
     const popupWidth = 320;
     const popupHeight = 36;
     const gutter = 8;
 
-    const relativeLeft = rect.left - containerRect.left;
-    const relativeTop = rect.top - containerRect.top;
-    const relativeBottom = rect.bottom - containerRect.top;
-
     const left = Math.max(
       gutter,
-      Math.min(relativeLeft + 12, containerRect.width - popupWidth - gutter)
+      Math.min(rect.left + 12, window.innerWidth - popupWidth - gutter)
     );
 
-    const top = relativeTop > popupHeight + gutter
-      ? relativeTop - popupHeight - 6
-      : Math.min(relativeBottom + 6, containerRect.height - popupHeight - gutter);
+    const top = rect.top > popupHeight + gutter
+      ? rect.top - popupHeight - 6
+      : Math.min(rect.bottom + 6, window.innerHeight - popupHeight - gutter);
 
     // Check MSG first (higher priority)
     const snippet = text.slice(-200);
@@ -303,20 +302,18 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       if (sel && !sel.isCollapsed && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
         const range = sel.getRangeAt(0);
         const rect = range.getBoundingClientRect();
-        if (containerRef.current && rect.width > 0 && rect.height > 0) {
-          const containerRect = containerRef.current.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
           const popupWidth = 144;
           const popupHeight = 36;
           const gutter = 8;
-          
-          const relativeLeft = rect.left - containerRect.left + (rect.width / 2) - (popupWidth / 2);
-          const relativeTop = rect.top - containerRect.top;
-          
-          const left = Math.max(gutter, Math.min(relativeLeft, containerRect.width - popupWidth - gutter));
-          const top = relativeTop > popupHeight + gutter
-            ? relativeTop - popupHeight - 6
-            : relativeTop + rect.height + 6;
-            
+
+          const idealLeft = rect.left + (rect.width / 2) - (popupWidth / 2);
+
+          const left = Math.max(gutter, Math.min(idealLeft, window.innerWidth - popupWidth - gutter));
+          const top = rect.top > popupHeight + gutter
+            ? rect.top - popupHeight - 6
+            : rect.bottom + 6;
+
           setSelectionPopup({ top, left });
           return;
         }
@@ -589,145 +586,157 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         style={{ wordBreak: 'break-word', WebkitUserSelect: 'text', userSelect: 'text' }}
       />
 
-      {/* Text Selection Popup */}
-      {selectionPopup && (
-        <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 flex items-center gap-1 p-1 bg-background border border-border rounded-md shadow-md"
-          style={{ top: selectionPopup.top, left: selectionPopup.left }}
-        >
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-            onMouseDown={(e) => e.preventDefault()} onClick={() => { exec('bold'); checkSelection(); }} title="Negrito">
-            <Bold className="w-3.5 h-3.5" />
-          </Button>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-            onMouseDown={(e) => e.preventDefault()} onClick={() => { exec('italic'); checkSelection(); }} title="Itálico">
-            <Italic className="w-3.5 h-3.5" />
-          </Button>
-          <div className="w-px h-4 bg-border mx-0.5 shrink-0" />
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-            onMouseDown={(e) => e.preventDefault()} onClick={() => { applyBlock('h1'); checkSelection(); }} title="Título 1">
-            <Heading1 className="w-3.5 h-3.5" />
-          </Button>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-            onMouseDown={(e) => e.preventDefault()} onClick={() => { applyBlock('h2'); checkSelection(); }} title="Título 2">
-            <Heading2 className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      )}
-
-      {/* Scripture insert popup */}
-      {scripturePopup && (
-        <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{ top: scripturePopup.top, left: scripturePopup.left }}
-        >
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8 gap-1.5 text-xs shadow-md border border-border max-w-[320px]"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={insertVerses}
-            disabled={inserting}
-          >
-            {inserting ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <BookOpen className="w-3.5 h-3.5 shrink-0" />}
-            <span className="truncate">
-              Inserir {scripturePopup.ref.bookName} {scripturePopup.ref.chapter}:{scripturePopup.ref.verseLabel}
-            </span>
-          </Button>
-        </div>
-      )}
-
-      {/* MSG insert popup */}
-      {msgPopup && !msgMatches && (
-        <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{ top: msgPopup.top, left: msgPopup.left }}
-        >
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8 gap-1.5 text-xs shadow-md border border-border max-w-[320px]"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={searchMsg}
-            disabled={msgLoading}
-          >
-            {msgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <FileText className="w-3.5 h-3.5 shrink-0" />}
-            <span className="truncate">Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphs.join(', ')}</span>
-          </Button>
-        </div>
-      )}
-
-      {/* MSG multiple matches - choose document */}
-      {msgPopup && msgMatches && msgMatches.length > 0 && (
-        <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[min(420px,calc(100vw-32px))] max-h-[min(320px,60vh)] overflow-hidden flex flex-col"
-          style={{
-            top: Math.min(msgPopup.top + 42, containerRef.current?.clientHeight ? containerRef.current.clientHeight - 200 : msgPopup.top + 42),
-            left: Math.max(8, Math.min(msgPopup.left, containerRef.current?.clientWidth ? containerRef.current.clientWidth - Math.min(420, window.innerWidth - 32) - 8 : msgPopup.left)),
-          }}
-        >
-          <div className="flex items-center justify-between mb-2 px-1 shrink-0">
-            <p className="text-sm font-medium">
-              {msgMatches.length} documento{msgMatches.length > 1 ? 's' : ''} encontrado{msgMatches.length > 1 ? 's' : ''}
-            </p>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
+      {/* All floating popups below are portalled straight to <body> and use
+          `fixed` + viewport coordinates — this container has overflow-hidden
+          (needed to clip the editor's own scroll area), which was silently
+          cutting these off whenever they didn't fit inside it (short editor,
+          split view, mobile). Portalling escapes that entirely. */}
+      {typeof document !== 'undefined' && createPortal(
+        <>
+          {/* Text Selection Popup */}
+          {selectionPopup && (
+            <div
+              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150 flex items-center gap-1 p-1 bg-background border border-border rounded-md shadow-md"
+              style={{ top: selectionPopup.top, left: selectionPopup.left }}
             >
-              ✕
-            </Button>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
-            <div className="space-y-1">
-              {msgMatches.map((m) => (
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                onMouseDown={(e) => e.preventDefault()} onClick={() => { exec('bold'); checkSelection(); }} title="Negrito">
+                <Bold className="w-3.5 h-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                onMouseDown={(e) => e.preventDefault()} onClick={() => { exec('italic'); checkSelection(); }} title="Itálico">
+                <Italic className="w-3.5 h-3.5" />
+              </Button>
+              <div className="w-px h-4 bg-border mx-0.5 shrink-0" />
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                onMouseDown={(e) => e.preventDefault()} onClick={() => { applyBlock('h1'); checkSelection(); }} title="Título 1">
+                <Heading1 className="w-3.5 h-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                onMouseDown={(e) => e.preventDefault()} onClick={() => { applyBlock('h2'); checkSelection(); }} title="Título 2">
+                <Heading2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {/* Scripture insert popup */}
+          {scripturePopup && (
+            <div
+              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150"
+              style={{ top: scripturePopup.top, left: scripturePopup.left }}
+            >
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 gap-1.5 text-xs shadow-md border border-border max-w-[320px]"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={insertVerses}
+                disabled={inserting}
+              >
+                {inserting ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <BookOpen className="w-3.5 h-3.5 shrink-0" />}
+                <span className="truncate">
+                  Inserir {scripturePopup.ref.bookName} {scripturePopup.ref.chapter}:{scripturePopup.ref.verseLabel}
+                </span>
+              </Button>
+            </div>
+          )}
+
+          {/* MSG insert popup */}
+          {msgPopup && !msgMatches && (
+            <div
+              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150"
+              style={{ top: msgPopup.top, left: msgPopup.left }}
+            >
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 gap-1.5 text-xs shadow-md border border-border max-w-[320px]"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={searchMsg}
+                disabled={msgLoading}
+              >
+                {msgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <FileText className="w-3.5 h-3.5 shrink-0" />}
+                <span className="truncate">Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphs.join(', ')}</span>
+              </Button>
+            </div>
+          )}
+
+          {/* MSG multiple matches - choose document */}
+          {msgPopup && msgMatches && msgMatches.length > 0 && (
+            <div
+              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[min(420px,calc(100vw-16px))] max-h-[min(320px,60vh)] overflow-hidden flex flex-col"
+              style={{
+                // Conservative estimate (max popup height) so it flips above the
+                // cursor instead of running off the bottom of the screen.
+                top: Math.max(8, Math.min(msgPopup.top + 42, window.innerHeight - 328)),
+                left: Math.max(8, Math.min(msgPopup.left, window.innerWidth - Math.min(420, window.innerWidth - 16) - 8)),
+              }}
+            >
+              <div className="flex items-center justify-between mb-2 px-1 shrink-0">
+                <p className="text-sm font-medium">
+                  {msgMatches.length} documento{msgMatches.length > 1 ? 's' : ''} encontrado{msgMatches.length > 1 ? 's' : ''}
+                </p>
                 <Button
-                  key={m.id}
                   size="sm"
                   variant="ghost"
-                  className="w-full justify-start h-auto py-2.5 px-3 text-left gap-2.5 hover:bg-accent/60"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => insertMsgMatch(m)}
+                  onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
                 >
-                  <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
-                  <div className="flex flex-col min-w-0 gap-0.5">
-                    <span className="text-sm font-medium truncate">{m.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {[m.translator, m.date].filter(Boolean).join(' — ')}
-                      {m.paragraphs.length > 0
-                        ? ` • ${m.paragraphs.length} parágrafo${m.paragraphs.length > 1 ? 's' : ''}`
-                        : ' • Parágrafos não encontrados'}
-                    </span>
-                  </div>
+                  ✕
                 </Button>
-              ))}
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto pr-1 overscroll-contain" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
+                <div className="space-y-1">
+                  {msgMatches.map((m) => (
+                    <Button
+                      key={m.id}
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start h-auto py-2.5 px-3 text-left gap-2.5 hover:bg-accent/60"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => insertMsgMatch(m)}
+                    >
+                      <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
+                      <div className="flex flex-col min-w-0 gap-0.5">
+                        <span className="text-sm font-medium truncate">{m.title}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {[m.translator, m.date].filter(Boolean).join(' — ')}
+                          {m.paragraphs.length > 0
+                            ? ` • ${m.paragraphs.length} parágrafo${m.paragraphs.length > 1 ? 's' : ''}`
+                            : ' • Parágrafos não encontrados'}
+                        </span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* MSG no matches */}
-      {msgPopup && msgMatches && msgMatches.length === 0 && (
-        <div
-          className="absolute z-50 animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3"
-          style={{
-            top: Math.min(msgPopup.top + 42, containerRef.current?.clientHeight ? containerRef.current.clientHeight - 88 : msgPopup.top + 42),
-            left: Math.min(msgPopup.left, containerRef.current?.clientWidth ? containerRef.current.clientWidth - 308 : msgPopup.left),
-          }}
-        >
-          <p className="text-xs text-muted-foreground">Nenhum documento encontrado para "{msgPopup.ref.docName}"</p>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="w-full text-xs mt-1"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
-          >
-            Fechar
-          </Button>
-        </div>
+          {/* MSG no matches */}
+          {msgPopup && msgMatches && msgMatches.length === 0 && (
+            <div
+              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3 w-[min(300px,calc(100vw-16px))]"
+              style={{
+                top: Math.max(8, Math.min(msgPopup.top + 42, window.innerHeight - 88)),
+                left: Math.max(8, Math.min(msgPopup.left, window.innerWidth - 300 - 8)),
+              }}
+            >
+              <p className="text-xs text-muted-foreground">Nenhum documento encontrado para "{msgPopup.ref.docName}"</p>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full text-xs mt-1"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
+              >
+                Fechar
+              </Button>
+            </div>
+          )}
+        </>,
+        document.body
       )}
     </div>
   );
