@@ -34,6 +34,10 @@ export interface PDFViewerProps {
   onBack: () => void;
   searchContext?: SearchContext | null;
   embedded?: boolean;
+  // Last page read, synced across devices via the reading_progress table
+  // (falls back to this device's own localStorage when not available yet).
+  initialPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 const highlightColors = [
@@ -52,16 +56,17 @@ const drawColors = [
   { name: 'Roxo', color: '#a855f7' },
 ];
 
-export function PDFViewer({ doc, onBack, searchContext, embedded = false }: PDFViewerProps) {
+export function PDFViewer({ doc, onBack, searchContext, embedded = false, initialPage, onPageChange }: PDFViewerProps) {
   const isMobile = useIsMobile();
-  const savedPage = searchContext ? 1 : (() => {
+  const savedPage = searchContext ? 1 : initialPage && initialPage > 0 ? initialPage : (() => {
     try { return parseInt(localStorage.getItem(`pdf_page_${doc.id}`) || '1', 10) || 1; } catch { return 1; }
   })();
   const [currentPage, setCurrentPage] = useState(savedPage);
 
   useEffect(() => {
     try { localStorage.setItem(`pdf_page_${doc.id}`, String(currentPage)); } catch {}
-  }, [currentPage, doc.id]);
+    onPageChange?.(currentPage);
+  }, [currentPage, doc.id, onPageChange]);
   const [totalPages, setTotalPages] = useState(doc.pages || 1);
   const [zoom, setZoom] = useState(100);
   const [activeColor, setActiveColor] = useState(highlightColors[0].color);

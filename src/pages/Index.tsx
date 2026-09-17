@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { PDFDocument, SearchContext } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useDocuments } from '@/hooks/use-documents';
@@ -42,7 +42,7 @@ const Index = () => {
     translators: Array.from(new Set(documents.map((doc) => doc.translator?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'pt-BR')),
   }), [documents]);
   const { authors, translators, addAuthor, removeAuthor, addTranslator, removeTranslator } = useSettings(settingsSeed.authors, settingsSeed.translators);
-  const { goal, progress, completedThisMonth, upsertGoal, startReading, markCompleted, unmarkCompleted, resetMonthlyProgress } = useReadingGoals();
+  const { goal, progress, completedThisMonth, upsertGoal, startReading, updateProgress, markCompleted, unmarkCompleted, resetMonthlyProgress } = useReadingGoals();
   const { summaries, loading: summariesLoading, upsertSummary, deleteSummary } = useDocumentSummaries();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<PDFDocument | null>(null);
@@ -76,6 +76,24 @@ const Index = () => {
     setViewingDoc(doc);
     startReading(doc.id);
   };
+
+  // Last page read per document, from reading_progress — this is what makes
+  // "resume where I left off" follow the account instead of just the device.
+  const lastReadPage = (docId: string) => progress.find((p) => p.document_id === docId)?.current_page;
+
+  // Debounce the DB write so flipping through pages quickly doesn't fire a
+  // request per page — only the page the user actually settles on. Kept as a
+  // stable callback (depends only on the open document's id) so PDFViewer's
+  // own effect doesn't re-fire on every unrelated Index re-render.
+  const pageUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleViewerPageChange = useCallback((page: number) => {
+    if (!viewingDoc) return;
+    const docId = viewingDoc.id;
+    if (pageUpdateTimerRef.current) clearTimeout(pageUpdateTimerRef.current);
+    pageUpdateTimerRef.current = setTimeout(() => {
+      updateProgress(docId, page);
+    }, 1000);
+  }, [viewingDoc, updateProgress]);
 
   const tabContentProps: Omit<TabContentProps, 'tabId'> = {
     documents,
@@ -202,7 +220,13 @@ const Index = () => {
   return (
     <>
       {viewingDoc && !splitMode && (
-        <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} />
+        <PDFViewer
+          doc={viewingDoc}
+          onBack={() => { setViewingDoc(null); setSearchContext(null); }}
+          searchContext={searchContext}
+          initialPage={lastReadPage(viewingDoc.id)}
+          onPageChange={handleViewerPageChange}
+        />
       )}
     <div className={`${splitMode ? 'h-screen overflow-hidden flex flex-col' : 'min-h-screen pb-20 sm:pb-0'} bg-background safe-top safe-x sm:safe-bottom ${viewingDoc && !splitMode ? 'hidden' : ''}`}>
       {/* Header */}
@@ -276,7 +300,14 @@ const Index = () => {
                       would unmount DocumentsTab and lose its search/filter state
                       every time a document is opened and closed. */}
                   {viewingDoc && (
-                    <PDFViewer doc={viewingDoc} onBack={() => { setViewingDoc(null); setSearchContext(null); }} searchContext={searchContext} embedded />
+                    <PDFViewer
+                      doc={viewingDoc}
+                      onBack={() => { setViewingDoc(null); setSearchContext(null); }}
+                      searchContext={searchContext}
+                      embedded
+                      initialPage={lastReadPage(viewingDoc.id)}
+                      onPageChange={handleViewerPageChange}
+                    />
                   )}
                   <div className={`flex-1 min-h-0 flex flex-col overflow-hidden ${viewingDoc ? 'hidden' : ''}`}>
                     <div className="split-panel-content relative flex-1 min-h-0 overflow-y-auto p-4 [&:has(.mindmap-embedded-active)]:overflow-hidden [&:has(.mindmap-embedded-active)]:p-0">

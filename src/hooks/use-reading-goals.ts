@@ -140,11 +140,23 @@ export function useReadingGoals() {
 
   const updateProgress = async (documentId: string, currentPage: number) => {
     if (!user) return;
-    await supabase
-      .from('reading_progress')
-      .update({ current_page: currentPage } as any)
-      .eq('document_id', documentId)
-      .eq('user_id', user.id);
+    // Mirror startReading's insert-or-update: a page change can arrive before
+    // startReading's own insert has landed (e.g. right when a document is
+    // opened for the first time), and a blind UPDATE would silently do nothing.
+    const existing = progress.find((p) => p.document_id === documentId);
+    if (existing) {
+      await supabase
+        .from('reading_progress')
+        .update({ current_page: currentPage } as any)
+        .eq('id', existing.id);
+    } else {
+      await supabase.from('reading_progress').insert({
+        user_id: user.id,
+        document_id: documentId,
+        current_page: currentPage,
+        is_reading: true,
+      } as any);
+    }
     await fetchProgress();
   };
 
