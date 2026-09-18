@@ -580,7 +580,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         }}
         data-placeholder={placeholder}
         className={cn(
-          "overflow-y-auto p-3 sm:p-3 text-sm sm:text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
+          "overflow-y-auto p-3 sm:p-3 text-lg sm:text-lg focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-lg [&_p]:font-normal [&_p]:leading-relaxed",
           fillHeight ? "min-h-[150px] sm:min-h-[200px] flex-1" : "min-h-[200px] sm:min-h-[300px] max-h-[40vh] sm:max-h-[50vh]"
         )}
         style={{ wordBreak: 'break-word', WebkitUserSelect: 'text', userSelect: 'text' }}
