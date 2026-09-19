@@ -41,14 +41,17 @@ const fontFamilies = [
   { label: 'Times New Roman', value: 'Times New Roman' },
 ];
 
+// Values are plain pixel sizes (used to build "<n>px" for the inline style
+// wrapper) — document.execCommand('fontSize', ...) took legacy 1-7 levels
+// instead and never reliably applied, which is why this control didn't work.
 const fontSizes = [
-  { label: '12', value: '1' },
-  { label: '14', value: '2' },
-  { label: '16', value: '3' },
-  { label: '18', value: '4' },
-  { label: '24', value: '5' },
-  { label: '32', value: '6' },
-  { label: '48', value: '7' },
+  { label: '12', value: '12' },
+  { label: '14', value: '14' },
+  { label: '16', value: '16' },
+  { label: '18', value: '18' },
+  { label: '24', value: '24' },
+  { label: '32', value: '32' },
+  { label: '48', value: '48' },
 ];
 
 export function RichTextEditor({ value, onChange, placeholder, fillHeight = false }: RichTextEditorProps) {
@@ -106,6 +109,39 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
+  }, [onChange, restoreSelection, saveSelection]);
+
+  // Fonte/Tam. toolbar controls: wrap the current selection in a styled span
+  // directly instead of document.execCommand('fontName'/'fontSize', ...) —
+  // that legacy API silently does nothing once the Select popup has moved
+  // focus away from the editor and back, which is why it never worked.
+  const applyInlineStyle = useCallback((styleProp: 'fontFamily' | 'fontSize', styleValue: string) => {
+    editorRef.current?.focus();
+    restoreSelection();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const range = sel.getRangeAt(0);
+    if (!editorRef.current || !editorRef.current.contains(range.commonAncestorContainer)) return;
+
+    const span = document.createElement('span');
+    span.style[styleProp] = styleValue;
+    try {
+      range.surroundContents(span);
+    } catch {
+      // Selection crosses element boundaries (e.g. spans two paragraphs) —
+      // surroundContents can't wrap that in one node, so extract + wrap instead.
+      const frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+    }
+
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
+
+    saveSelection();
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
   }, [onChange, restoreSelection, saveSelection]);
 
   const handleInput = useCallback(() => {
@@ -537,7 +573,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
 
         <div className="w-px h-6 sm:h-5 bg-border mx-1 shrink-0" />
 
-        <Select onValueChange={(v) => exec('fontName', v)}>
+        <Select onValueChange={(v) => applyInlineStyle('fontFamily', v)}>
           <SelectTrigger className="h-9 sm:h-7 w-[100px] sm:w-[110px] text-xs shrink-0">
             <SelectValue placeholder="Fonte" />
           </SelectTrigger>
@@ -550,7 +586,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           </SelectContent>
         </Select>
 
-        <Select onValueChange={(v) => exec('fontSize', v)}>
+        <Select onValueChange={(v) => applyInlineStyle('fontSize', `${v}px`)}>
           <SelectTrigger className="h-9 sm:h-7 w-[68px] sm:w-[70px] text-xs shrink-0">
             <SelectValue placeholder="Tam." />
           </SelectTrigger>
@@ -580,7 +616,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         }}
         data-placeholder={placeholder}
         className={cn(
-          "overflow-y-auto p-3 sm:p-3 text-lg sm:text-lg focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-lg [&_p]:font-normal [&_p]:leading-relaxed",
+          "overflow-y-auto p-3 sm:p-3 text-sm sm:text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
           fillHeight ? "min-h-[150px] sm:min-h-[200px] flex-1" : "min-h-[200px] sm:min-h-[300px] max-h-[40vh] sm:max-h-[50vh]"
         )}
         style={{ wordBreak: 'break-word', WebkitUserSelect: 'text', userSelect: 'text' }}
@@ -596,7 +632,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* Text Selection Popup */}
           {selectionPopup && (
             <div
-              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150 flex items-center gap-1 p-1 bg-background border border-border rounded-md shadow-md"
+              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 flex items-center gap-1 p-1 bg-background border border-border rounded-md shadow-md"
               style={{ top: selectionPopup.top, left: selectionPopup.left }}
             >
               <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
@@ -622,7 +658,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* Scripture insert popup */}
           {scripturePopup && (
             <div
-              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150"
+              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150"
               style={{ top: scripturePopup.top, left: scripturePopup.left }}
             >
               <Button
@@ -644,7 +680,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* MSG insert popup */}
           {msgPopup && !msgMatches && (
             <div
-              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150"
+              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150"
               style={{ top: msgPopup.top, left: msgPopup.left }}
             >
               <Button
@@ -664,7 +700,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* MSG multiple matches - choose document */}
           {msgPopup && msgMatches && msgMatches.length > 0 && (
             <div
-              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[min(420px,calc(100vw-16px))] max-h-[min(320px,60vh)] overflow-hidden flex flex-col"
+              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[min(420px,calc(100vw-16px))] max-h-[min(320px,60vh)] overflow-hidden flex flex-col"
               style={{
                 // Conservative estimate (max popup height) so it flips above the
                 // cursor instead of running off the bottom of the screen.
@@ -717,7 +753,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* MSG no matches */}
           {msgPopup && msgMatches && msgMatches.length === 0 && (
             <div
-              className="fixed z-[60] animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3 w-[min(300px,calc(100vw-16px))]"
+              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3 w-[min(300px,calc(100vw-16px))]"
               style={{
                 top: Math.max(8, Math.min(msgPopup.top + 42, window.innerHeight - 88)),
                 left: Math.max(8, Math.min(msgPopup.left, window.innerWidth - 300 - 8)),
