@@ -63,6 +63,7 @@ import {
   FolderInput,
   FileDown,
   CheckSquare,
+  Upload,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -103,6 +104,8 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingBatch, setExportingBatch] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
   const [lastAutoSavedAt, setLastAutoSavedAt] = useState<Date | null>(null);
   // Id of the row a background autosave created for a study that started out
   // unsaved — once set, later autosaves (and a manual Salvar) update that same
@@ -295,6 +298,36 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
       toast.error('Erro ao gerar os PDFs dos estudos selecionados');
     } finally {
       setExportingBatch(false);
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const { importStudyFromPdf } = await import('@/lib/import-study-pdf');
+      const { title, html } = await importStudyFromPdf(file);
+      // Fresh, unsaved study — the 30s autosave protects it as soon as the
+      // user starts reviewing/editing.
+      resetForm();
+      setStudyTitle(title || file.name.replace(/\.pdf$/i, ''));
+      setSummaryText(html);
+      if (embedded) {
+        setInlineView('create');
+      } else {
+        setDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Error importing study PDF:', err);
+      if (err instanceof Error && err.message === 'NO_TEXT_LAYER') {
+        toast.error('Não foi possível ler texto desse PDF.');
+      } else {
+        toast.error('Arquivo inválido.');
+      }
+    } finally {
+      setImporting(false);
+      e.target.value = '';
     }
   };
 
@@ -559,6 +592,24 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
             <Button size="sm" variant="outline" onClick={() => setShowNewFolder(true)} className="gap-1.5">
               <FolderPlus className="w-4 h-4" />
               <span className="hidden sm:inline">Pasta</span>
+            </Button>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              hidden
+              onChange={handleImportFile}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => importFileInputRef.current?.click()}
+              disabled={importing}
+              className="gap-1.5"
+              title="Importar um estudo a partir de um PDF exportado pelo app"
+            >
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              <span className="hidden sm:inline">Importar</span>
             </Button>
             <Button size="sm" onClick={openNew} className="gap-1.5">
               <Plus className="w-4 h-4" />
