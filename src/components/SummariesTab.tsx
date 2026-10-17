@@ -557,6 +557,92 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
     setMovingStudyId(null);
   };
 
+  // ===== Study card (shared by the main grid and the Recentes section) =====
+  const renderStudyCard = (s: DocSummary) => {
+    const isMM = isMindMap(s.summary);
+    return (
+      <Card
+        key={s.id}
+        className="group cursor-pointer"
+        onClick={() => (selectionMode ? toggleSelected(s.id) : openView(s))}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            {selectionMode && (
+              <Checkbox
+                checked={selectedIds.has(s.id)}
+                onCheckedChange={() => toggleSelected(s.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-0.5 shrink-0"
+              />
+            )}
+            <CardTitle className="text-xl font-bold leading-tight flex-1 flex items-start gap-1.5 min-w-0">
+              {isMM && <Network className="w-4 h-4 text-primary shrink-0 mt-1" />}
+              <span>{getStudyDisplayTitle(s)}</span>
+            </CardTitle>
+            {!selectionMode && (
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openView(s)} title="Visualizar estudo">
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Mais opções">
+                      <MoreHorizontal className="w-3.5 h-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem disabled={exportingId === s.id} onClick={() => handleExportOne(s)}>
+                      {exportingId === s.id ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      ) : (
+                        <FileDown className="w-3.5 h-3.5 mr-2" />
+                      )}
+                      Exportar PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setMovingStudyId(s.id); setSelectedFolderId(s.folderId); }}>
+                      <FolderInput className="w-3.5 h-3.5 mr-2" /> Mover para pasta
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete(s.id)}>
+                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+          </div>
+          {s.documentIds.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {s.documentIds.map((docId) => (
+                <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[150px] truncate">
+                  {getDocTitle(docId)}
+                </Badge>
+              ))}
+            </div>
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            Atualizado em {format(new Date(s.updatedAt), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {isMM ? (
+            <div className="h-32 rounded overflow-hidden pointer-events-none">
+              <MindMapViewer value={s.summary} className="w-full h-full" />
+            </div>
+          ) : (
+            <div
+              className="text-sm line-clamp-6 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-1 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-1 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
+              dangerouslySetInnerHTML={{ __html: sanitizeContentColors(s.summary, isDark) }}
+            />
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   // ===== LIST VIEW (default) =====
   return (
     <div className="space-y-4">
@@ -632,31 +718,13 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </div>
       )}
 
-      {/* Recent studies — quick access to the last ones opened/edited */}
+      {/* Recent studies — quick access to the last ones opened/edited, as the
+          same cards used in the main grid below */}
       {!isSearching && !selectionMode && currentFolderId === null && recentSummaries.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-0.5">Recentes</h3>
-          <div className="grid gap-2">
-            {recentSummaries.map((s) => {
-              const isMM = isMindMap(s.summary);
-              return (
-                <div
-                  key={s.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
-                  onClick={() => openView(s)}
-                >
-                  {isMM ? (
-                    <Network className="w-5 h-5 text-primary shrink-0" />
-                  ) : (
-                    <FileText className="w-5 h-5 text-primary shrink-0" />
-                  )}
-                  <span className="font-medium text-sm flex-1 truncate">{getStudyDisplayTitle(s)}</span>
-                  <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
-                    {format(new Date(s.updatedAt), "dd 'de' MMM", { locale: ptBR })}
-                  </span>
-                </div>
-              );
-            })}
+          <div className={cn("grid gap-4", embedded ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
+            {recentSummaries.map(renderStudyCard)}
           </div>
         </div>
       )}
@@ -812,90 +880,7 @@ export function SummariesTab({ documents, summaries, loading, onUpsert, onDelete
         </div>
       ) : filteredSummaries.length > 0 && (
         <div className={cn("grid gap-4", embedded ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
-          {filteredSummaries.map((s) => {
-            const isMM = isMindMap(s.summary);
-            return (
-              <Card
-                key={s.id}
-                className="group cursor-pointer"
-                onClick={() => (selectionMode ? toggleSelected(s.id) : openView(s))}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    {selectionMode && (
-                      <Checkbox
-                        checked={selectedIds.has(s.id)}
-                        onCheckedChange={() => toggleSelected(s.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-0.5 shrink-0"
-                      />
-                    )}
-                    <CardTitle className="text-xl font-bold leading-tight flex-1 flex items-start gap-1.5 min-w-0">
-                      {isMM && <Network className="w-4 h-4 text-primary shrink-0 mt-1" />}
-                      <span>{getStudyDisplayTitle(s)}</span>
-                    </CardTitle>
-                    {!selectionMode && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openView(s)} title="Visualizar estudo">
-                          <Eye className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)} title="Editar estudo">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Mais opções">
-                              <MoreHorizontal className="w-3.5 h-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem disabled={exportingId === s.id} onClick={() => handleExportOne(s)}>
-                              {exportingId === s.id ? (
-                                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                              ) : (
-                                <FileDown className="w-3.5 h-3.5 mr-2" />
-                              )}
-                              Exportar PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setMovingStudyId(s.id); setSelectedFolderId(s.folderId); }}>
-                              <FolderInput className="w-3.5 h-3.5 mr-2" /> Mover para pasta
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(s.id)}>
-                              <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
-                  </div>
-                  {s.documentIds.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {s.documentIds.map((docId) => (
-                        <Badge key={docId} variant="secondary" className="text-[10px] py-0 px-1.5 font-normal max-w-[150px] truncate">
-                          {getDocTitle(docId)}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-[10px] text-muted-foreground">
-                    Atualizado em {format(new Date(s.updatedAt), "dd 'de' MMM 'de' yyyy", { locale: ptBR })}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {isMM ? (
-                    <div className="h-32 rounded overflow-hidden pointer-events-none">
-                      <MindMapViewer value={s.summary} className="w-full h-full" />
-                    </div>
-                  ) : (
-                    <div
-                      className="text-sm line-clamp-6 max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-1 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-1 [&_p]:text-sm [&_p]:leading-relaxed [&_b]:font-bold [&_i]:italic"
-                      dangerouslySetInnerHTML={{ __html: sanitizeContentColors(s.summary, isDark) }}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filteredSummaries.map(renderStudyCard)}
         </div>
       )}
 
