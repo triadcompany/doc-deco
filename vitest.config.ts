@@ -13,4 +13,9 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  // Keep in sync with vite.config.ts — anything importing a module that
+  // references __APP_VERSION__ (e.g. SettingsTab.tsx) needs it defined here too.
+  define: {
+    __APP_VERSION__: JSON.stringify("test"),
+  },
 });

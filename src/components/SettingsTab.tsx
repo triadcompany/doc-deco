@@ -322,6 +322,14 @@ function AppSettings() {
           </Button>
         </div>
       </div>
+
+      <div className="space-y-1.5 pt-2 border-t border-border/50">
+        <Label className="text-xs text-muted-foreground">Versão do sistema</Label>
+        <p className="font-medium text-sm tabular-nums">{__APP_VERSION__}</p>
+        <p className="text-xs text-muted-foreground">
+          Sobe a cada atualização — confira aqui se o dispositivo já recebeu a mais recente.
+        </p>
+      </div>
     </div>
   );
 }
