@@ -239,18 +239,39 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     const caretRange = range.cloneRange();
     caretRange.collapse(true);
 
-    let rect = caretRange.getBoundingClientRect();
-    if (!rect.width && !rect.height) {
-      const marker = document.createElement('span');
-      marker.textContent = '\u200b';
-      marker.style.display = 'inline-block';
-      marker.style.width = '0';
-      marker.style.overflow = 'hidden';
-      caretRange.insertNode(marker);
-      rect = marker.getBoundingClientRect();
-      marker.remove();
-      sel.removeAllRanges();
-      sel.addRange(range);
+    // Measuring a COLLAPSED range's rect is unreliable \u2014 WebKit (notably
+    // iPadOS/iOS Safari) frequently reports it as all-zero (top/left/width/
+    // height all 0) instead of just width 0, which sent the popup flying to
+    // the very top of the screen instead of next to the cursor. Measuring
+    // the character right before the cursor \u2014 a real, non-collapsed text
+    // range \u2014 is geometry every engine gets right, so prefer that.
+    let rect: DOMRect | null = null;
+    const startNode = caretRange.startContainer;
+    const startOffset = caretRange.startOffset;
+    if (startNode.nodeType === Node.TEXT_NODE && startOffset > 0) {
+      const charRange = document.createRange();
+      charRange.setStart(startNode, startOffset - 1);
+      charRange.setEnd(startNode, startOffset);
+      const charRect = charRange.getBoundingClientRect();
+      if (charRect.width > 0 || charRect.height > 0) {
+        rect = new DOMRect(charRect.right, charRect.top, 0, charRect.height);
+      }
+    }
+
+    if (!rect) {
+      rect = caretRange.getBoundingClientRect();
+      if (!rect.width && !rect.height) {
+        const marker = document.createElement('span');
+        marker.textContent = '\u200b';
+        marker.style.display = 'inline-block';
+        marker.style.width = '0';
+        marker.style.overflow = 'hidden';
+        caretRange.insertNode(marker);
+        rect = marker.getBoundingClientRect();
+        marker.remove();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
     }
 
     let textNode = range.startContainer;
@@ -300,9 +321,12 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       Math.min(rect.left + 12, window.innerWidth - popupWidth - gutter)
     );
 
-    const top = rect.top > popupHeight + gutter
-      ? rect.top - popupHeight - 6
-      : Math.min(rect.bottom + 6, window.innerHeight - popupHeight - gutter);
+    const top = Math.max(
+      gutter,
+      rect.top > popupHeight + gutter
+        ? rect.top - popupHeight - 6
+        : Math.min(rect.bottom + 6, window.innerHeight - popupHeight - gutter)
+    );
 
     // Check MSG first (higher priority)
     const snippet = text.slice(-200);
@@ -346,9 +370,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           const idealLeft = rect.left + (rect.width / 2) - (popupWidth / 2);
 
           const left = Math.max(gutter, Math.min(idealLeft, window.innerWidth - popupWidth - gutter));
-          const top = rect.top > popupHeight + gutter
-            ? rect.top - popupHeight - 6
-            : rect.bottom + 6;
+          const top = Math.max(
+            gutter,
+            rect.top > popupHeight + gutter ? rect.top - popupHeight - 6 : rect.bottom + 6
+          );
 
           setSelectionPopup({ top, left });
           return;
