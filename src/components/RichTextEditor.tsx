@@ -647,18 +647,23 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         style={{ wordBreak: 'break-word', WebkitUserSelect: 'text', userSelect: 'text' }}
       />
 
-      {/* All floating popups below are portalled straight to <body> and use
-          `fixed` + viewport coordinates — this container has overflow-hidden
+      {/* All floating popups below are portalled straight to <body>, positioned
+          in viewport coordinates but rendered with `absolute` (+ window.scrollX/Y)
+          instead of `fixed`. Two reasons: this container has overflow-hidden
           (needed to clip the editor's own scroll area), which was silently
           cutting these off whenever they didn't fit inside it (short editor,
-          split view, mobile). Portalling escapes that entirely. */}
+          split view, mobile) — portalling escapes that. And iPadOS/iOS Safari
+          has long-standing bugs placing `position: fixed` elements incorrectly
+          (often pinned near the top of the page) once any ancestor scrolls or
+          the page has a scrollable region — `absolute` relative to <body> with
+          the scroll offset added back in sidesteps that engine-specific quirk. */}
       {typeof document !== 'undefined' && createPortal(
         <>
           {/* Text Selection Popup */}
           {selectionPopup && (
             <div
-              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 flex items-center gap-1 p-1 bg-background border border-border rounded-md shadow-md"
-              style={{ top: selectionPopup.top, left: selectionPopup.left }}
+              className="absolute z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 flex items-center gap-1 p-1 bg-background border border-border rounded-md shadow-md"
+              style={{ top: selectionPopup.top + window.scrollY, left: selectionPopup.left + window.scrollX }}
             >
               <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0"
                 onMouseDown={(e) => e.preventDefault()} onClick={() => { exec('bold'); checkSelection(); }} title="Negrito">
@@ -683,8 +688,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* Scripture insert popup */}
           {scripturePopup && (
             <div
-              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150"
-              style={{ top: scripturePopup.top, left: scripturePopup.left }}
+              className="absolute z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150"
+              style={{ top: scripturePopup.top + window.scrollY, left: scripturePopup.left + window.scrollX }}
             >
               <Button
                 size="sm"
@@ -705,8 +710,8 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* MSG insert popup */}
           {msgPopup && !msgMatches && (
             <div
-              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150"
-              style={{ top: msgPopup.top, left: msgPopup.left }}
+              className="absolute z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150"
+              style={{ top: msgPopup.top + window.scrollY, left: msgPopup.left + window.scrollX }}
             >
               <Button
                 size="sm"
@@ -725,12 +730,12 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* MSG multiple matches - choose document */}
           {msgPopup && msgMatches && msgMatches.length > 0 && (
             <div
-              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[min(420px,calc(100vw-16px))] max-h-[min(320px,60vh)] overflow-hidden flex flex-col"
+              className="absolute z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-xl p-3 w-[min(420px,calc(100vw-16px))] max-h-[min(320px,60vh)] overflow-hidden flex flex-col"
               style={{
                 // Conservative estimate (max popup height) so it flips above the
                 // cursor instead of running off the bottom of the screen.
-                top: Math.max(8, Math.min(msgPopup.top + 42, window.innerHeight - 328)),
-                left: Math.max(8, Math.min(msgPopup.left, window.innerWidth - Math.min(420, window.innerWidth - 16) - 8)),
+                top: Math.max(8, Math.min(msgPopup.top + 42, window.innerHeight - 328)) + window.scrollY,
+                left: Math.max(8, Math.min(msgPopup.left, window.innerWidth - Math.min(420, window.innerWidth - 16) - 8)) + window.scrollX,
               }}
             >
               <div className="flex items-center justify-between mb-2 px-1 shrink-0">
@@ -778,10 +783,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           {/* MSG no matches */}
           {msgPopup && msgMatches && msgMatches.length === 0 && (
             <div
-              className="fixed z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3 w-[min(300px,calc(100vw-16px))]"
+              className="absolute z-[60] pointer-events-auto animate-in fade-in-0 zoom-in-95 duration-150 bg-popover border border-border rounded-lg shadow-lg p-3 w-[min(300px,calc(100vw-16px))]"
               style={{
-                top: Math.max(8, Math.min(msgPopup.top + 42, window.innerHeight - 88)),
-                left: Math.max(8, Math.min(msgPopup.left, window.innerWidth - 300 - 8)),
+                top: Math.max(8, Math.min(msgPopup.top + 42, window.innerHeight - 88)) + window.scrollY,
+                left: Math.max(8, Math.min(msgPopup.left, window.innerWidth - 300 - 8)) + window.scrollX,
               }}
             >
               <p className="text-xs text-muted-foreground">Nenhum documento encontrado para "{msgPopup.ref.docName}"</p>
