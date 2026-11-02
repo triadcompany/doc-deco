@@ -32,9 +32,11 @@ export interface MsgMatch {
 const MSG_REGEX = /MSG:\s*(.+?)\s*§([\d\s,-]+?)(?:\s*\(([^)]+)\))?(?:\s*\(([^)]+)\))?\s*$/i;
 
 /**
- * Parse a paragraph spec like "10, 28-29" into an array of numbers [10, 28, 29]
+ * Parse a paragraph spec like "10, 28-29" into an array of numbers [10, 28, 29].
+ * Exported so the editor can re-parse an already-inserted citation's edited
+ * title (e.g. "...§50" changed to "...§55") to fetch its new paragraphs.
  */
-function parseParagraphSpec(spec: string): number[] {
+export function parseParagraphSpec(spec: string): number[] {
   const nums = new Set<number>();
   const parts = spec.split(',').map(s => s.trim()).filter(Boolean);
   for (const part of parts) {
@@ -218,7 +220,10 @@ export async function searchMsgDocuments(ref: MsgRef): Promise<MsgMatch[]> {
 }
 
 /**
- * Format MSG paragraphs as HTML for insertion in the editor.
+ * Format MSG paragraphs as HTML (a single <blockquote>) for insertion in the
+ * editor. Callers that insert this as brand-new content append their own
+ * trailing empty paragraph afterwards; callers that replace an existing
+ * citation's blockquote (to update it to a new paragraph range) don't.
  */
 export function formatMsgAsHtml(match: MsgMatch): string {
   if (match.paragraphs.length === 0) return '';
@@ -234,5 +239,5 @@ export function formatMsgAsHtml(match: MsgMatch): string {
     .map(p => `<span style="color:hsl(var(--muted-foreground));font-size:0.75em;vertical-align:super;margin-right:2px;">${p.number}</span>${p.text}`)
     .join('<br/><br/>');
 
-  return `<blockquote style="border-left:3px solid hsl(var(--accent));padding:8px 12px;margin:8px 0;background:hsl(var(--muted)/0.3);border-radius:4px;font-size:0.9em;"><h2 style="margin:0 0 4px 0;font-size:1.15em;font-weight:700;">${header}</h2>${meta ? `<span style="font-size:0.8em;color:hsl(var(--muted-foreground));">${meta}</span><br/><br/>` : ''} ${lines}</blockquote><p><br/></p>`;
+  return `<blockquote style="border-left:3px solid hsl(var(--accent));padding:8px 12px;margin:8px 0;background:hsl(var(--muted)/0.3);border-radius:4px;font-size:0.9em;"><h2 style="margin:0 0 4px 0;font-size:1.15em;font-weight:700;">${header}</h2>${meta ? `<span style="font-size:0.8em;color:hsl(var(--muted-foreground));">${meta}</span><br/><br/>` : ''} ${lines}</blockquote>`;
 }

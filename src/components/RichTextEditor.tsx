@@ -20,10 +20,16 @@ import {
   Loader2,
   FileText,
   RemoveFormatting,
+  RefreshCw,
 } from 'lucide-react';
 import { detectLastScriptureReference, ScriptureRef } from '@/lib/scripture-parser';
 import { fetchVerses, formatVersesAsHtml } from '@/lib/bible-fetch';
-import { detectMsgReference, searchMsgDocuments, formatMsgAsHtml, MsgRef, MsgMatch } from '@/lib/msg-reference';
+import { detectMsgReference, searchMsgDocuments, formatMsgAsHtml, parseParagraphSpec, MsgRef, MsgMatch } from '@/lib/msg-reference';
+
+// An already-inserted MSG citation's title reads "<document name> §<paragraphs>"
+// (no "MSG:" prefix — that's only for typing a brand-new reference). Matching
+// this lets editing that title offer to re-fetch instead of doing nothing.
+const CITATION_TITLE_REGEX = /^(.+?)\s+§([\d\s,-]+)\s*$/;
 
 interface RichTextEditorProps {
   value: string;
@@ -74,14 +80,24 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     left: number;
   } | null>(null);
 
-  // MSG popup
+  // MSG popup. mode:'update' means this is for re-fetching an already-inserted
+  // citation (the user edited its title) rather than inserting a new one —
+  // citationUpdateTargetRef holds the <blockquote> to replace in that case.
   const [msgPopup, setMsgPopup] = useState<{
     ref: MsgRef;
     top: number;
     left: number;
+    mode?: 'update';
   } | null>(null);
   const [msgMatches, setMsgMatches] = useState<MsgMatch[] | null>(null);
   const [msgLoading, setMsgLoading] = useState(false);
+  const citationUpdateTargetRef = useRef<HTMLElement | null>(null);
+
+  const closeMsgPopup = useCallback(() => {
+    setMsgPopup(null);
+    setMsgMatches(null);
+    citationUpdateTargetRef.current = null;
+  }, []);
 
   const [inserting, setInserting] = useState(false);
 
@@ -295,16 +311,70 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     const sel = window.getSelection();
     if (sel && !sel.isCollapsed) {
       setScripturePopup(null);
-      setMsgPopup(null);
-      setMsgMatches(null);
+      closeMsgPopup();
       return;
     }
+
+    // If the cursor sits inside the title of an already-inserted MSG citation
+    // (format "<document> §<paragraphs>", no "MSG:" prefix), offer to re-fetch
+    // it instead of trying to detect a brand-new reference. This is what lets
+    // editing "...§50" into "...§55" on an existing citation actually change
+    // which paragraph is shown — plain text editing alone never did.
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
+      const node = sel.getRangeAt(0).startContainer;
+      const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as HTMLElement | null);
+      const h2 = el?.closest('h2') ?? null;
+      const blockquote = h2?.closest('blockquote') ?? null;
+      if (h2 && blockquote && editorRef.current.contains(blockquote)) {
+        const titleMatch = (h2.textContent || '').trim().match(CITATION_TITLE_REGEX);
+        const paragraphs = titleMatch ? parseParagraphSpec(titleMatch[2]) : [];
+        if (titleMatch && paragraphs.length > 0) {
+          const cursorInfo = getTextNearCursor();
+          if (cursorInfo) {
+            const { rect } = cursorInfo;
+            const popupWidth = 320;
+            const popupHeight = 36;
+            const gutter = 8;
+            const left = Math.max(gutter, Math.min(rect.left + 12, window.innerWidth - popupWidth - gutter));
+            const top = Math.max(
+              gutter,
+              rect.top > popupHeight + gutter
+                ? rect.top - popupHeight - 6
+                : Math.min(rect.bottom + 6, window.innerHeight - popupHeight - gutter)
+            );
+            // Recover translator/date from the meta line next to the title
+            // (e.g. "GO — 1963-03-17") for a more precise match — several
+            // documents can share a very similar title.
+            let translator: string | undefined;
+            let date: string | undefined;
+            const metaEl = h2.nextElementSibling;
+            if (metaEl?.tagName === 'SPAN') {
+              const datePattern = /^\d{2,4}[-/]\d{2}[-/]\d{2,4}$/;
+              for (const part of (metaEl.textContent || '').split('—').map((s) => s.trim()).filter(Boolean)) {
+                if (datePattern.test(part)) date = part; else translator = part;
+              }
+            }
+
+            citationUpdateTargetRef.current = blockquote as HTMLElement;
+            setScripturePopup(null);
+            setMsgMatches(null);
+            setMsgPopup({
+              ref: { docName: titleMatch[1].trim(), paragraphs, translator, date, raw: h2.textContent || '' },
+              top,
+              left,
+              mode: 'update',
+            });
+            return;
+          }
+        }
+      }
+    }
+    citationUpdateTargetRef.current = null;
 
     const cursorInfo = getTextNearCursor();
     if (!cursorInfo) {
       setScripturePopup(null);
-      setMsgPopup(null);
-      setMsgMatches(null);
+      closeMsgPopup();
       return;
     }
 
@@ -341,15 +411,13 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     const scriptSnippet = text.slice(-80);
     const ref = detectLastScriptureReference(scriptSnippet);
     if (ref) {
-      setMsgPopup(null);
-      setMsgMatches(null);
+      closeMsgPopup();
       setScripturePopup({ ref, top, left });
     } else {
       setScripturePopup(null);
-      setMsgPopup(null);
-      setMsgMatches(null);
+      closeMsgPopup();
     }
-  }, [getTextNearCursor]);
+  }, [getTextNearCursor, closeMsgPopup]);
 
   const debouncedDetect = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -520,6 +588,37 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
   }, [scripturePopup, replaceReferenceAndInsert]);
 
+  // Replace an already-inserted citation's <blockquote> with a freshly
+  // fetched one — used when the user edited its title to a different
+  // paragraph range and confirmed the "Atualizar" popup.
+  const applyCitationUpdate = useCallback((match: MsgMatch) => {
+    const target = citationUpdateTargetRef.current;
+    citationUpdateTargetRef.current = null;
+    if (!target || !target.parentNode) return;
+
+    const html = formatMsgAsHtml(match);
+    if (!html) return;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const newNode = temp.firstElementChild;
+    if (!newNode) return;
+
+    target.replaceWith(newNode);
+
+    const sel = window.getSelection();
+    if (sel) {
+      const r = document.createRange();
+      r.selectNodeContents(newNode);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+
+    saveSelection();
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  }, [onChange, saveSelection]);
+
   // Search MSG documents
   const searchMsg = useCallback(async () => {
     if (!msgPopup) return;
@@ -529,13 +628,19 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
       if (matches.length === 0) {
         setMsgMatches([]);
       } else if (matches.length === 1) {
-        const html = formatMsgAsHtml(matches[0]);
-        if (html) {
-          replaceReferenceAndInsert(msgPopup.ref.raw, html);
+        if (msgPopup.mode === 'update') {
+          applyCitationUpdate(matches[0]);
           setMsgPopup(null);
           setMsgMatches(null);
         } else {
-          setMsgMatches(matches);
+          const html = formatMsgAsHtml(matches[0]);
+          if (html) {
+            replaceReferenceAndInsert(msgPopup.ref.raw, `${html}<p><br/></p>`);
+            setMsgPopup(null);
+            setMsgMatches(null);
+          } else {
+            setMsgMatches(matches);
+          }
         }
       } else {
         setMsgMatches(matches);
@@ -546,17 +651,21 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     } finally {
       setMsgLoading(false);
     }
-  }, [msgPopup, replaceReferenceAndInsert]);
+  }, [msgPopup, replaceReferenceAndInsert, applyCitationUpdate]);
 
   const insertMsgMatch = useCallback((match: MsgMatch) => {
     if (!msgPopup) return;
-    const html = formatMsgAsHtml(match);
-    if (html) {
-      replaceReferenceAndInsert(msgPopup.ref.raw, html);
+    if (msgPopup.mode === 'update') {
+      applyCitationUpdate(match);
+    } else {
+      const html = formatMsgAsHtml(match);
+      if (html) {
+        replaceReferenceAndInsert(msgPopup.ref.raw, `${html}<p><br/></p>`);
+      }
     }
     setMsgPopup(null);
     setMsgMatches(null);
-  }, [replaceReferenceAndInsert, msgPopup]);
+  }, [replaceReferenceAndInsert, msgPopup, applyCitationUpdate]);
 
   return (
     <div
@@ -636,7 +745,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           setTimeout(() => {
             setScripturePopup(null);
             setSelectionPopup(null);
-            if (!msgMatches) setMsgPopup(null);
+            if (!msgMatches) { setMsgPopup(null); citationUpdateTargetRef.current = null; }
           }, 200);
         }}
         data-placeholder={placeholder}
@@ -721,8 +830,16 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
                 onClick={searchMsg}
                 disabled={msgLoading}
               >
-                {msgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <FileText className="w-3.5 h-3.5 shrink-0" />}
-                <span className="truncate">Inserir {msgPopup.ref.docName} §{msgPopup.ref.paragraphs.join(', ')}</span>
+                {msgLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                ) : msgPopup.mode === 'update' ? (
+                  <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 shrink-0" />
+                )}
+                <span className="truncate">
+                  {msgPopup.mode === 'update' ? 'Atualizar' : 'Inserir'} {msgPopup.ref.docName} §{msgPopup.ref.paragraphs.join(', ')}
+                </span>
               </Button>
             </div>
           )}
@@ -747,7 +864,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
                   variant="ghost"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
+                  onClick={closeMsgPopup}
                 >
                   ✕
                 </Button>
@@ -795,7 +912,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
                 variant="ghost"
                 className="w-full text-xs mt-1"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => { setMsgPopup(null); setMsgMatches(null); }}
+                onClick={closeMsgPopup}
               >
                 Fechar
               </Button>
