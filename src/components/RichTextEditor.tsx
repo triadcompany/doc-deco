@@ -38,7 +38,15 @@ interface RichTextEditorProps {
   fillHeight?: boolean;
 }
 
+// What studies look like today — Poppins at 14px, set as the app's global
+// body font (src/index.css). Kept here so a fresh editor still looks the
+// same even though size/family are now explicit, user-changeable styles
+// instead of a fixed Tailwind class.
+const DEFAULT_FONT_FAMILY = "'Poppins', sans-serif";
+const DEFAULT_FONT_SIZE = '14';
+
 const fontFamilies = [
+  { label: 'Poppins (padrão)', value: DEFAULT_FONT_FAMILY },
   { label: 'Sans-serif', value: 'sans-serif' },
   { label: 'Serif', value: 'serif' },
   { label: 'Monospace', value: 'monospace' },
@@ -91,6 +99,11 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
   } | null>(null);
   const [msgMatches, setMsgMatches] = useState<MsgMatch[] | null>(null);
   const [msgLoading, setMsgLoading] = useState(false);
+
+  // Fonte/Tam. toolbar — reflect the study's current base font/size, which
+  // starts at what studies look like today (Poppins, 14px).
+  const [baseFontFamily, setBaseFontFamily] = useState(DEFAULT_FONT_FAMILY);
+  const [baseFontSize, setBaseFontSize] = useState(DEFAULT_FONT_SIZE);
   const citationUpdateTargetRef = useRef<HTMLElement | null>(null);
 
   const closeMsgPopup = useCallback(() => {
@@ -127,17 +140,56 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     }
   }, [onChange, restoreSelection, saveSelection]);
 
-  // Fonte/Tam. toolbar controls: wrap the current selection in a styled span
-  // directly instead of document.execCommand('fontName'/'fontSize', ...) —
-  // that legacy API silently does nothing once the Select popup has moved
-  // focus away from the editor and back, which is why it never worked.
+  // Fonte/Tam. toolbar controls: wrap the target in a styled span directly
+  // instead of document.execCommand('fontName'/'fontSize', ...) — that legacy
+  // API silently does nothing once the Select popup has moved focus away from
+  // the editor and back, which is why it never worked.
+  //
+  // With a selection, only that text is restyled (a one-off override). With
+  // no selection — nothing highlighted, which is the common case: picking a
+  // font/size as a default rather than to restyle a specific phrase — the
+  // WHOLE study is wrapped in (or re-tagged with) a single base-style <div>,
+  // so existing text visibly conforms to the choice and it's saved as part of
+  // the content, not just a transient style on the editor element itself.
   const applyInlineStyle = useCallback((styleProp: 'fontFamily' | 'fontSize', styleValue: string) => {
     editorRef.current?.focus();
     restoreSelection();
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const editor = editorRef.current;
+    if (!sel || !editor) return;
+
+    if (sel.isCollapsed) {
+      const children = Array.from(editor.childNodes);
+      const existingWrapper =
+        children.length === 1 && children[0] instanceof HTMLElement && children[0].dataset.baseStyleWrapper === 'true'
+          ? (children[0] as HTMLElement)
+          : null;
+      const wrapper = existingWrapper || document.createElement('div');
+      wrapper.dataset.baseStyleWrapper = 'true';
+      wrapper.style[styleProp] = styleValue;
+      if (!existingWrapper) {
+        const hasContent = !!editor.textContent?.trim();
+        if (hasContent) {
+          while (editor.firstChild) wrapper.appendChild(editor.firstChild);
+        } else {
+          wrapper.innerHTML = '<br/>';
+        }
+        editor.innerHTML = '';
+        editor.appendChild(wrapper);
+      }
+      // Keep typing inside the wrapper so new text inherits the base style too.
+      const r = document.createRange();
+      r.selectNodeContents(wrapper);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+      saveSelection();
+      onChange(editor.innerHTML);
+      return;
+    }
+
     const range = sel.getRangeAt(0);
-    if (!editorRef.current || !editorRef.current.contains(range.commonAncestorContainer)) return;
+    if (!editor.contains(range.commonAncestorContainer)) return;
 
     const span = document.createElement('span');
     span.style[styleProp] = styleValue;
@@ -157,7 +209,7 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     sel.addRange(newRange);
 
     saveSelection();
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    onChange(editor.innerHTML);
   }, [onChange, restoreSelection, saveSelection]);
 
   const handleInput = useCallback(() => {
@@ -171,6 +223,12 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
     (editorRef as any).current = el;
     if (el && !isInitialized.current) {
       el.innerHTML = value;
+      // Baseline so studies keep looking the same as before size/family
+      // became explicit styles instead of a fixed Tailwind class — any
+      // inline style already inside `value` (a chosen base font, or a
+      // one-off span override) still wins, since it's more specific.
+      el.style.fontFamily = DEFAULT_FONT_FAMILY;
+      el.style.fontSize = `${DEFAULT_FONT_SIZE}px`;
       isInitialized.current = true;
     }
   }, [value]);
@@ -707,7 +765,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
 
         <div className="w-px h-6 sm:h-5 bg-border mx-1 shrink-0" />
 
-        <Select onValueChange={(v) => applyInlineStyle('fontFamily', v)}>
+        <Select
+          value={baseFontFamily}
+          onValueChange={(v) => { setBaseFontFamily(v); applyInlineStyle('fontFamily', v); }}
+        >
           <SelectTrigger className="h-9 sm:h-7 w-[100px] sm:w-[110px] text-xs shrink-0">
             <SelectValue placeholder="Fonte" />
           </SelectTrigger>
@@ -720,7 +781,10 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
           </SelectContent>
         </Select>
 
-        <Select onValueChange={(v) => applyInlineStyle('fontSize', `${v}px`)}>
+        <Select
+          value={baseFontSize}
+          onValueChange={(v) => { setBaseFontSize(v); applyInlineStyle('fontSize', `${v}px`); }}
+        >
           <SelectTrigger className="h-9 sm:h-7 w-[68px] sm:w-[70px] text-xs shrink-0">
             <SelectValue placeholder="Tam." />
           </SelectTrigger>
@@ -750,7 +814,12 @@ export function RichTextEditor({ value, onChange, placeholder, fillHeight = fals
         }}
         data-placeholder={placeholder}
         className={cn(
-          "overflow-y-auto p-3 sm:p-3 text-sm sm:text-sm focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:text-sm [&_p]:font-normal [&_p]:leading-relaxed",
+          // No base text-size/font-family class here on purpose — those are
+          // explicit inline styles now (handleRef sets the default, Fonte/
+          // Tam. in the toolbar change it), so a fixed Tailwind size class on
+          // <p> would always win over them by specificity and the toolbar
+          // would visibly do nothing. Headings keep their own fixed sizing.
+          "overflow-y-auto p-3 sm:p-3 focus:outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground/50 max-w-none [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:mb-2 [&_p]:font-normal [&_p]:leading-relaxed",
           fillHeight ? "min-h-[150px] sm:min-h-[200px] flex-1" : "min-h-[200px] sm:min-h-[300px] max-h-[40vh] sm:max-h-[50vh]"
         )}
         style={{ wordBreak: 'break-word', WebkitUserSelect: 'text', userSelect: 'text' }}
