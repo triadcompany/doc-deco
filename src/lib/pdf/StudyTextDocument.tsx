@@ -49,8 +49,16 @@ function renderBlocks(blocks: PdfBlock[], keyPrefix: string) {
   return blocks.map((block, i) => {
     const key = `${keyPrefix}-${i}`;
     if (block.type === 'quote') {
+      // No wrap={false} here on purpose: it forces the whole quote to be
+      // measured/laid out as one unbreakable unit, which works fine for a
+      // short citation but corrupts @react-pdf/renderer's height measurement
+      // for a long one (e.g. a 20+ verse range) — every wrapped line's real
+      // height gets ignored, so each verse paragraph overlaps the next one
+      // instead of stacking under it. Letting it flow (and paginate if it
+      // doesn't fit on one page) is the trade-off that keeps long citations
+      // actually readable; short ones still normally land on one page anyway.
       return (
-        <View key={key} style={styles.quote} wrap={false}>
+        <View key={key} style={styles.quote}>
           {renderBlocks(block.blocks, key)}
         </View>
       );
